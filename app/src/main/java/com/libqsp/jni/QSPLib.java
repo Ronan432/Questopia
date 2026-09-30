@@ -38,6 +38,7 @@ public abstract class QSPLib {
     }
 
     public record ListItem(String image, String name) { }
+    public record VarItem(String name, boolean isString, long numValue, String strValue, int count) { }
 
     public class ExecutionState {
         public String loc;
@@ -80,6 +81,8 @@ public abstract class QSPLib {
     public native int getSelActIndex();
     public native boolean isActsChanged();
     public native ListItem[] getObjects();
+    public native VarItem[] getAllVariables();
+    public native String[] getAllLocations();
     public native boolean setSelObjIndex(int index, boolean toRefreshUI);
     public native int getSelObjIndex();
     public native boolean isObjsChanged();

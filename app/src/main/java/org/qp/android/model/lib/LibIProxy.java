@@ -40,4 +40,10 @@ public interface LibIProxy {
     LibGameState getGameState();
 
     void setGameInterface(GameInterface view);
+
+    com.libqsp.jni.QSPLib.VarItem[] getAllVariables();
+    String[] getAllLocations();
+    byte[] getSaveData();
+    boolean loadSaveData(byte[] data);
+    void setFrozenVariables(java.util.Map<String, String> frozen);
 }

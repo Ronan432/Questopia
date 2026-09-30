@@ -1,21 +1,16 @@
 package org.qp.android.dto.stock;
 
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-@JacksonXmlRootElement(localName = "game_list")
 public class RemoteDataList {
 
-    public String version;
-    public String id;
-    public String title;
-    public String text;
+    public String version = "";
+    public String id = "";
+    public String title = "";
+    public String text = "";
 
-    @JacksonXmlElementWrapper(useWrapping = false)
     public List<RemoteGameData> game = new ArrayList<>();
 
     @Override
@@ -30,5 +25,4 @@ public class RemoteDataList {
     public int hashCode() {
         return Objects.hash(game);
     }
-
 }

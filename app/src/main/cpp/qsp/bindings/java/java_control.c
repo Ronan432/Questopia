@@ -41,6 +41,7 @@ jclass qspApiClass;
 jobject qspApiObject;
 
 jclass qspListItemClass;
+jclass qspVarItemClass;
 jclass qspExecutionStateClass;
 jclass qspErrorInfoClass;
 
@@ -318,6 +319,83 @@ JNIEXPORT jlong JNICALL Java_com_libqsp_jni_QSPLib_getNumVarValue(JNIEnv *env, j
     }
     return 0;
 }
+/* Get list of all locations */
+JNIEXPORT jobjectArray JNICALL Java_com_libqsp_jni_QSPLib_getAllLocations(JNIEnv *env, jobject api)
+{
+    jclass stringClass = (*env)->FindClass(env, "java/lang/String");
+    jobjectArray res = (*env)->NewObjectArray(env, qspLocsCount, stringClass, 0);
+    for (int i = 0; i < qspLocsCount; ++i)
+    {
+        jstring locName = qspToJavaString(env, qspLocs[i].Name);
+        (*env)->SetObjectArrayElement(env, res, i, locName);
+        (*env)->DeleteLocalRef(env, locName);
+    }
+    return res;
+}
+/* Get all variables currently in memory */
+JNIEXPORT jobjectArray JNICALL Java_com_libqsp_jni_QSPLib_getAllVariables(JNIEnv *env, jobject api)
+{
+    int totalVars = 0;
+    int index = 0;
+    jmethodID constructor;
+    jobjectArray res;
+
+    for (int i = 0; i < QSP_VARSBUCKETS; ++i)
+    {
+        totalVars += qspVars[i].VarsCount;
+    }
+
+    res = (*env)->NewObjectArray(env, totalVars, qspVarItemClass, 0);
+    constructor = (*env)->GetMethodID(env, qspVarItemClass, "<init>", "(Ljava/lang/String;ZJLjava/lang/String;I)V");
+
+    for (int i = 0; i < QSP_VARSBUCKETS; ++i)
+    {
+        QSPVar *var = qspVars[i].Vars;
+        for (int j = 0; j < qspVars[i].VarsCount; ++j, ++var)
+        {
+            jstring name = qspToJavaString(env, var->Name);
+            jboolean isString = JNI_FALSE;
+            jlong numVal = 0;
+            jstring strVal = NULL;
+
+            if (var->Name.Str && *var->Name.Str == (QSP_CHAR)'$')
+            {
+                isString = JNI_TRUE;
+            }
+
+            if (var->ValsCount > 0)
+            {
+                QSPVariant *v = &var->Values[0];
+                if (QSP_ISSTR(v->Type))
+                {
+                    isString = JNI_TRUE;
+                    strVal = qspToJavaString(env, QSP_PSTR(v));
+                }
+                else
+                {
+                    strVal = qspToJavaString(env, qspNullString);
+                }
+
+                if (QSP_ISNUM(v->Type))
+                {
+                    numVal = (jlong)QSP_PNUM(v);
+                }
+            }
+            else
+            {
+                strVal = qspToJavaString(env, qspNullString);
+            }
+
+            jobject itemObj = (*env)->NewObject(env, qspVarItemClass, constructor, name, isString, numVal, strVal, (jint)var->ValsCount);
+            (*env)->SetObjectArrayElement(env, res, index++, itemObj);
+
+            (*env)->DeleteLocalRef(env, itemObj);
+            (*env)->DeleteLocalRef(env, name);
+            (*env)->DeleteLocalRef(env, strVal);
+        }
+    }
+    return res;
+}
 /* Get string value of the specified array item */
 JNIEXPORT jstring JNICALL Java_com_libqsp_jni_QSPLib_getStrVarValue(JNIEnv *env, jobject api, jstring name, jint ind)
 {
@@ -539,6 +617,9 @@ JNIEXPORT void JNICALL Java_com_libqsp_jni_QSPLib_init(JNIEnv *env, jobject api)
     clazz = (*env)->FindClass(env, "com/libqsp/jni/QSPLib$ListItem");
     qspListItemClass = (jclass)(*env)->NewGlobalRef(env, clazz);
 
+    clazz = (*env)->FindClass(env, "com/libqsp/jni/QSPLib$VarItem");
+    qspVarItemClass = (jclass)(*env)->NewGlobalRef(env, clazz);
+
     clazz = (*env)->FindClass(env, "com/libqsp/jni/QSPLib$ExecutionState");
     qspExecutionStateClass = (jclass)(*env)->NewGlobalRef(env, clazz);
 
@@ -575,6 +656,7 @@ JNIEXPORT void JNICALL Java_com_libqsp_jni_QSPLib_terminate(JNIEnv *env, jobject
     (*env)->DeleteGlobalRef(env, qspApiObject);
     (*env)->DeleteGlobalRef(env, qspApiClass);
     (*env)->DeleteGlobalRef(env, qspListItemClass);
+    (*env)->DeleteGlobalRef(env, qspVarItemClass);
     (*env)->DeleteGlobalRef(env, qspExecutionStateClass);
     (*env)->DeleteGlobalRef(env, qspErrorInfoClass);
 }

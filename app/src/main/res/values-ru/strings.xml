@@ -1,162 +1,251 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Use in dialog/toast/notification -->
-    <!-- Notification channel -->
-        <string name="channelInstallGame">Распаковка игры</string>
-    <!-- Install notification -->
-        <string name="titleNotify">Установка игры</string>
-    <!-- Unpack notification -->
-        <string name="titleUnpackDoneNotify">Игра распакована!</string>
-        <string name="bodyUnpackDoneNotify">Фух! Я наконец-таки распаковала игру -GAMENAME-!</string>
-    <!-- Dialog LoadGamePopup -->
-        <string name="loadGamePopup">Файл сохранения не был найден в gameDir. Хотите ли вы вручную указать путь к файлу сохранения?</string>
-    <!-- Dialog Close -->
-        <string name="promptCloseGame">Вы уверены, что хотите закрыть игру?</string>
-    <!-- Dialog Select -->
-        <string name="selectGameFile">Выберите файл игры для запуска</string>
-    <!-- Dialog Edit -->
-        <string name="selectPathFile">Выберите патч-файл в формате .qsp</string>
-        <string name="selectModFile">Выберите файл мода в формате .qsp</string>
-        <string name="editButton">Изменить игру</string>
-        <string name="downloadButton">Скачать игру</string>
-    <!-- Dialog Error -->
-        <string name="error">Ошибка</string>
-        <string name="interFolderError">Ошибка чтения внутренней папки приложения</string>
-        <string name="gamesFolderError">Ошибка чтения папки с игрой</string>
-        <string name="gameFolderEmpty">Я не нашла в папке с игрой файла в формате .qsp или .gam!</string>
-        <string name="infoFileNotWritable">Ошибка чтения файла с информацией об игре</string>
-        <string name="infoFileWriteError">Ошибка записи информации об игре в файл</string>
-        <string name="installError">Я не могу скопировать папку с игрой -GAMENAME-!</string>
-        <string name="waitingError">Во время ожидания произошла ошибка</string>
-        <string name="waitingInputError">Я не смогла дождаться ввода</string>
-        <string name="noGameFilesError">Я не нашла файлы игры после копирования!</string>
-        <string name="notFoundSound">Звуковой файл не найден:</string>
-        <string name="notFoundImage">Файл изображения не найден:</string>
-        <string name="notFoundFile">Файл не найден:</string>
-        <string name="notReadFile">Не могу прочитать файл:</string>
-    <!-- Dialog Install -->
-        <string name="gameName">Название игры</string>
-        <string name="gameAuthor">Автор</string>
-        <string name="gameVersion">Версия</string>
-        <string name="btnAddGame">Добавить игру</string>
-        <string name="calcSizeDir">Рассчитать размер папки</string>
-        <string name="selectFolder">Выберите папку с файлом</string>
-        <string name="selectIcon">Выберите иконку</string>
-        <string name="add">Скопировать в корневую папку</string>
-    <!-- Dialog GameInfo -->
-        <string name="author">Автор: -AUTHOR-</string>
-        <string name="ported_by">Портировал: -PORTED_BY-</string>
-        <string name="version">Версия: -VERSION-</string>
-        <string name="fileSize">Размер: -SIZE-</string>
-        <string name="fileType">Тип файла: -TYPE-</string>
-        <string name="experimental">(экспериментально)</string>
-        <string name="mod_data">Изменено: -MOD_DATA-</string>
-        <string name="pub_data">Опубликовано: -PUB_DATA-</string>
-        <string name="close">Закрыть</string>
-        <string name="play">Играть</string>
-    <!-- Use in activity/fragment -->
-    <!-- QTopia -->
-        <string name="appName">Questopia</string>
-    <!-- SettingsFragment -->
-        <string name="settingsEffect">Настройки вступят в силу после изменения описания к игре</string>
-        <string name="addFolder">Выбрать папку с игрой</string>
-        <string name="addFolderSum0">Текущий корневой каталог это внутренняя директория приложения</string>
-        <string name="addFolderSum1">Текущий корневая директория это внешняя директория устройства</string>
-    <!-- FragmentImageBox -->
-        <string name="image">Изображение</string>
-    <!-- StockViewPagerFragment -->
-        <string name="tabZeroName">Установленные игры</string>
-        <string name="tabOneName">Репозиторий игр</string>
-    <!-- Use in menu -->
-    <!-- Menu game -->
-        <!-- Group running -->
-        <string name="mainDescTitle">Описание</string>
-        <string name="mainDescContDesc">Перейти к основному описанию</string>
-        <string name="varsDescTitle">Доп. описание</string>
-        <string name="varsDescContDesc">Перейти к дополнительному описанию</string>
-        <string name="inventoryTitle">Инвентарь</string>
-        <string name="inventoryContDesc">Перейти к инвентарю</string>
-        <string name="userInputTitle">Пользовательский ввод</string>
-        <string name="restartGameTitle">Начать заново</string>
-        <string name="loadTitle">Загрузить</string>
-        <string name="saveTitle">Сохранить</string>
-        <!-- Group default -->
-        <string name="gameStockTitle">Полка игр</string>
-        <string name="search">Поиск</string>
-        <string name="settingsTitle">Настройки</string>
-    <!-- Menu delete -->
-        <string name="selectAllTitle">Выбрать всё</string>
-        <string name="deleteGameTitle">Удалить игру</string>
-    <!-- Menu settings fragment -->
-        <!-- General section -->
-        <string name="generalCatTitle">Основное</string>
-        <string name="langTitle">Язык приложения</string>
-        <string name="binPrefTitle">Двоичные префиксы</string>
-        <string name="actsHeightTitle">Высота списка действий</string>
-        <string name="separatorTitle">Видимость разделителя</string>
-        <string name="separatorSum">Между списком действий и основным описанием</string>
-        <string name="immersiveModeTitle">Режим погружения</string>
-        <string name="autoscrollTitle">Автопролистывание</string>
-        <string name="musicDebugSum">Диалог, сообщающий об ошибке, если путь к звуку неправильный</string>
-        <!-- Text section -->
-        <string name="textCatTitle">Текст</string>
-        <string name="fontStyleTitle">Стиль шрифта</string>
-        <string name="fontSizeTitle">Размер шрифта</string>
-        <string name="useGameFontTitle">Шрифт из игры</string>
-        <string name="useGameFontSum">Использовать настройки шрифта из игры</string>
-        <string name="useGameTextColorTitle">Цвет текста</string>
-        <string name="useGameTextColorSum">Использовать настройки цвета текста из игры</string>
-        <string name="textColorTitle">Укажите цвет текста</string>
-        <string name="useGameBackgroundColorTitle">Цвет фона</string>
-        <string name="useGameBackgroundColorSum">Использовать настройки цвета фона из игры</string>
-        <string name="backColorTitle">Укажите цвет фона</string>
-        <string name="useGameLinkColorTitle">Цвет ссылок</string>
-        <string name="useGameLinkColorSum">Использовать настройки цвета ссылок из игры</string>
-        <string name="linkColorTitle">Укажите цвет ссылок</string>
-        <string name="textBackLinkColorSum">Значение по умолчанию -VALUE-</string>
-        <string name="execStringTitle">Командная строка QSP</string>
-        <string name="execStringSum">Диалог, используемый для отладки или читерства</string>
-        <!-- Image section -->
-        <string name="imageCatTitle">Картинки</string>
-        <string name="pref_disable_image">Отключить картинки</string>
-        <string name="autoWidthTitle">Ширина изображения</string>
-        <string name="autoWidthSum">Автоматическая ширина изображения</string>
-        <string name="customWidthTitle">Укажите ширину изображения</string>
-        <string name="autoHeightTitle">Высота изображения</string>
-        <string name="autoHeightSum">Автоматическая высота изображения</string>
-        <string name="customHeightTitle">Укажите высоту изображения</string>
-        <string name="permImgDialogTitle">Все картинки в диалоге</string>
-        <string name="fullScreenImageSum">Нажатие на картинку в основном описании открывает её в диалоге</string>
-        <string name="imageDebugTitle">Отладчик путей к картинкам</string>
-        <string name="imageDebugSum">Диалог, сообщающий об ошибке, если путь к картинке неправильный</string>
-        <!-- Sound section -->
-        <string name="soundCatTitle">Звук</string>
-        <string name="pref_audio_play">Воспроизводить звук в игре</string>
-        <string name="pref_mute_video">Отключение звука видео в игре</string>
-        <string name="pref_audio_debug">Отладчик путей к звукам</string>
-        <!-- Switch section -->
-        <string name="filePicker">Диалог Выбора Файла (альфа)</string>
-        <!-- Extra section -->
-        <string name="aboutTitle">О программе</string>
-    <!-- Menu save and load -->
-        <string name="selectSlot">Выберите слот</string>
-        <string name="slotPresent" formatted="false">Слот %d - %s</string>
-        <string name="slotEmpty">Слот %d [Пусто]</string>
-        <string name="loadFrom">Из файла…</string>
-        <string name="saveTo">В файл…</string>
-    <!-- Menu news -->
-        <string name="newsMenuTitle">Новости Questopia</string>
+    <!-- Application -->
+    <string name="appName">Questopia</string>
+    <string name="extendedName" translatable="false">Questopia -VERSION-</string>
+
+    <!-- Navigation & Tabs -->
+    <string name="nav_home">Главная</string>
+    <string name="tabZeroName">Игры</string>
+    <string name="tabOneName">Репозиторий игр</string>
+    <string name="search">Поиск</string>
+    <string name="settingsTitle">Настройки</string>
+    <string name="gameStockTitle">Полка игр</string>
+
+    <!-- Common Actions & Buttons -->
+    <string name="btnAddGame">Добавить игру</string>
+    <string name="deleteGameTitle">Удалить игру</string>
+    <string name="selectAllTitle">Выбрать всё</string>
+    <string name="editButton">Изменить игру</string>
+    <string name="downloadButton">Скачать игру</string>
+    <string name="play">Играть</string>
+    <string name="close">Закрыть</string>
+    <string name="cancel">Отмена</string>
+    <string name="ok">ОК</string>
+    <string name="yes">Да</string>
+    <string name="no">Нет</string>
+    <string name="add">Скопировать в корневую папку</string>
+    <string name="selectColor">Выберите цвет</string>
+    <string name="selectFolder">Выберите папку с файлом</string>
+    <string name="selectIcon">Выберите иконку</string>
+    <string name="selectGameFile">Выберите файл игры для запуска</string>
+    <string name="selectPathFile">Выберите патч-файл в формате .qsp</string>
+    <string name="selectModFile">Выберите файл мода в формате .qsp</string>
+
+    <!-- Prompts & Dialogs -->
+    <string name="promptExitApp">Вы хотите выйти из приложения?</string>
+    <string name="promptCloseGame">Вы уверены, что хотите закрыть игру?</string>
+    <string name="deleteConfirmPrompt">Вы уверены, что хотите удалить эту игру?</string>
+    <string name="loadGamePopup">Файл сохранения не был найден в gameDir. Хотите ли вы вручную указать путь к файлу сохранения?</string>
+    <string name="emptyGamesTitle">Нет установленных игр</string>
+    <string name="emptyGamesDesc">Используйте кнопку \'+\' или вкладку \'Репозиторий игр\' для добавления игр</string>
+    <string name="emptyInventory">Инвентарь пуст</string>
+    <string name="gameMenuTitle">Меню игры</string>
+    <string name="selectActionTitle">Выберите действие</string>
+    <string name="playGameAction">Запустить игру</string>
+    <string name="editGameAction">Редактировать информацию</string>
+    <string name="deleteGameAction">Удалить игру и файлы</string>
+    <string name="searchGamesPlaceholder">Поиск игр…</string>
+    <string name="refreshRepositoryPrompt">Обновите, чтобы загрузить игры из репозитория</string>
+
+    <!-- Notifications -->
+    <string name="channelInstallGame">Распаковка игры</string>
+    <string name="titleNotify">Установка игры</string>
+    <string name="titleUnpackDoneNotify">Игра распакована!</string>
+    <string name="bodyUnpackDoneNotify">Фух! Я наконец-таки распаковала игру -GAMENAME-!</string>
+
+    <!-- Errors -->
+    <string name="error">Ошибка</string>
+    <string name="interFolderError">Ошибка чтения внутренней папки приложения</string>
+    <string name="gamesFolderError">Ошибка чтения папки с игрой</string>
+    <string name="gameFolderEmpty">Я не нашла в папке с игрой файла в формате .qsp или .gam!</string>
+    <string name="infoFileNotWritable">Ошибка чтения файла с информацией об игре</string>
+    <string name="infoFileWriteError">Ошибка записи информации об игре в файл</string>
+    <string name="installError">Я не могу скопировать папку с игрой -GAMENAME-!</string>
+    <string name="waitingError">Во время ожидания произошла ошибка</string>
+    <string name="waitingInputError">Я не смогла дождаться ввода</string>
+    <string name="noGameFilesError">Я не нашла файлы игры после копирования!</string>
+    <string name="notFoundSound">Звуковой файл не найден:</string>
+    <string name="notFoundImage">Файл изображения не найден:</string>
+    <string name="notFoundFile">Файл не найден:</string>
+    <string name="notReadFile">Не могу прочитать файл:</string>
+
+    <!-- Game Information / Metadata -->
+    <string name="gameName">Название игры</string>
+    <string name="gameAuthor">Автор</string>
+    <string name="gameVersion">Версия</string>
+    <string name="calcSizeDir">Рассчитать размер папки</string>
+    <string name="author">Автор: -AUTHOR-</string>
+    <string name="ported_by">Портировал: -PORTED_BY-</string>
+    <string name="version">Версия: -VERSION-</string>
+    <string name="fileSize">Размер: -SIZE-</string>
+    <string name="fileType">Тип файла: -TYPE-</string>
+    <string name="experimental">(экспериментально)</string>
+    <string name="mod_data">Изменено: -MOD_DATA-</string>
+    <string name="pub_data">Опубликовано: -PUB_DATA-</string>
+    <string name="image">Изображение</string>
+
+    <!-- In-Game Menu & Controls -->
+    <string name="mainDescTitle">Игра</string>
+    <string name="mainDescContDesc">Перейти к основному описанию</string>
+    <string name="varsDescTitle">Персонаж</string>
+    <string name="varsDescContDesc">Перейти к дополнительному описанию</string>
+    <string name="inventoryTitle">Инвентарь</string>
+    <string name="inventoryContDesc">Перейти к инвентарю</string>
+    <string name="userInputTitle">Пользовательский ввод</string>
+    <string name="restartGameTitle">Начать заново</string>
+    <string name="loadTitle">Загрузить</string>
+    <string name="saveTitle">Сохранить</string>
+    <string name="selectSlot">Выберите слот</string>
+    <string name="slotPresent" formatted="false">Слот %d - %s</string>
+    <string name="slotEmpty">Слот %d [Пусто]</string>
+    <string name="loadFrom">Из файла…</string>
+    <string name="saveTo">В файл…</string>
+    <string name="newsMenuTitle">Новости Questopia</string>
+
+    <!-- Settings: Appearance & Themes -->
+    <string name="appearanceCatTitle">Внешний вид и язык</string>
+    <string name="appThemeTitle">Тема</string>
+    <string name="themeColorTitle">Цветовой акцент</string>
+    <string name="themeModeSystem">Системная</string>
+    <string name="themeModeLight">Светлая</string>
+    <string name="themeModeDark">Тёмная</string>
+    <string name="themeModeAmoled">AMOLED Чёрный</string>
+    <string name="themeColorDynamic">Динамический</string>
+    <string name="themeColorBlue">Синий</string>
+    <string name="themeColorGreen">Зеленый</string>
+    <string name="themeColorOrange">Оранжевый</string>
+    <string name="themeColorPurple">Фиолетовый</string>
+    <string name="themeColorPink">Розовый</string>
+    <string name="themeColorTeal">Бирюзовый</string>
+    <string name="themeColorAmber">Желтый</string>
+    <string name="themeColorMonochrome">Монохромный</string>
+    <string name="versionInfoTitle">Информация о версии</string>
+    <string name="searchSettingsPlaceholder">Поиск в настройках…</string>
+    <string name="noSearchResults">Результатов не найдено для «%1$s»</string>
+
+    <!-- Settings: General -->
+    <string name="generalCatTitle">Основное</string>
+    <string name="langTitle">Язык</string>
+    <string name="binPrefTitle">Двоичные префиксы</string>
+    <string name="actsHeightTitle">Высота списка действий</string>
+    <string name="separatorTitle">Видимость разделителя</string>
+    <string name="separatorSum">Между списком действий и основным описанием</string>
+    <string name="immersiveModeTitle">Режим погружения</string>
+    <string name="immersiveModeSum">Скрыть системные панели и строку состояния</string>
+    <string name="autoscrollTitle">Автопролистывание</string>
+    <string name="autoscrollSum">Автоматически прокручивать вниз при новом тексте</string>
+    <string name="musicDebugSum">Диалог, сообщающий об ошибке, если путь к звуку неправильный</string>
+    <string name="settingsEffect">Настройки вступят в силу после изменения описания к игре</string>
+    <string name="addFolder">Выбрать папку с игрой</string>
+    <string name="addFolderSum0">Текущий корневой каталог это внутренняя директория приложения</string>
+    <string name="addFolderSum1">Текущий корневая директория это внешняя директория устройства</string>
+
+    <!-- Settings: Text -->
+    <string name="textCatTitle">Шрифт и текст</string>
+    <string name="fontStyleTitle">Стиль шрифта</string>
+    <string name="fontSizeTitle">Размер шрифта</string>
+    <string name="useGameFontTitle">Шрифт из игры</string>
+    <string name="useGameFontSum">Использовать настройки шрифта из игры</string>
+    <string name="useGameTextColorTitle">Цвет текста</string>
+    <string name="useGameTextColorSum">Использовать настройки цвета текста из игры</string>
+    <string name="textColorTitle">Пользовательский цвет текста</string>
+    <string name="textColorSum">Палитра цвета текста</string>
+    <string name="useGameBackgroundColorTitle">Цвет фона</string>
+    <string name="useGameBackgroundColorSum">Использовать настройки цвета фона из игры</string>
+    <string name="backColorTitle">Укажите цвет фона</string>
+    <string name="useGameLinkColorTitle">Цвет ссылок</string>
+    <string name="useGameLinkColorSum">Использовать настройки цвета ссылок из игры</string>
+    <string name="linkColorTitle">Укажите цвет ссылок</string>
+    <string name="textBackLinkColorSum">Значение по умолчанию: -VALUE-</string>
+    <string name="execStringTitle">Командная строка QSP</string>
+    <string name="execStringSum">Диалог, используемый для отладки или читерства</string>
+    <string name="cheatModesTitle">Режимы читов</string>
+    <string name="cheatModesSummary">Включает редактор переменных, заморозку статов и читы в игровом меню</string>
+    <string name="saveEditorTitle">Редактор сохранений и переменных</string>
+    <string name="saveEditorSummary">Просмотр и изменение переменных игры, сохранение и загрузка</string>
+
+    <!-- Settings: Images -->
+    <string name="imageCatTitle">Изображения и графика</string>
+    <string name="pref_disable_image">Отключить картинки</string>
+    <string name="disableImageSum">Скрыть и не загружать изображения в игре</string>
+    <string name="autoWidthTitle">Ширина изображения</string>
+    <string name="autoWidthSum">Автоматическая ширина изображения</string>
+    <string name="customWidthTitle">Укажите ширину изображения</string>
+    <string name="autoHeightTitle">Высота изображения</string>
+    <string name="autoHeightSum">Автоматическая высота изображения</string>
+    <string name="customHeightTitle">Укажите высоту изображения</string>
+    <string name="permImgDialogTitle">Все картинки в диалоге</string>
+    <string name="fullScreenImageSum">Нажатие на картинку в основном описании открывает её в диалоге</string>
+    <string name="imageDebugTitle">Отладчик путей к картинкам</string>
+    <string name="imageDebugSum">Диалог, сообщающий об ошибке, если путь к картинке неправильный</string>
+
+    <!-- Settings: Sound -->
+    <string name="soundCatTitle">Звук и воспроизведение</string>
+    <string name="pref_audio_play">Воспроизводить звук в игре</string>
+    <string name="playAudioSum">Воспроизводить звуковые эффекты и музыку</string>
+    <string name="pref_mute_video">Отключение звука видео в игре</string>
+    <string name="muteVideoSum">Отключать звук при воспроизведении видео</string>
+    <string name="pref_audio_debug">Отладчик путей к звукам</string>
+    <string name="filePicker">Диалог Выбора Файла</string>
+    <string name="aboutCatTitle">О программе и сборке</string>
+    <string name="aboutTitle">О программе</string>
+    <string name="aboutSum">Информация о приложении Questopia и лицензии</string>
+
+    <!-- Arrays -->
+    <string-array name="fontName">
+        <item>По умолчанию</item>
+        <item>Sans-Serif</item>
+        <item>Serif</item>
+        <item>Monospace</item>
+        <item>Google Sans / Medium</item>
+        <item>Sans-Serif Полужирный</item>
+        <item>Курсив</item>
+        <item>Sans-Serif Тонкий</item>
+        <item>Sans-Serif Сжатый</item>
+    </string-array>
+    <string-array name="fontValue">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+    </string-array>
+    <string-array name="fontSize">
+        <item>12</item>
+        <item>14</item>
+        <item>16</item>
+        <item>18</item>
+        <item>20</item>
+        <item>22</item>
+    </string-array>
+    <string-array name="langName">
+        <item>English</item>
+        <item>Русский</item>
+        <item>Türkçe</item>
+    </string-array>
+    <string-array name="langValue">
+        <item>en</item>
+        <item>ru</item>
+        <item>tr</item>
+    </string-array>
+    <string-array name="binPrefName">
+        <item>B/KB/MB/GB/TB</item>
+        <item>B/KiB/MiB/GiB/TiB</item>
+    </string-array>
+    <string-array name="binPrefValue">
+        <item>1000</item>
+        <item>1024</item>
+    </string-array>
+    <string-array name="actsHeight">
+        <item>1/5</item>
+        <item>1/4</item>
+        <item>1/3</item>
+        <item>1/2</item>
+        <item>2/3</item>
+    </string-array>
 </resources>
-
-
-
-
-
-
-
-
-
-
-
-
-

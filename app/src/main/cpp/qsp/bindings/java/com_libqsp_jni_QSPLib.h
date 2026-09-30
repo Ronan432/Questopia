@@ -177,6 +177,22 @@ JNIEXPORT jboolean JNICALL Java_com_libqsp_jni_QSPLib_isObjsChanged
 
 /*
  * Class:     com_libqsp_jni_QSPLib
+ * Method:    getAllVariables
+ * Signature: ()[Lcom/libqsp/jni/QSPLib$VarItem;
+ */
+JNIEXPORT jobjectArray JNICALL Java_com_libqsp_jni_QSPLib_getAllVariables
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     com_libqsp_jni_QSPLib
+ * Method:    getAllLocations
+ * Signature: ()[Ljava/lang/String;
+ */
+JNIEXPORT jobjectArray JNICALL Java_com_libqsp_jni_QSPLib_getAllLocations
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     com_libqsp_jni_QSPLib
  * Method:    showWindow
  * Signature: (IZ)V
  */

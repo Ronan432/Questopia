@@ -45,3 +45,12 @@ Thumbs.db
 obj/
 *.patch
 app/src/main/libs/
+build.py
+.kotlin/
+.artifacts/
+build-windows-qsp/
+target/
+native-rust/target/
+
+
+

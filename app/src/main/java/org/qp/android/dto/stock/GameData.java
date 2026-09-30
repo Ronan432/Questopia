@@ -40,7 +40,13 @@ public class GameData implements Serializable {
         title = other.title;
         lang = other.lang;
         player = other.player;
-        iconUrl = other.icon;
+        if (other.icon != null && !other.icon.trim().isEmpty()) {
+            iconUrl = Uri.parse(other.icon.trim());
+        } else if (other.image != null && !other.image.trim().isEmpty()) {
+            iconUrl = Uri.parse(other.image.trim());
+        } else {
+            iconUrl = Uri.EMPTY;
+        }
         fileUrl = other.fileUrl;
         fileSize = other.fileSize;
         fileExt = other.fileExt;

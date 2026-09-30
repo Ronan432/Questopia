@@ -23,10 +23,14 @@ public final class ViewUtil {
         } else if (Typeface.SERIF.equals(typeface)) {
             return "serif";
         } else if (Typeface.MONOSPACE.equals(typeface)) {
-            return "courier";
-        } else if (Typeface.DEFAULT.equals(typeface)) {
-            return "default";
+            return "monospace";
+        } else if (Typeface.create("sans-serif-medium", Typeface.NORMAL).equals(typeface)) {
+            return "sans-serif-medium";
+        } else if (Typeface.create("sans-serif", Typeface.BOLD).equals(typeface)) {
+            return "sans-serif-bold";
+        } else if (Typeface.create("cursive", Typeface.NORMAL).equals(typeface)) {
+            return "cursive";
         }
-        return "default";
+        return "sans-serif";
     }
 }

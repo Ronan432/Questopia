@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Application -->
+    <string name="appName">Questopia</string>
+    <string name="extendedName" translatable="false">Questopia -VERSION-</string>
+
+    <!-- Navigation & Tabs -->
+    <string name="nav_home">Ana Sayfa</string>
+    <string name="tabZeroName">Oyunlar</string>
+    <string name="tabOneName">Oyun Deposu</string>
+    <string name="search">Ara</string>
+    <string name="settingsTitle">Ayarlar</string>
+    <string name="gameStockTitle">Oyun Kütüphanesi</string>
+
+    <!-- Common Actions & Buttons -->
+    <string name="btnAddGame">Oyun Ekle</string>
+    <string name="deleteGameTitle">Oyunu Sil</string>
+    <string name="selectAllTitle">Tümünü Seç</string>
+    <string name="editButton">Oyunu Düzenle</string>
+    <string name="downloadButton">Oyunu İndir</string>
+    <string name="play">Oyna</string>
+    <string name="close">Kapat</string>
+    <string name="cancel">İptal</string>
+    <string name="ok">Tamam</string>
+    <string name="yes">Evet</string>
+    <string name="no">Hayır</string>
+    <string name="add">Kök klasöre kopyala</string>
+    <string name="selectColor">Renk Seçin</string>
+    <string name="selectFolder">Dosyayı içeren klasörü seçin</string>
+    <string name="selectIcon">Simge Seçin</string>
+    <string name="selectGameFile">Başlatılacak oyun dosyasını seçin</string>
+    <string name="selectPathFile">.qsp formatında yama dosyasını seçin</string>
+    <string name="selectModFile">.qsp formatında mod dosyasını seçin</string>
+
+    <!-- Prompts & Dialogs -->
+    <string name="promptExitApp">Uygulamadan çıkmak istiyor musunuz?</string>
+    <string name="promptCloseGame">Oyunu kapatmak istediğinizden emin misiniz?</string>
+    <string name="deleteConfirmPrompt">Bu oyunu silmek istediğinizden emin misiniz?</string>
+    <string name="loadGamePopup">Kayıt dosyası oyun klasöründe bulunamadı. Dosya yolunu elle belirtmek ister misiniz?</string>
+    <string name="emptyGamesTitle">Henüz yüklü oyun bulunmuyor</string>
+    <string name="emptyGamesDesc">Yeni oyun eklemek için \'+\' butonunu veya Oyun Deposu sekmesini kullanın</string>
+    <string name="emptyInventory">Envanter boş</string>
+    <string name="gameMenuTitle">Oyun Menüsü</string>
+    <string name="selectActionTitle">Seçim Yapın</string>
+    <string name="playGameAction">Oyunu başlat</string>
+    <string name="editGameAction">Oyun bilgilerini düzenle</string>
+    <string name="deleteGameAction">Oyunu ve dosyalarını kaldır</string>
+    <string name="searchGamesPlaceholder">Oyunlarda ara…</string>
+    <string name="refreshRepositoryPrompt">Depodan oyun listesini yüklemek için yenileyin</string>
+
+    <!-- Notifications -->
+    <string name="channelInstallGame">Oyun çıkarma</string>
+    <string name="titleNotify">Oyun Kurulumu</string>
+    <string name="titleUnpackDoneNotify">Oyun çıkartıldı!</string>
+    <string name="bodyUnpackDoneNotify">-GAMENAME- oyunu başarıyla çıkartıldı!</string>
+
+    <!-- Errors -->
+    <string name="error">Hata</string>
+    <string name="interFolderError">Uygulama dahili klasörü okunurken hata oluştu</string>
+    <string name="gamesFolderError">Oyun klasörü okunurken hata oluştu</string>
+    <string name="gameFolderEmpty">Oyun klasöründe .qsp veya .gam formatında dosya bulunamadı!</string>
+    <string name="infoFileNotWritable">Oyun bilgi dosyası okunamıyor</string>
+    <string name="infoFileWriteError">Oyun bilgisi dosyaya yazılamadı</string>
+    <string name="installError">-GAMENAME- oyun klasörü kopyalanamıyor!</string>
+    <string name="waitingError">Bekleme sırasında bir hata oluştu</string>
+    <string name="waitingInputError">Kullanıcı girdisi alınamadı</string>
+    <string name="noGameFilesError">Kopyalama sonrasında oyun dosyaları bulunamadı!</string>
+    <string name="notFoundSound">Ses dosyası bulunamadı:</string>
+    <string name="notFoundImage">Görsel dosyası bulunamadı:</string>
+    <string name="notFoundFile">Dosya bulunamadı:</string>
+    <string name="notReadFile">Dosya okunamıyor:</string>
+
+    <!-- Game Information / Metadata -->
+    <string name="gameName">Oyun Adı</string>
+    <string name="gameAuthor">Yazar</string>
+    <string name="gameVersion">Sürüm</string>
+    <string name="calcSizeDir">Klasör boyutunu hesapla</string>
+    <string name="author">Yazar: -AUTHOR-</string>
+    <string name="ported_by">Port eden: -PORTED_BY-</string>
+    <string name="version">Sürüm: -VERSION-</string>
+    <string name="fileSize">Boyut: -SIZE-</string>
+    <string name="fileType">Dosya Türü: -TYPE-</string>
+    <string name="experimental">(deneysel)</string>
+    <string name="mod_data">Düzenlenme: -MOD_DATA-</string>
+    <string name="pub_data">Yayınlanma: -PUB_DATA-</string>
+    <string name="image">Görsel</string>
+
+    <!-- In-Game Menu & Controls -->
+    <string name="mainDescTitle">Oyun</string>
+    <string name="mainDescContDesc">Ana açıklamaya git</string>
+    <string name="varsDescTitle">Karakter</string>
+    <string name="varsDescContDesc">Ek açıklamaya git</string>
+    <string name="inventoryTitle">Envanter</string>
+    <string name="inventoryContDesc">Envantere git</string>
+    <string name="userInputTitle">Kullanıcı Girdisi</string>
+    <string name="restartGameTitle">Oyunu Yeniden Başlat</string>
+    <string name="loadTitle">Yükle</string>
+    <string name="saveTitle">Kaydet</string>
+    <string name="selectSlot">Kayıt yuvası seçin</string>
+    <string name="slotPresent" formatted="false">Yuva %d - %s</string>
+    <string name="slotEmpty">Yuva %d [Boş]</string>
+    <string name="loadFrom">Dosyadan Yükle…</string>
+    <string name="saveTo">Dosyaya Kaydet…</string>
+    <string name="newsMenuTitle">Yenilikler</string>
+
+    <!-- Settings: Appearance & Themes -->
+    <string name="appearanceCatTitle">Görünüm ve Dil</string>
+    <string name="appThemeTitle">Tema</string>
+    <string name="themeColorTitle">Vurgu Rengi</string>
+    <string name="themeModeSystem">Sistem Varsayılanı</string>
+    <string name="themeModeLight">Aydınlık</string>
+    <string name="themeModeDark">Karanlık</string>
+    <string name="themeModeAmoled">AMOLED Siyah</string>
+    <string name="themeColorDynamic">Dinamik</string>
+    <string name="themeColorBlue">Mavi</string>
+    <string name="themeColorGreen">Yeşil</string>
+    <string name="themeColorOrange">Turuncu</string>
+    <string name="themeColorPurple">Mor</string>
+    <string name="themeColorPink">Pembe</string>
+    <string name="themeColorTeal">Turkuaz</string>
+    <string name="themeColorAmber">Sarı</string>
+    <string name="themeColorMonochrome">Monokrom</string>
+    <string name="versionInfoTitle">Sürüm Bilgisi</string>
+    <string name="searchSettingsPlaceholder">Ayarlarda ara…</string>
+    <string name="noSearchResults">\"%1$s\" için sonuç bulunamadı</string>
+
+    <!-- Settings: General -->
+    <string name="generalCatTitle">Genel</string>
+    <string name="langTitle">Dil</string>
+    <string name="binPrefTitle">İkili Ön Ekler</string>
+    <string name="actsHeightTitle">Eylem Listesi Yüksekliği</string>
+    <string name="separatorTitle">Ayırıcı Çizgi Görünürlüğü</string>
+    <string name="separatorSum">Eylem listesi ile ana açıklama arasında</string>
+    <string name="immersiveModeTitle">Tam Ekran Modu</string>
+    <string name="immersiveModeSum">Sistem ve durum çubuklarını gizle</string>
+    <string name="autoscrollTitle">Otomatik Kaydırma</string>
+    <string name="autoscrollSum">Yeni metin geldiğinde otomatik aşağı kaydır</string>
+    <string name="musicDebugSum">Ses yolu hatalıysa uyaran diyalog</string>
+    <string name="settingsEffect">Ayarlar oyun açıklaması değiştiğinde geçerli olacaktır</string>
+    <string name="addFolder">Oyun klasörünü seç</string>
+    <string name="addFolderSum0">Mevcut kök dizin: Uygulama dahili dizini</string>
+    <string name="addFolderSum1">Mevcut kök dizin: Cihaz harici dizini</string>
+
+    <!-- Settings: Text -->
+    <string name="textCatTitle">Yazı Tipi ve Metin</string>
+    <string name="fontStyleTitle">Yazı Tipi Stili</string>
+    <string name="fontSizeTitle">Yazı Boyutu</string>
+    <string name="useGameFontTitle">Oyun Yazı Tipini Kullan</string>
+    <string name="useGameFontSum">Oyunun kendi yazı tipi ayarlarını uygula</string>
+    <string name="useGameTextColorTitle">Metin Rengi</string>
+    <string name="useGameTextColorSum">Oyunun kendi metin rengini uygula</string>
+    <string name="textColorTitle">Özel Metin Rengi</string>
+    <string name="textColorSum">Özel metin rengi paleti</string>
+    <string name="useGameBackgroundColorTitle">Arka Plan Rengi</string>
+    <string name="useGameBackgroundColorSum">Oyunun kendi arka plan rengini uygula</string>
+    <string name="backColorTitle">Özel Arka Plan Rengi Belirle</string>
+    <string name="useGameLinkColorTitle">Bağlantı Rengi</string>
+    <string name="useGameLinkColorSum">Oyunun kendi bağlantı rengini uygula</string>
+    <string name="linkColorTitle">Özel Bağlantı Rengi Belirle</string>
+    <string name="textBackLinkColorSum">Varsayılan değer: -VALUE-</string>
+    <string name="execStringTitle">QSP Komut Satırı</string>
+    <string name="execStringSum">Hata ayıklama veya hile için komut istemi</string>
+    <string name="cheatModesTitle">Hile Modları</string>
+    <string name="cheatModesSummary">Oyun içi menüde değişken editörü ve hile modlarını etkinleştirir</string>
+    <string name="saveEditorTitle">Save &amp; Değişken Editörü</string>
+    <string name="saveEditorSummary">Canlı oyun değişkenlerini incele, düzenle, kaydet veya yükle</string>
+
+    <!-- Settings: Images -->
+    <string name="imageCatTitle">Görseller ve Medya</string>
+    <string name="pref_disable_image">Görselleri Devre Dışı Bırak</string>
+    <string name="disableImageSum">Oyun içi görselleri yükleme ve gizle</string>
+    <string name="autoWidthTitle">Görsel Genişliği</string>
+    <string name="autoWidthSum">Otomatik görsel genişliği</string>
+    <string name="customWidthTitle">Özel Görsel Genişliği</string>
+    <string name="autoHeightTitle">Görsel Yüksekliği</string>
+    <string name="autoHeightSum">Otomatik görsel yüksekliği</string>
+    <string name="customHeightTitle">Özel Görsel Yüksekliği</string>
+    <string name="permImgDialogTitle">Diyalogda Görsel Gösterimi</string>
+    <string name="fullScreenImageSum">Açıklamadaki görsele dokunulduğunda tam boyutlu açar</string>
+    <string name="imageDebugTitle">Görsel Hata Ayıklayıcı</string>
+    <string name="imageDebugSum">Görsel yolu bulunamadığında uyarı verir</string>
+
+    <!-- Settings: Sound -->
+    <string name="soundCatTitle">Ses ve Oynatma</string>
+    <string name="pref_audio_play">Oyundaki sesleri çal</string>
+    <string name="playAudioSum">Oyun içi ses efektleri ve müzikleri çal</string>
+    <string name="pref_mute_video">Videoları sessize al</string>
+    <string name="muteVideoSum">Video oynatılırken sesi otomatik kapat</string>
+    <string name="pref_audio_debug">Ses Hata Ayıklayıcı</string>
+    <string name="filePicker">Dosya Seçici</string>
+    <string name="aboutCatTitle">Hakkında ve Sürüm</string>
+    <string name="aboutTitle">Questopia Hakkında</string>
+    <string name="aboutSum">Questopia hakkında ve lisans bilgileri</string>
+
+    <!-- Arrays -->
+    <string-array name="fontName">
+        <item>Varsayılan</item>
+        <item>Sans-Serif</item>
+        <item>Serif</item>
+        <item>Monospace</item>
+        <item>Google Sans / Medium</item>
+        <item>Sans-Serif Kalın</item>
+        <item>El Yazısı (Cursive)</item>
+        <item>Sans-Serif İnce</item>
+        <item>Sans-Serif Dar</item>
+    </string-array>
+    <string-array name="fontValue">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+    </string-array>
+    <string-array name="fontSize">
+        <item>12</item>
+        <item>14</item>
+        <item>16</item>
+        <item>18</item>
+        <item>20</item>
+        <item>22</item>
+    </string-array>
+    <string-array name="langName">
+        <item>English</item>
+        <item>Русский</item>
+        <item>Türkçe</item>
+    </string-array>
+    <string-array name="langValue">
+        <item>en</item>
+        <item>ru</item>
+        <item>tr</item>
+    </string-array>
+    <string-array name="binPrefName">
+        <item>B/KB/MB/GB/TB</item>
+        <item>B/KiB/MiB/GiB/TiB</item>
+    </string-array>
+    <string-array name="binPrefValue">
+        <item>1000</item>
+        <item>1024</item>
+    </string-array>
+    <string-array name="actsHeight">
+        <item>1/5</item>
+        <item>1/4</item>
+        <item>1/3</item>
+        <item>1/2</item>
+        <item>2/3</item>
+    </string-array>
+</resources>

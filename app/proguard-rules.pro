@@ -19,42 +19,26 @@
 # DTO
 -keep class org.qp.android.dto.stock.** { *; }
 
-# NDK
--keep class com.libqsp.jni.** { *; }
+# Application
+-keep class org.qp.android.QuestopiaApplication { *; }
+
+# NDK & Native
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+-keep class com.libqsp.** { *; }
+-keepclassmembers class com.libqsp.** { *; }
 -keep class org.qp.android.model.lib.** { *; }
+-keepclassmembers class org.qp.android.model.lib.** { *; }
 
 -dontwarn aQute.bnd.annotation.spi.ServiceProvider
+-dontwarn org.slf4j.**
+-dontwarn io.ktor.**
 
-# PrettyTime
--keep class org.ocpsoft.prettytime.i18n.**
+# LibPickYou
+-keep class com.xayah.libpickyou.** { *; }
 
-# SevenZipJBinding
--keep class net.sf.sevenzipjbinding.** { *; }
 
-# AppDevNext
--keep class info.hannes.** { *; }
--keep class com.google.gson.reflect.TypeToken
--keep class * extends com.google.gson.reflect.TypeToken
--keep public class * implements java.lang.reflect.Type
-
-# Proguard configuration for Jackson 2.x
--keep class org.qp.android.helpers.UriMixIn
--keep class org.qp.android.helpers.UriDeserializer
--keep class org.qp.android.helpers.UriSerializer
-
--keep class * implements com.fasterxml.jackson.core.type.TypeReference
--keep class com.fasterxml.jackson.databind.ObjectMapper {
-    public <methods>;
-    protected <methods>;
-}
--keepclassmembers class * {
-    @com.fasterxml.jackson.annotation.* *;
-}
--keep class com.fasterxml.jackson.databind.ObjectWriter {
-    public ** writeValueAsString(**);
-}
--keepnames class com.fasterxml.jackson.** { *; }
--dontwarn com.fasterxml.jackson.databind.**
 
 # JSR 305 annotations are for embedding nullability information.
 -dontwarn javax.annotation.**

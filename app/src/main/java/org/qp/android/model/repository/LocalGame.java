@@ -180,11 +180,11 @@ public class LocalGame {
             });
         }
 
-        if (!Objects.equals(data.gameDirUri.getPath(), rootDir.getUri().getPath())) {
+        if (data.gameDirUri == null || !Objects.equals(data.gameDirUri.getPath(), rootDir.getUri().getPath())) {
             data.gameDirUri = rootDir.getUri();
         }
 
-        if (!Objects.deepEquals(data.gameFilesUri, gameFiles)) {
+        if (data.gameFilesUri == null || !Objects.deepEquals(data.gameFilesUri, gameFiles)) {
             data.gameFilesUri = gameFiles;
         }
 
@@ -248,7 +248,7 @@ public class LocalGame {
     }
 
     public List<GameData> lightExtractDataFromList(List<DocumentFile> fileList) throws IOException {
-        if (fileList.isEmpty()) {
+        if (fileList == null || fileList.isEmpty()) {
             return Collections.emptyList();
         }
 
@@ -257,23 +257,55 @@ public class LocalGame {
 
         synchronized (itemsGamesDirs) {
             for (var data : unpackFileList) {
-                if (!isWritableDir(context, data)) {
+                if (data == null || !data.exists()) {
+                    Log.w("QUESTLOGTEST", "Folder does not exist or is null");
                     continue;
                 }
+                Log.d("QUESTLOGTEST", "Scanning folder: " + data.getName() + " (URI: " + data.getUri() + ")");
                 var item = (GameData) null;
                 var infoFile = fromRelPath(context, GAME_INFO_FILENAME, data);
-                if (isWritableFile(context, infoFile)) {
+                if (infoFile == null || !infoFile.exists()) {
+                    infoFile = data.findFile(GAME_INFO_FILENAME);
+                }
+                if (infoFile != null && infoFile.exists()) {
                     var infoFileCont = readFileAsString(context, infoFile.getUri());
                     if (isNotEmptyOrBlank(infoFileCont)) {
                         try {
                             item = parseGameInfo(infoFileCont);
-                        } catch (IOException e) {
-                            continue;
+                            Log.d("QUESTLOGTEST", "Parsed .gameInfo for: " + (item != null ? item.title : "null"));
+                        } catch (Exception e) {
+                            Log.e("QUESTLOGTEST", "Failed to parse .gameInfo: " + e.getMessage());
                         }
                     }
-                    if (item != null) {
-                        itemsGamesDirs.add(item);
+                }
+
+                // Fallback: If no valid .gameInfo was parsed, scan executable files directly!
+                if (item == null) {
+                    Log.d("QUESTLOGTEST", "No .gameInfo found or parse failed; scanning executable files in " + data.getName());
+                    var files = data.listFiles();
+                    var qspFiles = new ArrayList<Uri>();
+                    long totalSize = 0L;
+                    for (var f : files) {
+                        var name = f.getName() != null ? f.getName().toLowerCase(Locale.ROOT) : "";
+                        if (name.endsWith(".qsp") || name.endsWith(".gam") || name.endsWith(".qsps") || name.endsWith(".aqsp")) {
+                            qspFiles.add(f.getUri());
+                            Log.d("QUESTLOGTEST", "Found game file in folder: " + f.getName());
+                        }
+                        totalSize += f.length();
                     }
+                    if (!qspFiles.isEmpty()) {
+                        item = new GameData();
+                        item.id = (long) data.getUri().hashCode();
+                        item.title = data.getName() != null ? data.getName() : "Untitled";
+                        item.gameDirUri = data.getUri();
+                        item.gameFilesUri = qspFiles;
+                        item.fileSize = totalSize > 0 ? totalSize : -1L;
+                        Log.i("QUESTLOGTEST", "Constructed fallback GameData: " + item.title + " with " + qspFiles.size() + " files");
+                    }
+                }
+
+                if (item != null) {
+                    itemsGamesDirs.add(item);
                 }
             }
         }

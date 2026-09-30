@@ -27,10 +27,14 @@ public class SettingsController {
     public boolean isUseGameFont;
     public boolean isUseAutoscroll;
     public boolean isUseExecString;
+    public boolean isCheatsEnabled;
     public boolean isUseImmersiveMode;
     public boolean isUseGameTextColor;
+    public boolean hasCustomTextColor;
     public boolean isUseGameBackgroundColor;
+    public boolean hasCustomBackColor;
     public boolean isUseGameLinkColor;
+    public boolean hasCustomLinkColor;
     public boolean isUseFullscreenImages;
     public boolean isUseImageDebug;
     public boolean isUseMusicDebug;
@@ -56,6 +60,7 @@ public class SettingsController {
         settingsController.actionsHeightRatio = parseActionsHeightRatio(preferences.getString("actsHeight", "1/3"));
         settingsController.isUseAutoscroll = preferences.getBoolean("autoscroll", true);
         settingsController.isUseExecString = preferences.getBoolean("execString", false);
+        settingsController.isCheatsEnabled = preferences.getBoolean("enableCheats", false);
         settingsController.isUseSeparator = preferences.getBoolean("separator", false);
         settingsController.isUseGameFont = preferences.getBoolean("useGameFont", false);
         settingsController.isUseImmersiveMode = preferences.getBoolean("immersiveMode", true);
@@ -69,10 +74,13 @@ public class SettingsController {
     private static void colorSettings(@NonNull SettingsController settingsController,
                                       @NonNull SharedPreferences preferences) {
         settingsController.isUseGameTextColor = preferences.getBoolean("useGameTextColor", true);
+        settingsController.hasCustomTextColor = preferences.contains("textColor");
         settingsController.textColor = preferences.getInt("textColor", Color.parseColor("#000000"));
         settingsController.isUseGameBackgroundColor = preferences.getBoolean("useGameBackgroundColor", true);
+        settingsController.hasCustomBackColor = preferences.contains("backColor");
         settingsController.backColor = preferences.getInt("backColor", Color.parseColor("#e0e0e0"));
         settingsController.isUseGameLinkColor = preferences.getBoolean("useGameLinkColor", true);
+        settingsController.hasCustomLinkColor = preferences.contains("linkColor");
         settingsController.linkColor = preferences.getInt("linkColor", Color.parseColor("#0000ff"));
     }
 
@@ -110,6 +118,11 @@ public class SettingsController {
             case 1 -> Typeface.SANS_SERIF;
             case 2 -> Typeface.SERIF;
             case 3 -> Typeface.MONOSPACE;
+            case 4 -> Typeface.create("sans-serif-medium", Typeface.NORMAL);
+            case 5 -> Typeface.create("sans-serif", Typeface.BOLD);
+            case 6 -> Typeface.create("cursive", Typeface.NORMAL);
+            case 7 -> Typeface.create("sans-serif-light", Typeface.NORMAL);
+            case 8 -> Typeface.create("sans-serif-condensed", Typeface.NORMAL);
             default -> Typeface.DEFAULT;
         };
     }

@@ -1,5 +1,6 @@
 package org.qp.android.helpers.bus;
 
+import android.os.Looper;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 
@@ -82,7 +83,11 @@ public class Events {
             ArrayList<NavigationEvent> postingEvents = new ArrayList<>();
             for (NavigationEvent event : waitingEvents) {
                 if (hasObservers()) {
-                    setValue(event);
+                    if (Looper.myLooper() == Looper.getMainLooper()) {
+                        setValue(event);
+                    } else {
+                        postValue(event);
+                    }
                     postingEvents.add(event);
                 }
             }
@@ -91,7 +96,7 @@ public class Events {
 
         private void newEvent(NavigationEvent event, Type type) {
             event.type = type;
-            setValue(switch (type) {
+            NavigationEvent targetEvent = switch (type) {
                 case EXECUTE_WITHOUT_LIMITS, EXECUTE_ONCE -> hasObservers() ? event : null;
                 case WAIT_OBSERVER_IF_NEEDED, WAIT_OBSERVER_IF_NEEDED_AND_EXECUTE_ONCE -> {
                     if (hasObservers() && isActive) {
@@ -101,7 +106,12 @@ public class Events {
                         yield null;
                     }
                 }
-            });
+            };
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                setValue(targetEvent);
+            } else {
+                postValue(targetEvent);
+            }
         }
     }
 

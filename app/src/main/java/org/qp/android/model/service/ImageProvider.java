@@ -1,51 +1,53 @@
 package org.qp.android.model.service;
 
-import static org.qp.android.helpers.utils.ThreadUtil.isMainThread;
-
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import android.os.Handler;
-import android.os.Looper;
+import android.util.Log;
 
-import com.squareup.picasso.Picasso;
-import com.squareup.picasso.Target;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import coil.Coil;
+import coil.request.ImageRequest;
+import coil.target.Target;
 
 public class ImageProvider {
 
-    private Bitmap mBitmap;
+    private Drawable mDrawable;
 
     /**
-     * Loads an image from a file using an Uri.
+     * Loads an image from a file using an Uri via Coil.
      *
      * @return uploaded image, or <code>null</code> if the image was not found
      */
-    public BitmapDrawable getDrawableFromPath(Context context , Uri path) {
-        var target = new Target() {
-            @Override
-            public void onBitmapLoaded(Bitmap bitmap , Picasso.LoadedFrom from) {
-                mBitmap = bitmap;
-            }
+    public Drawable getDrawableFromPath(Context context, Uri path) {
+        if (path == null || path.toString().isEmpty()) return null;
 
-            @Override
-            public void onBitmapFailed(Exception e , Drawable errorDrawable) {
+        Log.d("QUESTLOGTEST", "ImageProvider getDrawableFromPath requesting path: " + path);
 
-            }
+        var request = new ImageRequest.Builder(context)
+                .data(path)
+                .target(new Target() {
+                    @Override
+                    public void onStart(@Nullable Drawable placeholder) {
+                        Log.d("QUESTLOGTEST", "ImageProvider load start for: " + path);
+                    }
 
-            @Override
-            public void onPrepareLoad(Drawable placeHolderDrawable) {
+                    @Override
+                    public void onError(@Nullable Drawable error) {
+                        Log.e("QUESTLOGTEST", "ImageProvider load error for: " + path);
+                    }
 
-            }
-        };
+                    @Override
+                    public void onSuccess(@NonNull Drawable result) {
+                        Log.d("QUESTLOGTEST", "ImageProvider load success for: " + path);
+                        mDrawable = result;
+                    }
+                })
+                .build();
 
-        if (isMainThread()) {
-            Picasso.get().load(path).into(target);
-        } else {
-            new Handler(Looper.getMainLooper()).post(() ->
-                    Picasso.get().load(path).into(target));
-        }
-        return new BitmapDrawable(context.getResources() , mBitmap);
+        Coil.imageLoader(context).enqueue(request);
+        return mDrawable;
     }
 }

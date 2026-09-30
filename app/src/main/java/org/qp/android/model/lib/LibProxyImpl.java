@@ -40,6 +40,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class LibProxyImpl extends QSPLib implements LibIProxy {
@@ -51,9 +53,11 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
     private Thread libThread;
     private volatile Handler libHandler;
     private volatile boolean libThreadInit;
+    private volatile CountDownLatch initLatch;
     private volatile long gameStartTime;
     private volatile long lastMsCountCallTime;
     private GameInterface gameInterface;
+    private final java.util.concurrent.ConcurrentHashMap<String, String> frozenVariables = new java.util.concurrent.ConcurrentHashMap<>();
 
     public LibProxyImpl(Context context) {
         this.context = context;
@@ -85,6 +89,11 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
             Log.w(TAG, "Lib thread has not been started!");
             return;
         }
+        if (!libThreadInit && initLatch != null) {
+            try {
+                initLatch.await(3, TimeUnit.SECONDS);
+            } catch (InterruptedException ignored) {}
+        }
         if (!libThreadInit) {
             Log.w(TAG, "Lib thread has been started, but not initialized!");
             return;
@@ -103,9 +112,17 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
 
     private boolean loadGameWorld() {
         final var gameFileUri = gameState.gameFileUri;
+        if (gameFileUri == null || gameFileUri == Uri.EMPTY) {
+            Log.e(TAG, "gameFileUri is null or empty!");
+            return false;
+        }
         final var gameData = getFileContents(context, gameFileUri);
-        if (gameData == null) return false;
+        if (gameData == null) {
+            Log.e(TAG, "Failed to read bytes from gameFileUri: " + gameFileUri);
+            return false;
+        }
         if (!loadGameWorldFromData(gameData, true)) {
+            Log.e(TAG, "loadGameWorldFromData failed for URI: " + gameFileUri);
             showLastQspError();
             return false;
         }
@@ -230,6 +247,8 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
     // region LibQpProxy
 
     public void startLibThread() {
+        if (libThread != null && libThread.isAlive()) return;
+        initLatch = new CountDownLatch(1);
         libThread = new Thread(() -> {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
@@ -239,15 +258,24 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
                     }
                     libHandler = new Handler(Looper.myLooper());
                     libThreadInit = true;
+                    if (initLatch != null) {
+                        initLatch.countDown();
+                    }
                     Looper.loop();
                     terminate();
                 } catch (Throwable t) {
                     Log.e(TAG, "lib thread has stopped exceptionally", t);
                     Thread.currentThread().interrupt();
+                    if (initLatch != null) {
+                        initLatch.countDown();
+                    }
                 }
             }
         }, "libQSP");
         libThread.start();
+        try {
+            initLatch.await(3, TimeUnit.SECONDS);
+        } catch (InterruptedException ignored) {}
     }
 
     public void stopLibThread() {
@@ -263,6 +291,8 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
             Log.w(TAG, "libqsp thread has been started, but not initialized");
         }
         libThread.interrupt();
+        libThread = null;
+        libHandler = null;
     }
 
     public void enableDebugMode(boolean isDebug) {
@@ -411,6 +441,11 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
 
     @Override
     public void onRefreshInt(boolean isForced) {
+        if (!frozenVariables.isEmpty()) {
+            for (var entry : frozenVariables.entrySet()) {
+                execString(entry.getKey() + " = " + entry.getValue(), false);
+            }
+        }
         var request = new LibRefIRequest();
         var configChanged = loadInterfaceConfiguration();
 
@@ -619,6 +654,25 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
         }
 
         gameState.gameDirUri = newGameDir.getUri();
+    }
+
+    @Override
+    public byte[] getSaveData() {
+        return saveGameAsData(false);
+    }
+
+    @Override
+    public boolean loadSaveData(byte[] data) {
+        if (data == null) return false;
+        return openSavedGameFromData(data, true);
+    }
+
+    @Override
+    public void setFrozenVariables(java.util.Map<String, String> frozen) {
+        frozenVariables.clear();
+        if (frozen != null) {
+            frozenVariables.putAll(frozen);
+        }
     }
 
     // endregion LibQpCallbacks

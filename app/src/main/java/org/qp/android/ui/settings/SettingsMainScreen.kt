@@ -1,7 +1,17 @@
 package org.qp.android.ui.settings
 
 import android.app.Activity
+import android.content.Context
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.util.Log
 import android.view.HapticFeedbackConstants
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -152,6 +162,7 @@ fun SettingsMainScreen(
     val sepTitle = stringResource(R.string.separatorTitle)
     val sepSum = stringResource(R.string.separatorSum)
     val autoTitle = stringResource(R.string.autoscrollTitle)
+    val edgeFeedbackTitle = stringResource(R.string.edgeFeedbackTitle)
     val cheatsTitle = stringResource(R.string.cheatModesTitle)
     val cheatsSum = stringResource(R.string.cheatModesSummary)
 
@@ -199,21 +210,70 @@ fun SettingsMainScreen(
         "dynamic", "blue", "green", "orange", "purple", "pink", "teal", "amber", "monochrome"
     )
 
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            var topVibrated = false
+            var bottomVibrated = false
+
+            fun triggerVibration() {
+                try {
+                    val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        context.getSystemService(VibratorManager::class.java)?.defaultVibrator
+                    } else {
+                        @Suppress("DEPRECATION")
+                        context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                    }
+                    if (vibrator?.hasVibrator() == true) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            vibrator.vibrate(VibrationEffect.createOneShot(35L, VibrationEffect.DEFAULT_AMPLITUDE))
+                        } else {
+                            @Suppress("DEPRECATION") vibrator.vibrate(35L)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("QUEST_EDGE_VIBRATION", "Vibration error", e)
+                }
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (available.y > 8f && !topVibrated) {
+                    triggerVibration()
+                    topVibrated = true
+                } else if (available.y <= 0f) {
+                    topVibrated = false
+                }
+
+                if (available.y < -8f && !bottomVibrated) {
+                    triggerVibration()
+                    bottomVibrated = true
+                } else if (available.y >= 0f) {
+                    bottomVibrated = false
+                }
+
+                return Offset.Zero
+            }
+        }
+    }
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(paddingValues)
+                .nestedScroll(nestedScrollConnection),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 120.dp)
         ) {
             item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(top = 8.dp, bottom = 12.dp),
+                        .padding(top = 4.dp, bottom = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (showBackButton) {
@@ -579,7 +639,7 @@ fun SettingsMainScreen(
                 if (showVer) {
                     add { shape ->
                         ExpressivePreferenceItem(
-                            title = "Questopia v${BuildConfig.VERSION_NAME}",
+                            title = stringResource(R.string.appVersionTitle, BuildConfig.VERSION_NAME),
                             subtitle = "${stringResource(R.string.versionInfoTitle)} (${BuildConfig.VERSION_CODE})",
                             shape = shape,
                             icon = Icons.Outlined.Code,

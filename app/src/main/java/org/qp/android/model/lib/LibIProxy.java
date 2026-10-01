@@ -2,7 +2,11 @@ package org.qp.android.model.lib;
 
 import android.net.Uri;
 
+import com.libqsp.jni.QSPLib;
+
 import org.qp.android.ui.game.GameInterface;
+
+import java.util.Map;
 
 public interface LibIProxy {
     /**
@@ -41,9 +45,10 @@ public interface LibIProxy {
 
     void setGameInterface(GameInterface view);
 
-    com.libqsp.jni.QSPLib.VarItem[] getAllVariables();
+    QSPLib.VarItem[] getAllVariables();
     String[] getAllLocations();
     byte[] getSaveData();
     boolean loadSaveData(byte[] data);
-    void setFrozenVariables(java.util.Map<String, String> frozen);
+    void setFrozenVariables(Map<String, String> frozen);
+    void refreshGameUi();
 }

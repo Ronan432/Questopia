@@ -17,6 +17,9 @@ import org.qp.android.model.service.ImageProvider;
 import org.qp.android.ui.settings.SettingsController;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 
 import coil.ImageLoader;
 import coil.ImageLoaderFactory;
@@ -43,6 +46,28 @@ public class QuestopiaApplication extends Application implements ImageLoaderFact
         super.onCreate();
         LocaleHelper.applyAppLanguage(this);
         createNotificationChannels();
+        final Thread.UncaughtExceptionHandler previous = Thread.getDefaultUncaughtExceptionHandler();
+        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+            try {
+                StringWriter stack = new StringWriter();
+                throwable.printStackTrace(new PrintWriter(stack));
+                String logcat = "";
+                try {
+                    Process process = Runtime.getRuntime().exec(new String[]{"logcat", "-d", "-t", "250"});
+                    java.io.InputStream input = process.getInputStream();
+                    logcat = new java.io.BufferedReader(new java.io.InputStreamReader(input, java.nio.charset.StandardCharsets.UTF_8)).lines()
+                            .collect(java.util.stream.Collectors.joining("\n"));
+                    process.destroy();
+                } catch (Exception ignored) { }
+                try (FileWriter writer = new FileWriter(new File(getFilesDir(), "last_crash.txt"), false)) {
+                    writer.write("Questopia crash report\n\nException:\n");
+                    writer.write(stack.toString());
+                    writer.write("\n\nLast logcat:\n");
+                    writer.write(logcat);
+                }
+            } catch (Exception ignored) { }
+            if (previous != null) previous.uncaughtException(thread, throwable);
+        });
     }
 
     @NonNull

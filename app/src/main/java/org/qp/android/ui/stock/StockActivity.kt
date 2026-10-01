@@ -20,6 +20,9 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.documentfile.provider.DocumentFile
@@ -48,6 +51,7 @@ class StockActivity : ComponentActivity() {
     private var pendingAddFolder: DocumentFile? = null
     private var showAddDialogState by mutableStateOf(false)
     private var isLoadingState by mutableStateOf(false)
+    private var crashReport by mutableStateOf<String?>(null)
 
     private fun openFolderPicker() {
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
@@ -88,6 +92,11 @@ class StockActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val crashFile = File(filesDir, "last_crash.txt")
+        if (crashFile.exists()) {
+            crashReport = runCatching { crashFile.readText() }.getOrNull()
+            crashFile.delete()
+        }
         LocaleHelper.applyAppLanguage(this)
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
@@ -112,7 +121,8 @@ class StockActivity : ComponentActivity() {
         setContent {
             val prefs = PreferenceManager.getDefaultSharedPreferences(this)
             val themeMode = prefs.getString("themeMode", "system") ?: "system"
-            QuestopiaTheme(themeMode = themeMode) {
+            val themeColor = prefs.getString("themeColor", "monochrome") ?: "monochrome"
+            QuestopiaTheme(themeMode = themeMode, themeColor = themeColor) {
                 StockContent(
                     viewModel = stockViewModel,
                     isLoading = isLoadingState,
@@ -166,6 +176,16 @@ class StockActivity : ComponentActivity() {
                     },
                     onExitApp = { finish() }
                 )
+                crashReport?.let { report ->
+                    AlertDialog(
+                        onDismissRequest = { crashReport = null },
+                        title = { Text(getString(R.string.crashReportTitle)) },
+                        text = { Text(report, maxLines = 18, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+                        confirmButton = {
+                            TextButton(onClick = { crashReport = null }) { Text(getString(R.string.close)) }
+                        }
+                    )
+                }
             }
         }
     }
@@ -354,10 +374,11 @@ private fun StockContent(
         EditGameDialog(
             game = targetGame,
             onDismiss = { editingGame = null },
-            onSave = { title, author, version ->
+            onSave = { title, author, version, iconUri ->
                 targetGame.title = title
                 targetGame.author = author
                 targetGame.version = version
+                targetGame.iconUrl = iconUri
                 viewModel.saveGameData(targetGame)
                 editingGame = null
             }

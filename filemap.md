@@ -35,6 +35,7 @@ Questopia/
 │       ├── archive.rs            # Bellek haritalı & akışkan ZIP/QSP açıcı
 │       ├── html_parser.rs        # Yüksek hızlı HTML/BBCode & span ayrıştırıcı
 │       └── audio_mixer.rs        # 32-bit Float donanımsal ses karıştırıcı
+├── build.py                      # Otomatik derleme & Çok kanallı Kablosuz ADB Port Tarayıcı Python aracı
 ├── build.gradle                  # Kök Gradle yapılandırması
 ├── settings.gradle               # Modül ve repo ayarları (:app, :desktop)
 ├── gradle.properties             # JVM parametreleri ve AndroidX özellikleri
@@ -71,87 +72,47 @@ Questopia/
 | `model/lib/LibGameState.java` | QSP motor durumunu temsil eden model (konum, metin, eylemler, değişkenler). |
 | `model/lib/LibIConfig.java` | QSP motor yapılandırma arayüzü. |
 | `model/lib/LibIProxy.java` | QSP motoru ile Android katmanı arasındaki arayüz sözleşmesi. |
-| `model/lib/LibProxyImpl.java` | `LibIProxy` uygulayıcısı; `QSPLib` JNI çağrılarını yönetir, callback'leri işler, arka plan iş parçacığıyla senkronize eder. |
-| `model/lib/LibRefIRequest.java` | Motor isteklerini yönlendiren referans arayüzü. |
-| `model/lib/LibWindowType.java` | QSP pencere tipleri enum'u (Ana pencere, Eylemler, Nesneler, Değişkenler). |
-| `model/service/AudioPlayer.java` | QSP ses ve müzik komutlarını (Play/Stop/Pause/Volume) `MediaPlayer`/`SoundPool` ile yürüten servis. |
-| `model/service/HtmlProcessor.java` | QSP metinlerindeki HTML/CSS etiketlerini ve resim yollarını ayrıştıran (`Jsoup`) ve biçimlendiren servis. |
+| `model/lib/LibProxyImpl.java` | `LibIProxy` uygulayıcısı; `QSPLib` JNI çağrılarını yönetir, callback'leri işler, arka plan iş parçacığıyla senkronize eder. Dosya yollarındaki ters bölü (`\`) karakterlerini otomatik normalize eder. |
+| `model/service/AudioPlayer.java` | QSP ses ve müzik komutlarını yürüten servis. |
+| `model/service/HtmlProcessor.java` | QSP metinlerindeki HTML/CSS etiketlerini ve resim yollarını ayrıştıran (`Jsoup`) servis. |
 | `model/service/ImageProvider.java` | QSP oyun içi grafiklerini ve görsellerini yükleyen/önbelleğe alan sağlayıcı. |
 | `model/repository/LocalGame.java` | Cihazdaki yerel oyun dizinlerini tarayan, `.gameInfo` doğrulayan ve yöneten depo sınıfı. |
 | `model/repository/RemoteGameRepository.kt` | Ktor Client ile uzak sunucudan oyun listesini çeken depo sınıfı. |
 | `model/archive/ArchiveUnpack.kt` | Saf Kotlin/Java `java.util.zip.ZipFile` ile Zip Slip korumalı ve çoklu kodlama destekli arşiv açıcı servis. |
-| `model/notify/NotifyBuilder.java` | Bildirim çubuğu bildirimleri oluşturan yardımcı sınıf. |
 
 ---
 
 ### D. Kullanıcı Arayüzü: Oyun Yönetim Ekranı (`org/qp/android/ui/stock`)
 | Dosya Yolu | Sorumluluk / İşlev |
 | :--- | :--- |
-| `ui/stock/StockActivity.kt` | Material 3 Jetpack Compose tabanlı oyun yönetim ana penceresi (`ComponentActivity`); gezinme çubuğu, arama çubuğu ve `LibPickYou` dosya seçici entegrasyonu. |
+| `ui/stock/StockActivity.kt` | Material 3 Jetpack Compose tabanlı oyun yönetim ana penceresi (`ComponentActivity`). |
 | `ui/stock/StockScreens.kt` | Stock ana koordinasyon ekranı (`StockMainScreen`), yatay kaydırmalı `HorizontalPager`, dinamik arama çubuğu ve FAB. |
-| `ui/stock/StockNavigation.kt` | Alt navigasyon çubuğu (`FlexibleNavigationBar`, `FlexibleNavItem`) ve üst sekmeler (`StockSegmentedControl`). |
-| `ui/stock/GameComponents.kt` | Yüklü oyun listesi (`InstalledGamesList`), Depo listesi (`RemoteGamesList`), oyun kartları (`GameCard`, `RemoteGameCard`) ve diyaloglar. |
-| `ui/stock/StockViewModel.java` | Oyun yönetim iş mantığı, dosya seçici koordinasyonu, indirme, XML ayrıştırma ve ayıklama işlemleri. |
+| `ui/stock/StockNavigation.kt` | Alt navigasyon çubuğu ve üst sekmeler. |
+| `ui/stock/GameComponents.kt` | Yüklü oyun listesi (`InstalledGamesList`), Depo listesi (`RemoteGamesList`), oyun kartları (`GameCard`) ve `CustomDrawerHandle` yay animasyonlu tutamaklı basılı tutma context menüsü. |
+| `ui/stock/StockViewModel.java` | Oyun yönetim iş mantığı, dosya seçici koordinasyonu, indirme ve ayıklama işlemleri. |
 
 ---
 
 ### E. Kullanıcı Arayüzü: Oyun Oynatma Ekranı (`org/qp/android/ui/game`)
 | Dosya Yolu | Sorumluluk / İşlev |
 | :--- | :--- |
-| `ui/game/GameActivity.kt` | QSP oyununun oynandığı ana aktivite; Material 3 Compose UI + WebView, derin karanlık menüler (`ModalBottomSheet`), kayıt/yükleme slotları (`SaveSlotsSheet`), Hile Modları entegrasyonu ve klavye/durum kontrolleri. |
-| `ui/game/CheatModesSheet.kt` | **Hile Modları & QSPSaveEditor**: Canlı değişken arama/düzenleme, değişken dondurucu (freeze), sahne atlama (location warper), eşya yöneticisi (spawner), hile konsolu, save diff ve %100 geri alma (rollback) güvenceli modal. |
-| `ui/game/GameViewModel.java` | Oyun döngüsü, kullanıcı girdileri, durum güncellemeleri, değişken/lokasyon köprüleri ve motor iletişimini yöneten ViewModel. |
-| `ui/game/GameInterface.java` | ViewModel ile Activity arasındaki haberleşme arayüzü. |
-| `ui/game/GameLibRequest.java` | Motor isteklerini sarmalayan veri nesnesi. |
+| `ui/game/GameActivity.kt` | QSP oyun oynama aktivitesi; Material 3 Compose UI + WebView (kaydırma titreşimi kapalı), derin karanlık menüler (`ModalBottomSheet`), açıklama metinleri temizlenmiş oyun içi menü (`showInGameMenu`) ve kayıt/yükleme slotları. |
+| `ui/game/CheatModesSheet.kt` | **Hile Modları & QSPSaveEditor**: 0 ms gecikmesiz anlık değişken değiştirme, dairesel kontrol butonları, `MorphingSurface` destekli lokasyon atlama (Teleport), eşya silme onay uyarısı (`AlertDialog`), dondurucu ve hile konsolu. |
+| `ui/game/GameViewModel.java` | Oyun döngüsü, kullanıcı girdileri, durum güncellemeleri ve motor iletişimini yöneten ViewModel. |
 
 ---
 
 ### F. Kullanıcı Arayüzü: Ayarlar Ekranı (`org/qp/android/ui/settings`)
 | Dosya Yolu | Sorumluluk / İşlev |
 | :--- | :--- |
-| `ui/settings/SettingsActivity.kt` | Material 3 Compose ayarlar aktivitesi (`ComponentActivity`) ve gezinme yönlendiricisi (`SettingsApp`). |
-| `ui/settings/SettingsComponents.kt` | Expressive segmented-list bileşenleri (`ExpressiveSettingsGroup`, `ExpressivePreferenceItem`, `ExpressiveSwitchPreferenceItem`, `ExpressiveListPreferenceItem`, `ExpressiveColorPreferenceItem`, koyu seçim diyalogları, `AboutDialog`, `VersionDialog`). |
-| `ui/settings/SettingsMainScreen.kt` | Ayarlar ana menüsü; dinamik olarak kayan arama çubuğu, temiz gruplanmış kartlar ve diyaloglar. |
-| `ui/settings/SettingsViewModel.java` | Ayarlar ekranı durum yöneticisi. |
-| `ui/settings/SettingsController.java` | SharedPreferences verilerini tip güvenli okuyan/yazan kontrolcü. |
-| `ui/settings/SettingsApp.kt` | Ayar verileri ve temalar için data modelleri. |
+| `ui/settings/SettingsActivity.kt` | Material 3 Compose ayarlar aktivitesi. |
+| `ui/settings/SettingsComponents.kt` | Expressive segmented-list bileşenleri (`ExpressiveSettingsGroup`, `ExpressivePreferenceItem`, `ExpressiveSwitchPreferenceItem`, `ExpressiveListPreferenceItem`, `ExpressiveColorPreferenceItem`, `CustomDrawerHandle` çekmece seçim diyalogları). |
+| `ui/settings/SettingsMainScreen.kt` | Ayarlar ana menüsü; kayan arama çubuğu, zorunlu sınır titreşimi (`NestedScrollConnection`) ve gruplanmış kartlar. |
 
 ---
 
 ### G. Tema & Ortak Bileşenler (`org/qp/android/ui/common` & `org/qp/android/ui/theme`)
 | Dosya Yolu | Sorumluluk / İşlev |
 | :--- | :--- |
-| `ui/common/MorphingUi.kt` | Yaylanma taşmalarına karşı sıfır Dp (`.coerceAtLeast(0.dp)`) korumalı yay animasyonlu morphing butonlar ve yüzeyler (`MorphingSurface`, `MorphingButton`, `getGroupedItemShape`). |
-| `ui/theme/Theme.kt` | Material 3 Dynamic Colors, Saf Siyah AMOLED desteği, Monokrom ve 8 renk ön ayarı barındıran merkezi tema motoru (`QuestopiaTheme`, `getColorScheme`). |
-
----
-
-## 3. Desktop (Windows x64) Kaynak Kodları Haritası (`desktop/src/main`)
-
-| Dosya Yolu | Sorumluluk / İşlev |
-| :--- | :--- |
-| `kotlin/org/qp/desktop/Main.kt` | Compose Desktop uygulama giriş noktası, pencere yapılandırması ve Skiko donanım hızlandırma ilklendirmesi. |
-| `kotlin/org/qp/desktop/engine/DesktopQspEngine.kt` | Windows üzerinde QSP motor durumunu yöneten ve fail-safe demo oyun enjeksiyonu sağlayan motor yöneticisi. |
-| `kotlin/org/qp/desktop/engine/RustEngineCore.kt` | Windows için Rust native köprü sınıfı (`questopia_rust.dll`). |
-| `kotlin/org/qp/desktop/ui/DesktopNavigationRail.kt` | Genişleyip daralabilen (spring animasyonlu) sol navigasyon paneli, hızlı oyun geçişi ve son oyunlar listesi. |
-| `kotlin/org/qp/desktop/ui/LibraryScreen.kt` | Masaüstü oyun kütüphanesi ve oyun başlatıcı kartları. |
-| `kotlin/org/qp/desktop/ui/StockScreen.kt` | Uzak katalog tarayıcısı ve oyun indirme arayüzü. |
-| `kotlin/org/qp/desktop/ui/GamePlayScreen.kt` | Masaüstü oyun oynama ekranı, metin çıktısı, eylem/envanter panelleri ve menüler. |
-| `kotlin/org/qp/desktop/ui/SettingsScreen.kt` | Masaüstü ayarlar sayfası (Aydınlık, Karanlık, AMOLED ve renk paletleri). |
-| `kotlin/org/qp/desktop/ui/common/MorphingUi.kt` | Masaüstü yay animasyonlu morphing kartlar ve yüzeyler. |
-| `kotlin/org/qp/desktop/theme/DesktopTheme.kt` | Masaüstü Material 3 renk şemaları ve tema sağlayıcısı. |
-| `java/com/libqsp/jni/QSPLib.java` | 3 aşamalı DLL arama ve gömülü classpath çıkarma mekanizmalı JNI köprüsü. |
-
----
-
-## 4. Yerel Katmanlar (C/C++ & Rust)
-
-| Dizin / Dosya | Sorumluluk / İşlev |
-| :--- | :--- |
-| `native-rust/src/lib.rs` | Android ve Desktop JNI dışa aktarım fonksiyonları. |
-| `native-rust/src/archive.rs` | `zip-rs` + `flate2` tabanlı, Zip Slip korumalı akışkan arşiv okuyucu. |
-| `native-rust/src/html_parser.rs` | Sıfır kopyalamalı yüksek hızlı HTML/BBCode temizleyici ve span üretici. |
-| `native-rust/src/audio_mixer.rs` | 32-bit Float donanımsal ses karıştırıcı ve soft-clipping limiter. |
-| `app/src/main/cpp/CMakeLists.txt` | NDK derleme betiği; Oniguruma regex ve QSP C motorunu statik kütüphane olarak derler. |
-| `app/src/main/cpp/qsp/` | QSP C çekirdeği (`actions.c`, `game.c`, `locations.c`, `text.c` vb.). |
-| `app/src/main/cpp/qsp/bindings/java/` | C JNI köprü kodları (`com_libqsp_jni_QSPLib.h`, `java_callbacks.c`, `java_control.c`). |
+| `ui/common/MorphingUi.kt` | **Merkezi Morph Shaping & Çekmece Tutamağı Modülü**: Yay animasyonlu morphing butonlar ve yüzeyler (`MorphingSurface`, `MorphingButton`, `getGroupedItemShape`) ve dinamik çekmece tutamağı (`CustomDrawerHandle`). |
+| `ui/theme/Theme.kt` | Material 3 Dynamic Colors, Saf Siyah AMOLED desteği, Mavi tonlaması temizlenmiş nötr koyu gri Monokrom ve 8 renk ön ayarı barındıran merkezi tema motoru (`QuestopiaTheme`, `getColorScheme`). |

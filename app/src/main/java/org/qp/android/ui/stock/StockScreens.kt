@@ -1,5 +1,6 @@
 package org.qp.android.ui.stock
 
+import android.view.HapticFeedbackConstants
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -92,6 +93,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
@@ -120,19 +122,16 @@ fun StockMainScreen(
     onRefreshRemote: () -> Unit = {}
 ) {
     var currentNavTab by remember { mutableStateOf(StockNavigationTab.GAMES) }
-    val pagerState = rememberPagerState(initialPage = 0) { 2 }
-    val coroutineScope = rememberCoroutineScope()
     var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
     var isSearchFocused by remember { mutableStateOf(false) }
     var showExitDialog by remember { mutableStateOf(false) }
 
     val focusManager = LocalFocusManager.current
+    val view = LocalView.current
 
-    LaunchedEffect(pagerState.currentPage) {
-        if (pagerState.currentPage == 1 && remoteGames.isEmpty()) {
-            onRefreshRemote()
-        }
+    BackHandler(enabled = currentNavTab != StockNavigationTab.GAMES) {
+        currentNavTab = StockNavigationTab.GAMES
     }
 
     BackHandler(enabled = currentNavTab == StockNavigationTab.GAMES) {
@@ -149,23 +148,17 @@ fun StockMainScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            val context = LocalContext.current
-            val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
-            val themeMode = prefs.getString("themeMode", "system") ?: "system"
-            val navBarColor = if (themeMode == "amoled") Color.Black else MaterialTheme.colorScheme.surfaceContainer
-
+            val navColors = rememberNavThemeColors()
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(navBarColor)
+                    .background(navColors.navBarColor)
                     .navigationBarsPadding(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 FlexibleNavigationBar(
                     currentTab = currentNavTab,
-                    onTabSelected = {
-                        currentNavTab = it
-                    }
+                    onTabSelected = { currentNavTab = it }
                 )
             }
         }
@@ -182,204 +175,199 @@ fun StockMainScreen(
             AnimatedContent(
                 targetState = currentNavTab,
                 transitionSpec = {
-                    if (targetState == StockNavigationTab.SETTINGS) {
-                        (slideInHorizontally(
-                            initialOffsetX = { (it * 0.18f).toInt() },
-                            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
-                        ) + fadeIn(animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing)))
-                            .togetherWith(
-                                slideOutHorizontally(
-                                    targetOffsetX = { -(it * 0.18f).toInt() },
-                                    animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)
-                                ) + fadeOut(animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing))
-                            )
-                    } else {
-                        (slideInHorizontally(
-                            initialOffsetX = { -(it * 0.18f).toInt() },
-                            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
-                        ) + fadeIn(animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing)))
-                            .togetherWith(
-                                slideOutHorizontally(
-                                    targetOffsetX = { (it * 0.18f).toInt() },
-                                    animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)
-                                ) + fadeOut(animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing))
-                            )
-                    }
+                    (slideInHorizontally(
+                        initialOffsetX = { (it * 0.18f).toInt() },
+                        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)))
+                        .togetherWith(
+                            slideOutHorizontally(
+                                targetOffsetX = { -(it * 0.18f).toInt() },
+                                animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing)
+                            ) + fadeOut(animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing))
+                        )
                 },
                 label = "navTabTransition"
             ) { targetTab ->
                 when (targetTab) {
                     StockNavigationTab.GAMES -> {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .statusBarsPadding()
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .statusBarsPadding()
+                        ) {
+                            AnimatedVisibility(
+                                visible = isLoading,
+                                enter = fadeIn(),
+                                exit = fadeOut()
                             ) {
-                                AnimatedVisibility(
-                                    visible = isLoading,
-                                    enter = fadeIn(),
-                                    exit = fadeOut()
-                                ) {
-                                    LinearProgressIndicator(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(4.dp)
-                                    )
-                                }
+                                LinearProgressIndicator(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(4.dp)
+                                )
+                            }
 
-                                // Top Persistent Search Bar (Unified ExpressiveSearchBar)
+                            // Top Row: Search Bar + Far Right Small (+) Add Game Button
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 ExpressiveSearchBar(
                                     query = searchQuery,
                                     onQueryChange = { searchQuery = it },
                                     placeholderText = stringResource(R.string.searchGamesPlaceholder),
+                                    modifier = Modifier.weight(1f),
                                     isFocused = isSearchFocused,
                                     onFocusChanged = { isSearchFocused = it },
                                     onSearch = { focusManager.clearFocus() }
                                 )
+                                Spacer(modifier = Modifier.width(10.dp))
 
-                                // Full-width TabRow below Search Bar
-                                TabRow(
-                                    selectedTabIndex = pagerState.currentPage,
-                                    containerColor = MaterialTheme.colorScheme.surface,
-                                    contentColor = MaterialTheme.colorScheme.primary,
+                                val addInteractionSource = remember { MutableInteractionSource() }
+                                val isAddPressed by addInteractionSource.collectIsPressedAsState()
+                                val addCornerRadius by animateDpAsState(
+                                    targetValue = if (isAddPressed) 12.dp else 23.dp,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessMediumLow
+                                    ),
+                                    label = "addMorphRadius"
+                                )
+
+                                Surface(
+                                    shape = RoundedCornerShape(addCornerRadius),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    tonalElevation = 2.dp,
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 2.dp)
+                                        .size(46.dp)
+                                        .clip(RoundedCornerShape(addCornerRadius))
+                                        .clickable(
+                                            interactionSource = addInteractionSource,
+                                            indication = null,
+                                            onClick = {
+                                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                                onAddGameClicked()
+                                            }
+                                        )
                                 ) {
-                                    Tab(
-                                        selected = pagerState.currentPage == 0,
-                                        onClick = {
-                                            coroutineScope.launch {
-                                                pagerState.animateScrollToPage(0)
-                                            }
-                                        },
-                                        text = {
-                                            Text(
-                                                text = "${stringResource(R.string.tabZeroName)} (${localGames.size})",
-                                                style = MaterialTheme.typography.titleSmall,
-                                                fontWeight = if (pagerState.currentPage == 0) FontWeight.Bold else FontWeight.Normal
-                                            )
-                                        }
-                                    )
-                                    Tab(
-                                        selected = pagerState.currentPage == 1,
-                                        onClick = {
-                                            coroutineScope.launch {
-                                                pagerState.animateScrollToPage(1)
-                                            }
-                                        },
-                                        text = {
-                                            Text(
-                                                text = "${stringResource(R.string.tabOneName)} (${remoteGames.size})",
-                                                style = MaterialTheme.typography.titleSmall,
-                                                fontWeight = if (pagerState.currentPage == 1) FontWeight.Bold else FontWeight.Normal
-                                            )
-                                        }
-                                    )
-                                }
-
-                                val filteredLocalGames = remember(localGames, searchQuery) {
-                                    if (searchQuery.isBlank()) localGames
-                                    else localGames.filter {
-                                        (it.title ?: "").contains(searchQuery, ignoreCase = true) ||
-                                                (it.author ?: "").contains(searchQuery, ignoreCase = true)
-                                    }
-                                }
-
-                                val filteredRemoteGames = remember(remoteGames, searchQuery) {
-                                    if (searchQuery.isBlank()) remoteGames
-                                    else remoteGames.filter {
-                                        (it.title ?: "").contains(searchQuery, ignoreCase = true) ||
-                                                (it.author ?: "").contains(searchQuery, ignoreCase = true)
-                                    }
-                                }
-
-                                var isPullRefreshing by remember { mutableStateOf(false) }
-                                LaunchedEffect(isLoading) {
-                                    if (!isLoading) {
-                                        isPullRefreshing = false
-                                    }
-                                }
-
-                                val bottomPadding = if (isSearchActive || searchQuery.isNotEmpty()) 160.dp else 120.dp
-
-                                HorizontalPager(
-                                    state = pagerState,
-                                    modifier = Modifier.fillMaxSize()
-                                ) { page ->
-                                    if (page == 0) {
-                                        PullToRefreshBox(
-                                            isRefreshing = isPullRefreshing || isLoading,
-                                            onRefresh = {
-                                                isPullRefreshing = true
-                                                onRefreshLocal()
-                                            },
-                                            modifier = Modifier.fillMaxSize()
-                                        ) {
-                                            InstalledGamesList(
-                                                games = filteredLocalGames,
-                                                onPlayGame = onPlayGame,
-                                                onEditGame = onEditGame,
-                                                onDeleteGame = onDeleteGame,
-                                                contentPadding = PaddingValues(top = 8.dp, bottom = bottomPadding, start = 16.dp, end = 16.dp)
-                                            )
-                                        }
-                                    } else {
-                                        PullToRefreshBox(
-                                            isRefreshing = isPullRefreshing || isLoading,
-                                            onRefresh = {
-                                                isPullRefreshing = true
-                                                onRefreshRemote()
-                                            },
-                                            modifier = Modifier.fillMaxSize()
-                                        ) {
-                                            RemoteGamesList(
-                                                games = filteredRemoteGames,
-                                                isLoading = isLoading,
-                                                onDownloadGame = onDownloadGame,
-                                                onRefresh = onRefreshRemote,
-                                                contentPadding = PaddingValues(top = 8.dp, bottom = bottomPadding, start = 16.dp, end = 16.dp)
-                                            )
-                                        }
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.Add,
+                                            contentDescription = stringResource(R.string.addGameContentDescription),
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            modifier = Modifier.size(22.dp)
+                                        )
                                     }
                                 }
                             }
 
-                            // Floating Action Button (FAB) for adding games on bottom right (Only visible on local games tab)
-                            AnimatedVisibility(
-                                visible = pagerState.currentPage == 0,
-                                enter = scaleIn() + fadeIn(),
-                                exit = scaleOut() + fadeOut(),
-                                modifier = Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .navigationBarsPadding()
-                                    .padding(end = 20.dp, bottom = 108.dp)
-                            ) {
-                                val fabInteractionSource = remember { MutableInteractionSource() }
-                                val isFabPressed by fabInteractionSource.collectIsPressedAsState()
-                                val fabCornerRadius by animateDpAsState(
-                                    targetValue = if (isFabPressed) 12.dp else 28.dp,
-                                    animationSpec = tween(durationMillis = 180),
-                                    label = "fabMorphRadius"
-                                )
-
-                                FloatingActionButton(
-                                    onClick = onAddGameClicked,
-                                    shape = RoundedCornerShape(fabCornerRadius),
-                                    interactionSource = fabInteractionSource,
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = "Oyun Ekle",
-                                        modifier = Modifier.size(26.dp)
-                                    )
+                            val filteredLocalGames = remember(localGames, searchQuery) {
+                                if (searchQuery.isBlank()) localGames
+                                else localGames.filter {
+                                    (it.title ?: "").contains(searchQuery, ignoreCase = true) ||
+                                            (it.author ?: "").contains(searchQuery, ignoreCase = true)
                                 }
+                            }
+
+                            var isPullRefreshing by remember { mutableStateOf(false) }
+                            LaunchedEffect(isLoading) {
+                                if (!isLoading) {
+                                    isPullRefreshing = false
+                                }
+                            }
+
+                            PullToRefreshBox(
+                                isRefreshing = isPullRefreshing || isLoading,
+                                onRefresh = {
+                                    isPullRefreshing = true
+                                    onRefreshLocal()
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                InstalledGamesList(
+                                    games = filteredLocalGames,
+                                    onPlayGame = onPlayGame,
+                                    onEditGame = onEditGame,
+                                    onDeleteGame = onDeleteGame,
+                                    contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp, start = 16.dp, end = 16.dp)
+                                )
                             }
                         }
                     }
+
+                    StockNavigationTab.REPOSITORY -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .statusBarsPadding()
+                        ) {
+                            AnimatedVisibility(
+                                visible = isLoading,
+                                enter = fadeIn(),
+                                exit = fadeOut()
+                            ) {
+                                LinearProgressIndicator(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(4.dp)
+                                )
+                            }
+
+                            // Top Search Bar ONLY (No + button on repository)
+                            ExpressiveSearchBar(
+                                query = searchQuery,
+                                onQueryChange = { searchQuery = it },
+                                placeholderText = stringResource(R.string.searchGamesPlaceholder),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+                                isFocused = isSearchFocused,
+                                onFocusChanged = { isSearchFocused = it },
+                                onSearch = { focusManager.clearFocus() }
+                            )
+
+                            val filteredRemoteGames = remember(remoteGames, searchQuery) {
+                                if (searchQuery.isBlank()) remoteGames
+                                else remoteGames.filter {
+                                    (it.title ?: "").contains(searchQuery, ignoreCase = true) ||
+                                            (it.author ?: "").contains(searchQuery, ignoreCase = true)
+                                }
+                            }
+
+                            var isPullRefreshing by remember { mutableStateOf(false) }
+                            LaunchedEffect(isLoading) {
+                                if (!isLoading) {
+                                    isPullRefreshing = false
+                                }
+                            }
+
+                            LaunchedEffect(Unit) {
+                                if (remoteGames.isEmpty()) {
+                                    onRefreshRemote()
+                                }
+                            }
+
+                            PullToRefreshBox(
+                                isRefreshing = isPullRefreshing || isLoading,
+                                onRefresh = {
+                                    isPullRefreshing = true
+                                    onRefreshRemote()
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                RemoteGamesList(
+                                    games = filteredRemoteGames,
+                                    isLoading = isLoading,
+                                    onDownloadGame = onDownloadGame,
+                                    onRefresh = onRefreshRemote,
+                                    contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp, start = 16.dp, end = 16.dp)
+                                )
+                            }
+                        }
+                    }
+
                     StockNavigationTab.SETTINGS -> {
                         SettingsApp(
                             onFinish = { currentNavTab = StockNavigationTab.GAMES },
@@ -417,4 +405,3 @@ fun StockMainScreen(
         )
     }
 }
-

@@ -1,6 +1,7 @@
 package org.qp.android.ui.settings
 
 import android.view.HapticFeedbackConstants
+import org.qp.android.ui.common.CustomDrawerHandle
 import org.qp.android.ui.common.MorphingDialogButton
 import org.qp.android.ui.common.MorphingSurface
 import org.qp.android.ui.common.getGroupedItemShape
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -55,13 +57,16 @@ import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.preference.PreferenceManager
 import androidx.compose.material3.SwitchDefaults
@@ -114,35 +119,20 @@ fun ExpressiveSearchBar(
     onSearch: (() -> Unit)? = null
 ) {
     val isSearchActiveOrFocused = isFocused || query.isNotEmpty()
-    val searchPadding by animateDpAsState(
-        targetValue = if (isSearchActiveOrFocused) 12.dp else 24.dp,
+    val searchElevation by animateDpAsState(
+        targetValue = if (isSearchActiveOrFocused) 5.dp else 1.dp,
         animationSpec = tween(220),
-        label = "searchPaddingAnim"
-    )
-    val searchHeight by animateDpAsState(
-        targetValue = if (isSearchActiveOrFocused) 50.dp else 42.dp,
-        animationSpec = tween(220),
-        label = "searchHeightAnim"
-    )
-    val searchFontSize by animateFloatAsState(
-        targetValue = if (isSearchActiveOrFocused) 15.5f else 13.5f,
-        animationSpec = tween(220),
-        label = "searchFontSizeAnim"
-    )
-    val searchIconSize by animateDpAsState(
-        targetValue = if (isSearchActiveOrFocused) 20.dp else 17.dp,
-        animationSpec = tween(220),
-        label = "searchIconSizeAnim"
+        label = "searchElevationAnim"
     )
 
     Surface(
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = if (isSearchActiveOrFocused) 4.dp else 1.dp,
+        tonalElevation = searchElevation,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = searchPadding, vertical = 4.dp)
-            .height(searchHeight)
+            .padding(vertical = 4.dp)
+            .height(48.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -157,7 +147,7 @@ fun ExpressiveSearchBar(
                     MaterialTheme.colorScheme.primary
                 else
                     MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(searchIconSize)
+                modifier = Modifier.size(19.dp)
             )
             Spacer(modifier = Modifier.width(10.dp))
             BasicTextField(
@@ -169,7 +159,7 @@ fun ExpressiveSearchBar(
                     .onFocusChanged { onFocusChanged?.invoke(it.isFocused) },
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = searchFontSize.sp,
+                    fontSize = 14.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 ),
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
@@ -181,7 +171,7 @@ fun ExpressiveSearchBar(
                             Text(
                                 text = placeholderText,
                                 style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = searchFontSize.sp,
+                                    fontSize = 14.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             )
@@ -387,6 +377,7 @@ fun ExpressiveSwitchPreferenceItem(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpressiveListPreferenceItem(
     title: String,
@@ -399,7 +390,7 @@ fun ExpressiveListPreferenceItem(
     iconTint: Color = MaterialTheme.colorScheme.onPrimaryContainer,
     shape: Shape = RoundedCornerShape(16.dp)
 ) {
-    var showDialog by remember { mutableStateOf(false) }
+    var showSheet by remember { mutableStateOf(false) }
     val currentLabel = entries.getOrNull(entryValues.indexOf(currentValue)) ?: currentValue
     val view = LocalView.current
     val context = LocalContext.current
@@ -411,24 +402,32 @@ fun ExpressiveListPreferenceItem(
         iconBgColor = iconBgColor,
         iconTint = iconTint,
         shape = shape,
-        onClick = { showDialog = true },
+        onClick = { showSheet = true },
         showChevron = true
     )
 
-    if (showDialog) {
+    if (showSheet) {
         val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
         val isAmoled = prefs.getString("themeMode", "system") == "3" || prefs.getString("themeMode", "system") == "amoled"
-        val dialogBg = if (isAmoled) Color(0xFF000000) else MaterialTheme.colorScheme.surfaceContainerHigh
-        val selectedItemBg = MaterialTheme.colorScheme.primaryContainer
-        val selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer
-        val unselectedItemBg = MaterialTheme.colorScheme.surfaceContainer
-        val unselectedTextColor = MaterialTheme.colorScheme.onSurface
+        val sheetBg = if (isAmoled) Color(0xFF000000) else MaterialTheme.colorScheme.surfaceContainerLow
 
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            containerColor = dialogBg,
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            containerColor = sheetBg,
+            dragHandle = { CustomDrawerHandle() },
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .padding(bottom = 24.dp)
+                    .navigationBarsPadding()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+                ) {
                     if (icon != null) {
                         Surface(
                             shape = CircleShape,
@@ -448,19 +447,18 @@ fun ExpressiveListPreferenceItem(
                     }
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-            },
-            text = {
+
+                // Options List
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp)
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     entries.forEachIndexed { index, entry ->
                         val value = entryValues.getOrElse(index) { entry }
@@ -468,19 +466,20 @@ fun ExpressiveListPreferenceItem(
                         val itemShape = getGroupedItemShape(
                             index = index,
                             total = entries.size,
-                            outerRadius = 18.dp,
+                            outerRadius = 20.dp,
                             innerRadius = 4.dp
                         )
 
                         MorphingSurface(
                             shape = itemShape,
-                            color = if (isSelected) selectedItemBg else unselectedItemBg,
-                            modifier = Modifier.fillMaxWidth(),
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+                            pressedRadius = 8.dp,
                             onClick = {
                                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                                 onValueSelected(value)
-                                showDialog = false
-                            }
+                                showSheet = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
                                 modifier = Modifier
@@ -491,15 +490,16 @@ fun ExpressiveListPreferenceItem(
                                 Text(
                                     text = entry,
                                     style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) selectedTextColor else unselectedTextColor,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.weight(1f)
                                 )
+
                                 if (isSelected) {
                                     Icon(
                                         imageVector = Icons.Filled.Check,
                                         contentDescription = null,
-                                        tint = selectedTextColor,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
@@ -507,16 +507,8 @@ fun ExpressiveListPreferenceItem(
                         }
                     }
                 }
-            },
-            confirmButton = {
-                MorphingDialogButton(
-                    isOutlined = true,
-                    onClick = { showDialog = false }
-                ) {
-                    Text(stringResource(R.string.cancel))
-                }
             }
-        )
+        }
     }
 }
 
@@ -572,7 +564,7 @@ fun ExpressiveColorPreferenceItem(
         val context = LocalContext.current
         val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
         val isAmoled = prefs.getString("themeMode", "system") == "3" || prefs.getString("themeMode", "system") == "amoled"
-        val dialogBg = if (isAmoled) Color(0xFF000000) else Color(0xFF101216)
+        val dialogBg = if (isAmoled) Color(0xFF000000) else MaterialTheme.colorScheme.surfaceContainerLow
 
         AlertDialog(
             onDismissRequest = { showDialog = false },
@@ -656,7 +648,7 @@ fun ExpressiveInfoDialog(
     val context = LocalContext.current
     val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
     val isAmoled = prefs.getString("themeMode", "system") == "3" || prefs.getString("themeMode", "system") == "amoled"
-    val dialogBg = if (isAmoled) Color(0xFF000000) else Color(0xFF101216)
+    val dialogBg = if (isAmoled) Color(0xFF000000) else MaterialTheme.colorScheme.surfaceContainerLow
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -682,20 +674,20 @@ fun AboutDialog(onDismiss: () -> Unit) {
         onDismiss = onDismiss
     ) {
         Text(
-            text = "Questopia",
+            text = stringResource(R.string.appName),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+            text = stringResource(R.string.versionInfoTitle) + ": ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "QSP (Quest Soft Player) text-based quest game interpreter for Android.",
+            text = stringResource(R.string.aboutDescription),
             style = MaterialTheme.typography.bodyMedium
         )
     }
@@ -708,18 +700,16 @@ fun VersionDialog(onDismiss: () -> Unit) {
         onDismiss = onDismiss
     ) {
         Text(
-            text = "Build Information",
+            text = stringResource(R.string.buildInformation),
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "• Version: ${BuildConfig.VERSION_NAME}\n• Version Code: ${BuildConfig.VERSION_CODE}\n• Package: ${BuildConfig.APPLICATION_ID}\n• Target SDK: 35",
+            text = stringResource(R.string.buildDetails, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, BuildConfig.APPLICATION_ID),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
-
-

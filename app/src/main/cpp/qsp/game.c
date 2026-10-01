@@ -30,6 +30,15 @@
 #include "time.h"
 #include "variables.h"
 
+#ifdef ANDROID
+#include <android/log.h>
+#define QSP_LOGE(...) __android_log_print(ANDROID_LOG_ERROR, "QSP_NATIVE", __VA_ARGS__)
+#define QSP_LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, "QSP_NATIVE", __VA_ARGS__)
+#else
+#define QSP_LOGE(...)
+#define QSP_LOGD(...)
+#endif
+
 int qspQstCRC = 0;
 
 QSPString qspCurIncFiles[QSP_MAXINCFILES];
@@ -429,91 +438,150 @@ INLINE QSP_BOOL qspCheckGameStatus(QSPString *strs, int strsCount, QSP_BOOL isUC
     QSPVariant val;
     int i, j, k, ind, count, groupsCount, varValuesCount, temp, selAction, selObject;
     ind = 16;
-    if (ind >= strsCount) return QSP_FALSE;
+    if (ind >= strsCount)
+    {
+        QSP_LOGE("qspCheckGameStatus fail: ind (%d) >= strsCount (%d)", ind, strsCount);
+        return QSP_FALSE;
+    }
     if (qspStrsCompare(strs[0], QSP_STATIC_STR(QSP_SAVEDGAMEID)) ||
         qspStrsCompare(strs[1], QSP_STATIC_STR(QSP_GAMEMINVER)) < 0 ||
-        qspStrsCompare(strs[1], QSP_STATIC_STR(QSP_VER)) > 0) return QSP_FALSE;
-    if (!qspGetVarNumValue(QSP_STATIC_STR(QSP_FMT("DEBUG"))) &&
-        qspReadEncodedIntVal(strs[2], isUCS) != qspQstCRC) return QSP_FALSE;
+        qspStrsCompare(strs[1], QSP_STATIC_STR(QSP_VER)) > 0)
+    {
+        QSP_LOGE("qspCheckGameStatus fail: Header ID or Version mismatch");
+        return QSP_FALSE;
+    }
     selAction = qspReadEncodedIntVal(strs[4], isUCS); /* qspCurSelAction */
     selObject = qspReadEncodedIntVal(strs[5], isUCS); /* qspCurSelObject */
-    if (qspReadEncodedIntVal(strs[15], isUCS) < 0) return QSP_FALSE; /* qspTimerInterval */
+    if (qspReadEncodedIntVal(strs[15], isUCS) < 0)
+    {
+        QSP_LOGE("qspCheckGameStatus fail: Invalid timer interval");
+        return QSP_FALSE;
+    }
     /* qspPLFilesCount */
-    if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &count)) return QSP_FALSE;
-    if (count < 0 || count > QSP_MAXPLFILES) return QSP_FALSE;
+    if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &count) || count < 0 || count > QSP_MAXPLFILES)
+    {
+        QSP_LOGE("qspCheckGameStatus fail: Invalid PLFilesCount (%d) at ind %d", count, ind);
+        return QSP_FALSE;
+    }
     /* files */
-    if (!qspSkipLines(strsCount, count, &ind)) return QSP_FALSE;
+    if (!qspSkipLines(strsCount, count, &ind))
+    {
+        QSP_LOGE("qspCheckGameStatus fail: Skip PLFiles failed at ind %d", ind);
+        return QSP_FALSE;
+    }
     /* qspCurIncFilesCount */
-    if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &count)) return QSP_FALSE;
-    if (count < 0 || count > QSP_MAXINCFILES) return QSP_FALSE;
+    if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &count) || count < 0 || count > QSP_MAXINCFILES)
+    {
+        QSP_LOGE("qspCheckGameStatus fail: Invalid IncFilesCount (%d) at ind %d", count, ind);
+        return QSP_FALSE;
+    }
     /* includes */
-    if (!qspSkipLines(strsCount, count, &ind)) return QSP_FALSE;
+    if (!qspSkipLines(strsCount, count, &ind))
+    {
+        QSP_LOGE("qspCheckGameStatus fail: Skip IncFiles failed at ind %d", ind);
+        return QSP_FALSE;
+    }
     /* qspCurActsCount */
-    if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &count)) return QSP_FALSE;
-    if (count < 0 || count > QSP_MAXACTIONS || selAction >= count) return QSP_FALSE;
+    if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &count) || count < 0 || count > QSP_MAXACTIONS)
+    {
+        QSP_LOGE("qspCheckGameStatus fail: Invalid ActsCount (%d) at ind %d", count, ind);
+        return QSP_FALSE;
+    }
+    if (selAction >= count)
+    {
+        QSP_LOGE("qspCheckGameStatus warn: selAction (%d) >= count (%d), clamping to -1", selAction, count);
+        selAction = -1;
+    }
     /* actions */
     for (i = 0; i < count; ++i)
     {
         /* image + description */
-        if (!qspSkipLines(strsCount, 2, &ind)) return QSP_FALSE;
+        if (!qspSkipLines(strsCount, 2, &ind))
+        {
+            QSP_LOGE("qspCheckGameStatus fail: Action %d image/desc skip failed at ind %d", i, ind);
+            return QSP_FALSE;
+        }
         /* lines of code count */
-        if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &groupsCount)) return QSP_FALSE;
-        if (groupsCount < 0) return QSP_FALSE;
+        if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &groupsCount) || groupsCount < 0)
+        {
+            QSP_LOGE("qspCheckGameStatus fail: Action %d groupsCount (%d) failed at ind %d", i, groupsCount, ind);
+            return QSP_FALSE;
+        }
         /* lines */
         for (j = 0; j < groupsCount; ++j)
         {
             /* line of code */
             if (!qspSkipLines(strsCount, 1, &ind)) return QSP_FALSE;
             /* line number */
-            if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &temp)) return QSP_FALSE;
-            if (temp < 0) return QSP_FALSE;
+            if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &temp) || temp < 0) return QSP_FALSE;
         }
         /* action's location */
-        if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &temp)) return QSP_FALSE;
-        if (temp < 0) return QSP_FALSE;
+        if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &temp) || temp < 0) return QSP_FALSE;
         /* action's source index */
         if (!qspSkipLines(strsCount, 1, &ind)) return QSP_FALSE;
     }
     /* qspCurObjsCount */
-    if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &count)) return QSP_FALSE;
-    if (count < 0 || count > QSP_MAXOBJECTS || selObject >= count) return QSP_FALSE;
+    if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &count) || count < 0 || count > QSP_MAXOBJECTS)
+    {
+        QSP_LOGE("qspCheckGameStatus fail: Invalid ObjsCount (%d) at ind %d", count, ind);
+        return QSP_FALSE;
+    }
+    if (selObject >= count)
+    {
+        QSP_LOGE("qspCheckGameStatus warn: selObject (%d) >= count (%d), clamping to -1", selObject, count);
+        selObject = -1;
+    }
     /* objects: image + description */
-    if (!qspSkipLines(strsCount, 2 * count, &ind)) return QSP_FALSE;
+    if (!qspSkipLines(strsCount, 2 * count, &ind))
+    {
+        QSP_LOGE("qspCheckGameStatus fail: Objects skip failed at ind %d", ind);
+        return QSP_FALSE;
+    }
     for (i = 0; i < QSP_VARSBUCKETS; ++i)
     {
         /* variables count */
-        if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &count)) return QSP_FALSE;
-        if (count < 0 || count > QSP_VARSBUCKETSIZE) return QSP_FALSE;
+        if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &count) || count < 0 || count > QSP_VARSBUCKETSIZE)
+        {
+            QSP_LOGE("qspCheckGameStatus fail: Bucket %d VarsCount (%d) failed at ind %d", i, count, ind);
+            return QSP_FALSE;
+        }
         /* variables */
         for (j = 0; j < count; ++j)
         {
             /* variable's name */
             if (!qspSkipLines(strsCount, 1, &ind)) return QSP_FALSE;
             /* values count */
-            if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &varValuesCount)) return QSP_FALSE;
-            if (varValuesCount < 0) return QSP_FALSE;
+            if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &varValuesCount) || varValuesCount < 0) return QSP_FALSE;
             /* values */
             for (k = 0; k < varValuesCount; ++k)
             {
                 /* var type + var value */
-                if (!qspReadEncodedVariant(strs, strsCount, &ind, isUCS, &val)) return QSP_FALSE;
+                if (!qspReadEncodedVariant(strs, strsCount, &ind, isUCS, &val))
+                {
+                    QSP_LOGE("qspCheckGameStatus fail: Bucket %d Var %d Val %d read variant failed at ind %d", i, j, k, ind);
+                    return QSP_FALSE;
+                }
                 qspFreeVariant(&val);
             }
             /* indices count */
-            if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &groupsCount)) return QSP_FALSE;
-            if (groupsCount < 0) return QSP_FALSE;
+            if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &groupsCount) || groupsCount < 0) return QSP_FALSE;
             /* indices */
             for (k = 0; k < groupsCount; ++k)
             {
                 /* value index */
-                if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &temp)) return QSP_FALSE;
-                if (temp < 0 || temp >= varValuesCount) return QSP_FALSE;
+                if (!qspGetIntValueAndSkipLine(strs, strsCount, &ind, isUCS, &temp) || temp < 0 || temp >= varValuesCount) return QSP_FALSE;
                 /* text value */
                 if (!qspSkipLines(strsCount, 1, &ind)) return QSP_FALSE;
             }
         }
     }
-    return (ind == strsCount - 1); /* the last line is always empty */
+    if (ind > strsCount)
+    {
+        QSP_LOGE("qspCheckGameStatus fail: Final ind (%d) > strsCount (%d)", ind, strsCount);
+        return QSP_FALSE;
+    }
+    QSP_LOGD("qspCheckGameStatus SUCCESS! ind=%d, strsCount=%d", ind, strsCount);
+    return QSP_TRUE;
 }
 
 QSP_BOOL qspOpenGameStatus(void *data, int dataSize)
@@ -524,15 +592,19 @@ QSP_BOOL qspOpenGameStatus(void *data, int dataSize)
     QSP_BIGINT msecsCount;
     int i, j, k, ind, count, varsCount, valsCount, oldLocationState;
     QSP_BOOL isUCS = (dataSize >= 2 && *((char *)data + 1) == 0);
+    QSP_LOGD("qspOpenGameStatus called: dataSize=%d, isUCS=%d", dataSize, isUCS);
     gameString = qspStringFromFileData(data, dataSize, isUCS);
     count = qspSplitStr(gameString, QSP_STATIC_STR(QSP_STRSDELIM), &strs);
     qspFreeString(&gameString);
+    QSP_LOGD("qspOpenGameStatus split lines count=%d", count);
     if (!qspCheckGameStatus(strs, count, isUCS))
     {
+        QSP_LOGE("qspOpenGameStatus: qspCheckGameStatus returned FALSE!");
         qspSetError(QSP_ERR_CANTLOADFILE);
         qspFreeStrs(strs, count);
         return QSP_FALSE;
     }
+    QSP_LOGD("qspOpenGameStatus: qspCheckGameStatus PASSED!");
     ++qspLocationState;
     ++qspFullRefreshCount;
     qspMemClear(QSP_FALSE);

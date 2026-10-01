@@ -3,8 +3,10 @@ package org.qp.android.ui.stock
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -13,13 +15,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,6 +42,8 @@ import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SportsEsports
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -51,17 +58,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.preference.PreferenceManager
 import org.qp.android.R
 
+import androidx.compose.ui.text.style.TextOverflow
+
 enum class StockNavigationTab {
     GAMES,
+    REPOSITORY,
     SETTINGS
 }
 
@@ -152,76 +164,290 @@ fun FlexibleNavItem(
     }
 }
 
+data class ExpressiveNavItem(
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector,
+    val label: String,
+    val contentDescription: String? = null,
+    val showBadge: Boolean = false
+)
+
+@Composable
+fun AnimatedExpressiveNavigationBar(
+    items: List<ExpressiveNavItem>,
+    selectedIndex: Int,
+    onTabSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    navBarColor: Color = MaterialTheme.colorScheme.surfaceContainer,
+    indicatorColor: Color = MaterialTheme.colorScheme.primaryContainer,
+    selectedIconColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+    unselectedIconColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    selectedTextColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+    unselectedTextColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
+) {
+    if (items.isEmpty()) return
+    val view = LocalView.current
+    val hasLabels = remember(items) { items.any { it.label.isNotBlank() } }
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .background(navBarColor)
+    ) {
+        val count = items.size
+        val totalWidth = this.maxWidth
+        val itemWidth = totalWidth / count
+
+        // Calculate dynamic pill width for each tab based on its label length
+        val itemPillWidths = remember(items, itemWidth) {
+            items.map { item ->
+                if (item.label.isBlank()) {
+                    48.dp
+                } else {
+                    val estTextWidth = item.label.length * 7.2f
+                    (20 + 6 + estTextWidth + 20).dp.coerceIn(72.dp, itemWidth - 6.dp)
+                }
+            }
+        }
+
+        val targetPillWidth = itemPillWidths.getOrElse(selectedIndex) { 80.dp }
+
+        val animatedPillWidth by animateDpAsState(
+            targetValue = targetPillWidth,
+            animationSpec = spring(
+                dampingRatio = 0.82f,
+                stiffness = Spring.StiffnessMediumLow
+            ),
+            label = "navPillWidth"
+        )
+
+        val pillHeight = if (hasLabels) 34.dp else 30.dp
+
+        val targetCenterX = itemWidth * selectedIndex + itemWidth / 2
+        val targetLeft = targetCenterX - animatedPillWidth / 2
+
+        val animatedLeft by animateDpAsState(
+            targetValue = targetLeft,
+            animationSpec = spring(
+                dampingRatio = 0.82f,
+                stiffness = Spring.StiffnessMediumLow
+            ),
+            label = "navIndicatorX"
+        )
+
+        val distanceToTarget = (animatedLeft - targetLeft).value.let { if (it < 0) -it else it }
+        val isMoving = distanceToTarget > 1.5f
+
+        val pillScaleX by animateFloatAsState(
+            targetValue = if (isMoving) 1.08f else 1.0f,
+            animationSpec = tween(180, easing = FastOutSlowInEasing),
+            label = "pillScaleX"
+        )
+        val pillScaleY by animateFloatAsState(
+            targetValue = if (isMoving) 0.92f else 1.0f,
+            animationSpec = tween(180, easing = FastOutSlowInEasing),
+            label = "pillScaleY"
+        )
+
+        // Single Shared Active Indicator Pill
+        Box(
+            modifier = Modifier
+                .offset(x = animatedLeft, y = (56.dp - pillHeight) / 2)
+                .width(animatedPillWidth)
+                .height(pillHeight)
+                .graphicsLayer {
+                    scaleX = pillScaleX
+                    scaleY = pillScaleY
+                }
+                .clip(CircleShape)
+                .background(indicatorColor)
+        )
+
+        // Items Row
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            items.forEachIndexed { index, item ->
+                val isSelected = index == selectedIndex
+
+                val iconScale by animateFloatAsState(
+                    targetValue = if (isSelected) 1.0f else 0.92f,
+                    animationSpec = spring(
+                        dampingRatio = 0.8f,
+                        stiffness = Spring.StiffnessMediumLow
+                    ),
+                    label = "iconScale"
+                )
+
+                val iconColor by animateColorAsState(
+                    targetValue = if (isSelected) selectedIconColor else unselectedIconColor,
+                    animationSpec = tween(250),
+                    label = "iconColor"
+                )
+
+                val textColor by animateColorAsState(
+                    targetValue = if (isSelected) selectedTextColor else unselectedTextColor,
+                    animationSpec = tween(250),
+                    label = "textColor"
+                )
+
+                val labelAlpha by animateFloatAsState(
+                    targetValue = if (isSelected) 1.0f else 0.72f,
+                    animationSpec = tween(250),
+                    label = "labelAlpha"
+                )
+
+                val labelOffsetY by animateDpAsState(
+                    targetValue = if (isSelected) 0.dp else 1.dp,
+                    animationSpec = tween(250),
+                    label = "labelOffsetY"
+                )
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            onTabSelected(index)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        BadgedBox(
+                            badge = {
+                                if (item.showBadge) {
+                                    Badge()
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                                contentDescription = item.contentDescription ?: item.label,
+                                tint = iconColor,
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .graphicsLayer {
+                                        scaleX = iconScale
+                                        scaleY = iconScale
+                                    }
+                            )
+                        }
+                        if (item.label.isNotBlank()) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = item.label,
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontSize = 11.5.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                ),
+                                color = textColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .graphicsLayer { alpha = labelAlpha }
+                                    .offset(y = labelOffsetY)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+data class NavThemeColors(
+    val navBarColor: Color,
+    val indicatorColor: Color,
+    val selectedIconColor: Color,
+    val unselectedIconColor: Color,
+    val selectedTextColor: Color,
+    val unselectedTextColor: Color
+)
+
+@Composable
+fun rememberNavThemeColors(): NavThemeColors {
+    val context = LocalContext.current
+    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+    val themeMode = prefs.getString("themeMode", "system") ?: "system"
+    val themeColor = prefs.getString("themeColor", "monochrome") ?: "monochrome"
+    val isAmoled = themeMode == "amoled" || themeMode == "3"
+    val isMonochrome = themeColor == "monochrome"
+
+    val navBarColor = if (isAmoled) Color.Black else MaterialTheme.colorScheme.surfaceContainer
+    val indicatorColor = if (isAmoled || isMonochrome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
+    val selectedIconColor = if (isAmoled || isMonochrome) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
+    val unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    return NavThemeColors(
+        navBarColor = navBarColor,
+        indicatorColor = indicatorColor,
+        selectedIconColor = selectedIconColor,
+        unselectedIconColor = unselectedColor,
+        selectedTextColor = selectedIconColor,
+        unselectedTextColor = unselectedColor
+    )
+}
+
 @Composable
 fun FlexibleNavigationBar(
     currentTab: StockNavigationTab,
     onTabSelected: (StockNavigationTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val view = LocalView.current
-    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
-    val themeMode = prefs.getString("themeMode", "system") ?: "system"
-    val themeColor = prefs.getString("themeColor", "monochrome") ?: "monochrome"
-    val isAmoled = themeMode == "amoled"
-    val isMonochrome = themeColor == "monochrome"
-    
-    val navBarColor = if (isAmoled) Color.Black else MaterialTheme.colorScheme.surfaceContainer
-    val indicatorColor = if (isMonochrome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
-    val selectedIconColor = if (isMonochrome) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
+    val navColors = rememberNavThemeColors()
 
-    NavigationBar(
-        containerColor = navBarColor,
-        tonalElevation = if (isAmoled) 0.dp else 6.dp,
-        modifier = modifier.fillMaxWidth()
-    ) {
-        val gamesSelected = currentTab == StockNavigationTab.GAMES
-        val settingsSelected = currentTab == StockNavigationTab.SETTINGS
-
-        NavigationBarItem(
-            selected = gamesSelected,
-            onClick = {
-                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                onTabSelected(StockNavigationTab.GAMES)
-            },
-            icon = {
-                Icon(
-                    imageVector = if (gamesSelected) Icons.Filled.Home else Icons.Outlined.Home,
-                    contentDescription = stringResource(R.string.nav_home)
-                )
-            },
-            label = { Text(stringResource(R.string.nav_home)) },
-            colors = NavigationBarItemDefaults.colors(
-                indicatorColor = indicatorColor,
-                selectedIconColor = selectedIconColor,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+    val navItems = listOf(
+        ExpressiveNavItem(
+            selectedIcon = Icons.Filled.SportsEsports,
+            unselectedIcon = Icons.Outlined.SportsEsports,
+            label = stringResource(R.string.tabZeroName)
+        ),
+        ExpressiveNavItem(
+            selectedIcon = Icons.Filled.CloudDownload,
+            unselectedIcon = Icons.Outlined.CloudDownload,
+            label = stringResource(R.string.tabOneName)
+        ),
+        ExpressiveNavItem(
+            selectedIcon = Icons.Filled.Settings,
+            unselectedIcon = Icons.Outlined.Settings,
+            label = stringResource(R.string.settingsTitle)
         )
+    )
 
-        NavigationBarItem(
-            selected = settingsSelected,
-            onClick = {
-                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                onTabSelected(StockNavigationTab.SETTINGS)
-            },
-            icon = {
-                Icon(
-                    imageVector = if (settingsSelected) Icons.Filled.Settings else Icons.Outlined.Settings,
-                    contentDescription = stringResource(R.string.settingsTitle)
-                )
-            },
-            label = { Text(stringResource(R.string.settingsTitle)) },
-            colors = NavigationBarItemDefaults.colors(
-                indicatorColor = indicatorColor,
-                selectedIconColor = selectedIconColor,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        )
+    val selectedIndex = when (currentTab) {
+        StockNavigationTab.GAMES -> 0
+        StockNavigationTab.REPOSITORY -> 1
+        StockNavigationTab.SETTINGS -> 2
     }
+
+    AnimatedExpressiveNavigationBar(
+        items = navItems,
+        selectedIndex = selectedIndex,
+        onTabSelected = { idx ->
+            val newTab = when (idx) {
+                0 -> StockNavigationTab.GAMES
+                1 -> StockNavigationTab.REPOSITORY
+                else -> StockNavigationTab.SETTINGS
+            }
+            onTabSelected(newTab)
+        },
+        navBarColor = navColors.navBarColor,
+        indicatorColor = navColors.indicatorColor,
+        selectedIconColor = navColors.selectedIconColor,
+        unselectedIconColor = navColors.unselectedIconColor,
+        selectedTextColor = navColors.selectedTextColor,
+        unselectedTextColor = navColors.unselectedTextColor,
+        modifier = modifier
+    )
 }
 
 @Composable

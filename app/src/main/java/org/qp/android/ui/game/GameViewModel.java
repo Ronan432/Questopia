@@ -58,6 +58,7 @@ import org.qp.android.ui.settings.SettingsController;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -698,9 +699,15 @@ public class GameViewModel extends AndroidViewModel implements GameInterface {
         }
     }
 
-    public void setFrozenVariables(java.util.Map<String, String> frozen) {
+    public void setFrozenVariables(Map<String, String> frozen) {
         if (getLibProxy() != null) {
             getLibProxy().setFrozenVariables(frozen);
+        }
+    }
+
+    public void refreshGameUi() {
+        if (getLibProxy() != null) {
+            getLibProxy().refreshGameUi();
         }
     }
 }

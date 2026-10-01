@@ -35,7 +35,8 @@ class SettingsActivity : ComponentActivity() {
         setContent {
             val prefs = PreferenceManager.getDefaultSharedPreferences(this)
             val themeMode = prefs.getString("themeMode", "system") ?: "system"
-            QuestopiaTheme(themeMode = themeMode) {
+            val themeColor = prefs.getString("themeColor", "monochrome") ?: "monochrome"
+            QuestopiaTheme(themeMode = themeMode, themeColor = themeColor) {
                 SettingsApp(onFinish = { finish() }, showBackButton = true)
             }
         }

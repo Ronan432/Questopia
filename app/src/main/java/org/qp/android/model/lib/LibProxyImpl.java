@@ -40,6 +40,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
@@ -57,7 +59,7 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
     private volatile long gameStartTime;
     private volatile long lastMsCountCallTime;
     private GameInterface gameInterface;
-    private final java.util.concurrent.ConcurrentHashMap<String, String> frozenVariables = new java.util.concurrent.ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> frozenVariables = new ConcurrentHashMap<>();
 
     public LibProxyImpl(Context context) {
         this.context = context;
@@ -141,7 +143,7 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
                 errorData.intLineNum,
                 errorData.errorNum,
                 desc);
-        Log.e(TAG, message);
+        Log.e(TAG, "QSP Engine Error encountered:\n" + message);
         if (gameInterface == null) return;
         gameInterface.showErrorDialog(message);
     }
@@ -192,7 +194,7 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
     @NonNull
     private List<ListItem> getActionsList() {
         var gameDir = getCurGameDir();
-        if (!isWritableDir(context, gameDir)) return Collections.emptyList();
+        if (gameDir == null) return Collections.emptyList();
         var actions = new ArrayList<ListItem>();
 
         for (var element : getActions()) {
@@ -201,9 +203,12 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
 
             if (isNotEmptyOrBlank(tempImagePath)) {
                 var tempPath = normalizeContentPath(getFilename(tempImagePath));
-                var fileFromPath = fromRelPath(context, tempPath, gameDir);
-                if (isWritableFile(context, fileFromPath)) {
-                    tempImagePath = String.valueOf(fileFromPath.getUri());
+                if (tempPath != null) {
+                    tempPath = tempPath.replace("\\", "/");
+                    var fileFromPath = fromRelPath(context, tempPath, gameDir);
+                    if (fileFromPath != null && fileFromPath.exists()) {
+                        tempImagePath = String.valueOf(fileFromPath.getUri());
+                    }
                 }
             }
 
@@ -216,23 +221,28 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
     @NonNull
     private List<ListItem> getObjectsList() {
         var gameDir = getCurGameDir();
-        if (!isWritableDir(context, gameDir)) return Collections.emptyList();
+        if (gameDir == null) return Collections.emptyList();
         var objects = new ArrayList<ListItem>();
 
         for (var element : getObjects()) {
             var tempImagePath = element.image() == null ? "" : element.image();
             var tempText = element.name() == null ? "" : element.name();
 
-            if (tempText.contains("<img")) {
-                if (getHtmlProcessor().isContainsHtmlTags(tempText)) {
-                    var tempPath = getHtmlProcessor().getSrcDir(tempText);
+            if (isNotEmptyOrBlank(tempImagePath)) {
+                var tempPath = normalizeContentPath(getFilename(tempImagePath));
+                if (tempPath != null) {
+                    tempPath = tempPath.replace("\\", "/");
                     var fileFromPath = fromRelPath(context, tempPath, gameDir);
-                    if (isWritableFile(context, fileFromPath)) {
+                    if (fileFromPath != null && fileFromPath.exists()) {
                         tempImagePath = String.valueOf(fileFromPath.getUri());
                     }
-                } else {
-                    var fileFromPath = fromRelPath(context, tempText, gameDir);
-                    if (isWritableFile(context, fileFromPath)) {
+                }
+            } else if (tempText.contains("<img")) {
+                var tempPath = getHtmlProcessor().getSrcDir(tempText);
+                if (isNotEmptyOrBlank(tempPath)) {
+                    tempPath = tempPath.replace("\\", "/");
+                    var fileFromPath = fromRelPath(context, tempPath, gameDir);
+                    if (fileFromPath != null && fileFromPath.exists()) {
                         tempImagePath = String.valueOf(fileFromPath.getUri());
                     }
                 }
@@ -342,9 +352,16 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
             return;
         }
         final var gameData = getFileContents(context, uri);
-        if (gameData == null) return;
+        if (gameData == null) {
+            Log.e(TAG, "Failed to load save game: getFileContents returned null for URI: " + uri);
+            return;
+        }
+        Log.d(TAG, "Attempting to open saved game from URI: " + uri + " (data length: " + gameData.length + " bytes)");
         if (!openSavedGameFromData(gameData, true)) {
+            Log.e(TAG, "Failed to open saved game from URI: " + uri + " (openSavedGameFromData returned false)");
             showLastQspError();
+        } else {
+            Log.i(TAG, "Successfully loaded save game from URI: " + uri);
         }
     }
 
@@ -418,6 +435,14 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
     public void executeCounter() {
         if (libLock.isLocked()) return;
         runOnQspThread(() -> {
+            if (!frozenVariables.isEmpty()) {
+                for (var entry : frozenVariables.entrySet()) {
+                    Log.d(TAG, "Enforcing frozen variable: " + entry.getKey() + " = " + entry.getValue());
+                    if (!execString(entry.getKey() + " = " + entry.getValue(), false)) {
+                        Log.e(TAG, "Failed to enforce frozen variable: " + entry.getKey() + " = " + entry.getValue());
+                    }
+                }
+            }
             if (!execCounter(true)) {
                 showLastQspError();
             }
@@ -441,11 +466,6 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
 
     @Override
     public void onRefreshInt(boolean isForced) {
-        if (!frozenVariables.isEmpty()) {
-            for (var entry : frozenVariables.entrySet()) {
-                execString(entry.getKey() + " = " + entry.getValue(), false);
-            }
-        }
         var request = new LibRefIRequest();
         var configChanged = loadInterfaceConfiguration();
 
@@ -657,22 +677,71 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
     }
 
     @Override
+    public VarItem[] getAllVariables() {
+        libLock.lock();
+        try {
+            return super.getAllVariables();
+        } finally {
+            libLock.unlock();
+        }
+    }
+
+    @Override
+    public String[] getAllLocations() {
+        libLock.lock();
+        try {
+            return super.getAllLocations();
+        } finally {
+            libLock.unlock();
+        }
+    }
+
+    @Override
     public byte[] getSaveData() {
-        return saveGameAsData(false);
+        libLock.lock();
+        try {
+            return saveGameAsData(false);
+        } finally {
+            libLock.unlock();
+        }
     }
 
     @Override
     public boolean loadSaveData(byte[] data) {
-        if (data == null) return false;
-        return openSavedGameFromData(data, true);
+        if (data == null) {
+            Log.e(TAG, "Failed to load save data: byte array is null");
+            return false;
+        }
+        libLock.lock();
+        try {
+            Log.d(TAG, "Attempting to open saved game from byte array (length: " + data.length + " bytes)");
+            boolean success = openSavedGameFromData(data, true);
+            if (!success) {
+                Log.e(TAG, "Failed to open saved game from byte array (openSavedGameFromData returned false)");
+                showLastQspError();
+            } else {
+                Log.i(TAG, "Successfully loaded save game from byte array");
+            }
+            return success;
+        } finally {
+            libLock.unlock();
+        }
     }
 
     @Override
-    public void setFrozenVariables(java.util.Map<String, String> frozen) {
+    public void setFrozenVariables(Map<String, String> frozen) {
         frozenVariables.clear();
-        if (frozen != null) {
+        if (frozen != null && !frozen.isEmpty()) {
             frozenVariables.putAll(frozen);
+            Log.d(TAG, "Updated frozen variables map: " + frozenVariables);
+        } else {
+            Log.d(TAG, "Cleared frozen variables map");
         }
+    }
+
+    @Override
+    public void refreshGameUi() {
+        runOnQspThread(() -> onRefreshInt(true));
     }
 
     // endregion LibQpCallbacks

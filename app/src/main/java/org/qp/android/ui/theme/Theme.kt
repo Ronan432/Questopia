@@ -60,9 +60,11 @@ private val MonochromeDark = darkColorScheme(
     onSurface = Color(0xFFFFFFFF),
     surfaceVariant = Color(0xFF2C2C2C),
     onSurfaceVariant = Color(0xFFC7C7C7),
-    surfaceContainer = Color(0xFF1E1E1E),
-    surfaceContainerHigh = Color(0xFF282828),
+    surfaceContainerLowest = Color(0xFF0F0F0F),
     surfaceContainerLow = Color(0xFF181818),
+    surfaceContainer = Color(0xFF1E1E1E),
+    surfaceContainerHigh = Color(0xFF262626),
+    surfaceContainerHighest = Color(0xFF303030),
     outline = Color(0xFF8E8E8E),
     outlineVariant = Color(0xFF484848)
 )
@@ -136,15 +138,17 @@ private fun getPresetScheme(
             onSecondary = Color(0xFF253140),
             secondaryContainer = Color(0xFF3B4858),
             onSecondaryContainer = onPrimaryContainerDark,
-            background = Color(0xFF111318),
+            background = Color(0xFF121212),
             onBackground = Color(0xFFE2E2E6),
-            surface = Color(0xFF111318),
+            surface = Color(0xFF121212),
             onSurface = Color(0xFFE2E2E6),
-            surfaceVariant = Color(0xFF43474E),
+            surfaceVariant = Color(0xFF2C2C2C),
             onSurfaceVariant = Color(0xFFC3C7D0),
-            surfaceContainer = Color(0xFF1D2024),
-            surfaceContainerHigh = Color(0xFF282A2E),
-            surfaceContainerLow = Color(0xFF191C20)
+            surfaceContainerLowest = Color(0xFF0F0F0F),
+            surfaceContainerLow = Color(0xFF181818),
+            surfaceContainer = Color(0xFF1E1E1E),
+            surfaceContainerHigh = Color(0xFF262626),
+            surfaceContainerHighest = Color(0xFF303030)
         )
     } else {
         lightColorScheme(

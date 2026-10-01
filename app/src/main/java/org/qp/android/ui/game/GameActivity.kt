@@ -4,7 +4,14 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.ViewGroup
+import android.util.Log
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.view.HapticFeedbackConstants
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.widget.LinearLayout
@@ -16,6 +23,13 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
 import org.qp.android.ui.common.MorphingButton
 import org.qp.android.ui.common.MorphingDialogButton
 import org.qp.android.ui.common.MorphingOutlinedButton
@@ -47,6 +61,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,6 +73,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.text.HtmlCompat
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.preference.PreferenceManager
 import coil.compose.SubcomposeAsyncImage
 import coil.request.CachePolicy
@@ -68,17 +84,22 @@ import com.anggrayudi.storage.file.MimeType
 import com.libqsp.jni.QSPLib
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
 import org.qp.android.R
 import org.qp.android.helpers.ErrorType
 import org.qp.android.helpers.utils.FileUtil.findOrCreateFile
 import org.qp.android.helpers.utils.FileUtil.fromRelPath
 import org.qp.android.helpers.utils.LocaleHelper
+import org.qp.android.ui.common.CustomDrawerHandle
 import org.qp.android.ui.common.MorphingButton
 import org.qp.android.ui.common.MorphingOutlinedButton
 import org.qp.android.ui.common.MorphingSurface
 import org.qp.android.ui.common.getGroupedItemShape
 import org.qp.android.ui.dialogs.GameDialogType
 import org.qp.android.ui.settings.SettingsActivity
+import org.qp.android.ui.stock.AnimatedExpressiveNavigationBar
+import org.qp.android.ui.stock.ExpressiveNavItem
+import org.qp.android.ui.stock.rememberNavThemeColors
 import org.qp.android.ui.stock.ShimmerPlaceholder
 import org.qp.android.ui.theme.QuestopiaTheme
 import java.text.SimpleDateFormat
@@ -94,6 +115,11 @@ data class ErrorDialogData(val message: String)
 data class SlotInfo(val index: Int, val isPresent: Boolean, val timeStr: String?, val fileUri: Uri?)
 
 class GameActivity : AppCompatActivity() {
+
+    internal fun frozenVariablesKey(): String {
+        val file = intent.getStringExtra("gameFileUri") ?: intent.getStringExtra("gameDirUri") ?: "unknown"
+        return "frozenVariables_" + file.hashCode()
+    }
 
     companion object {
         const val TAB_MAIN_DESC_AND_ACTIONS = 0
@@ -176,7 +202,8 @@ class GameActivity : AppCompatActivity() {
         setContent {
             val prefs = PreferenceManager.getDefaultSharedPreferences(this)
             val themeMode = prefs.getString("themeMode", "system") ?: "system"
-            QuestopiaTheme(themeMode = themeMode) {
+            val themeColor = prefs.getString("themeColor", "monochrome") ?: "monochrome"
+            QuestopiaTheme(themeMode = themeMode, themeColor = themeColor) {
                 GameMainCompose(
                     activity = this,
                     viewModel = gameViewModel,
@@ -465,7 +492,7 @@ fun GameDialogsHost(activity: GameActivity, viewModel: GameViewModel) {
                 OutlinedTextField(
                     value = textInput,
                     onValueChange = { textInput = it },
-                    label = { Text("Komut") },
+                    label = { Text(stringResource(R.string.command)) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
@@ -519,8 +546,8 @@ fun GameDialogsHost(activity: GameActivity, viewModel: GameViewModel) {
     if (menuDialogData != null) {
         val prefs = remember { PreferenceManager.getDefaultSharedPreferences(activity) }
         val isAmoled = prefs.getString("themeMode", "system") == "3" || prefs.getString("themeMode", "system") == "amoled"
-        val dialogBg = if (isAmoled) Color(0xFF000000) else Color(0xFF101216)
-        val itemBg = if (isAmoled) Color(0xFF0D0D0D) else Color(0xFF1B1D24)
+        val dialogBg = if (isAmoled) Color(0xFF000000) else MaterialTheme.colorScheme.surfaceContainerLow
+        val itemBg = if (isAmoled) Color(0xFF0D0D0D) else MaterialTheme.colorScheme.surfaceContainer
 
         Dialog(
             onDismissRequest = {
@@ -735,131 +762,155 @@ fun GameMainCompose(
     val actionsList by viewModel.actsListLiveData.observeAsState(emptyList())
     val objectsList by viewModel.objsListLiveData.observeAsState(emptyList())
 
+    LaunchedEffect(objectsList) {
+        Log.d(
+            "QUEST_INVENTORY",
+            "Inventory updated: count=${objectsList.size}, items=${objectsList.joinToString { item -> "name=${item.name()}, image=${item.image}" }}"
+        )
+    }
+
     BackHandler {
         onExitRequested()
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = gameTitle.ifBlank { stringResource(R.string.gameStockTitle) },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onExitRequested) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.close)
-                        )
+            val view = LocalView.current
+            var isTitleExpanded by remember { mutableStateOf(false) }
+            var isTitleTruncated by remember { mutableStateOf(false) }
+
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Combined Morphing overlay for Back button + Title
+                    MorphingSurface(
+                        shape = RoundedCornerShape(24.dp),
+                        pressedRadius = 8.dp,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        onClick = if (isTitleTruncated || isTitleExpanded) {
+                            { isTitleExpanded = !isTitleExpanded }
+                        } else null,
+                        modifier = Modifier
+                            .weight(1f)
+                            .animateContentSize()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 4.dp),
+                            verticalAlignment = if (isTitleExpanded) Alignment.Top else Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                    onExitRequested()
+                                },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = stringResource(R.string.close),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(4.dp))
+
+                            Text(
+                                text = gameTitle.ifBlank { stringResource(R.string.closeGameTitle) },
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = if (isTitleExpanded) 5 else 1,
+                                overflow = TextOverflow.Ellipsis,
+                                onTextLayout = { textLayoutResult ->
+                                    if (!isTitleExpanded) {
+                                        isTitleTruncated = textLayoutResult.hasVisualOverflow || textLayoutResult.lineCount > 1
+                                    }
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(end = 12.dp, top = if (isTitleExpanded) 8.dp else 0.dp, bottom = if (isTitleExpanded) 8.dp else 0.dp)
+                            )
+                        }
                     }
-                },
-                actions = {
-                    IconButton(onClick = { showInGameMenu = true }) {
-                        Icon(
-                            imageVector = Icons.Outlined.MoreVert,
-                            contentDescription = "Menü"
-                        )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Separate Morphing overlay for 3-dots Menu button
+                    MorphingSurface(
+                        shape = CircleShape,
+                        pressedRadius = 12.dp,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        onClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            showInGameMenu = true
+                        },
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.MoreVert,
+                                contentDescription = stringResource(R.string.menu),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
+                }
+            }
         },
         bottomBar = {
-            val context = LocalContext.current
-            val view = androidx.compose.ui.platform.LocalView.current
-            val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
-            val themeMode = prefs.getString("themeMode", "system") ?: "system"
-            val themeColor = prefs.getString("themeColor", "monochrome") ?: "monochrome"
-            val isAmoled = themeMode == "amoled"
-            val isMonochrome = themeColor == "monochrome"
-            val navBarColor = if (isAmoled) Color.Black else MaterialTheme.colorScheme.surfaceContainer
-            val indicatorColor = if (isMonochrome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
-            val selectedIconColor = if (isMonochrome) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
+            if (showInGameMenu || showSlotsSheetMode != null || showCheatModesSheet) return@Scaffold
+            val navColors = rememberNavThemeColors()
 
-            NavigationBar(
-                containerColor = navBarColor,
-                tonalElevation = if (isAmoled) 0.dp else 6.dp,
-                windowInsets = WindowInsets(0, 0, 0, 0),
-                modifier = Modifier.height(56.dp)
-            ) {
-                NavigationBarItem(
-                    selected = currentTab == GameActivity.TAB_MAIN_DESC_AND_ACTIONS,
-                    onClick = {
-                        view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-                        onTabSelected(GameActivity.TAB_MAIN_DESC_AND_ACTIONS)
-                    },
-                    icon = {
-                        BadgedBox(badge = { if (badgeMain) Badge() }) {
-                            Icon(
-                                imageVector = if (currentTab == GameActivity.TAB_MAIN_DESC_AND_ACTIONS) Icons.Filled.Description else Icons.Outlined.Description,
-                                contentDescription = stringResource(R.string.mainDescTitle),
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    },
-                    label = null,
-                    alwaysShowLabel = false,
-                    colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = indicatorColor,
-                        selectedIconColor = selectedIconColor,
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            val gameNavItems = listOf(
+                ExpressiveNavItem(
+                    selectedIcon = Icons.Filled.Description,
+                    unselectedIcon = Icons.Outlined.Description,
+                    label = "",
+                    contentDescription = stringResource(R.string.mainDescTitle),
+                    showBadge = badgeMain
+                ),
+                ExpressiveNavItem(
+                    selectedIcon = Icons.Filled.Assessment,
+                    unselectedIcon = Icons.Outlined.Assessment,
+                    label = "",
+                    contentDescription = stringResource(R.string.varsDescTitle),
+                    showBadge = badgeVars
+                ),
+                ExpressiveNavItem(
+                    selectedIcon = Icons.Filled.Inventory2,
+                    unselectedIcon = Icons.Outlined.Inventory2,
+                    label = "",
+                    contentDescription = stringResource(R.string.inventoryTitle),
+                    showBadge = badgeInv
                 )
-                NavigationBarItem(
-                    selected = currentTab == GameActivity.TAB_VARS_DESC,
-                    onClick = {
-                        view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-                        onTabSelected(GameActivity.TAB_VARS_DESC)
-                    },
-                    icon = {
-                        BadgedBox(badge = { if (badgeVars) Badge() }) {
-                            Icon(
-                                imageVector = if (currentTab == GameActivity.TAB_VARS_DESC) Icons.Filled.Assessment else Icons.Outlined.Assessment,
-                                contentDescription = stringResource(R.string.varsDescTitle),
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    },
-                    label = null,
-                    alwaysShowLabel = false,
-                    colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = indicatorColor,
-                        selectedIconColor = selectedIconColor,
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-                NavigationBarItem(
-                    selected = currentTab == GameActivity.TAB_OBJECTS,
-                    onClick = {
-                        view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-                        onTabSelected(GameActivity.TAB_OBJECTS)
-                    },
-                    icon = {
-                        BadgedBox(badge = { if (badgeInv) Badge() }) {
-                            Icon(
-                                imageVector = if (currentTab == GameActivity.TAB_OBJECTS) Icons.Filled.Inventory2 else Icons.Outlined.Inventory2,
-                                contentDescription = stringResource(R.string.inventoryTitle),
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    },
-                    label = null,
-                    alwaysShowLabel = false,
-                    colors = NavigationBarItemDefaults.colors(
-                        indicatorColor = indicatorColor,
-                        selectedIconColor = selectedIconColor,
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-            }
+            )
+
+            AnimatedExpressiveNavigationBar(
+                items = gameNavItems,
+                selectedIndex = currentTab,
+                onTabSelected = { tab ->
+                    onTabSelected(tab)
+                },
+                navBarColor = navColors.navBarColor,
+                indicatorColor = navColors.indicatorColor,
+                selectedIconColor = navColors.selectedIconColor,
+                unselectedIconColor = navColors.unselectedIconColor,
+                selectedTextColor = navColors.selectedTextColor,
+                unselectedTextColor = navColors.unselectedTextColor
+            )
         }
     ) { paddingValues ->
         Box(
@@ -961,15 +1012,16 @@ fun GameMainCompose(
         }
     }
 
-    // In-Game Options Menu Bottom Sheet (Grouped Expressive Design, No Emojis)
+    // In-Game Options Menu Bottom Sheet (Grouped Expressive Design, No Emojis, No Subtitles)
     if (showInGameMenu) {
         val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
         val isAmoled = prefs.getString("themeMode", "system") == "3" || prefs.getString("themeMode", "system") == "amoled"
-        val menuSheetBg = if (isAmoled) Color(0xFF000000) else Color(0xFF101216)
+        val menuSheetBg = if (isAmoled) Color(0xFF000000) else MaterialTheme.colorScheme.surfaceContainerLow
 
         ModalBottomSheet(
             onDismissRequest = { showInGameMenu = false },
             containerColor = menuSheetBg,
+            dragHandle = { CustomDrawerHandle() },
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
             Column(
@@ -977,6 +1029,7 @@ fun GameMainCompose(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
                     .padding(bottom = 24.dp)
+                    .navigationBarsPadding()
             ) {
                 Text(
                     text = stringResource(R.string.gameMenuTitle),
@@ -986,14 +1039,13 @@ fun GameMainCompose(
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
                 )
 
-                // Group 1: Kayıt ve Yükleme (Material 3 Expressive Segmented Group)
+                // Group 1: Kayıt ve Yükleme (Save & Load)
                 ExpressiveMenuGroup(
                     items = listOf(
                         { shape ->
                             ExpressiveMenuItem(
                                 icon = Icons.Outlined.Save,
                                 title = stringResource(R.string.saveTitle),
-                                subtitle = "İlerlemeyi bir slota kaydet",
                                 shape = shape,
                                 onClick = {
                                     showInGameMenu = false
@@ -1005,7 +1057,6 @@ fun GameMainCompose(
                             ExpressiveMenuItem(
                                 icon = Icons.Outlined.FolderOpen,
                                 title = stringResource(R.string.loadTitle),
-                                subtitle = "Kayıtlı bir oyunu yükle",
                                 shape = shape,
                                 onClick = {
                                     showInGameMenu = false
@@ -1016,74 +1067,54 @@ fun GameMainCompose(
                     )
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Group 2: Eylemler & Girdi
-                ExpressiveMenuGroup(
-                    items = listOf(
-                        { shape ->
-                            ExpressiveMenuItem(
-                                icon = Icons.Outlined.Refresh,
-                                title = stringResource(R.string.restartGameTitle),
-                                subtitle = "Oyunu baştan başlat",
-                                shape = shape,
-                                onClick = {
-                                    showInGameMenu = false
-                                    showRestartDialog = true
-                                }
-                            )
-                        },
-                        { shape ->
-                            ExpressiveMenuItem(
-                                icon = Icons.Outlined.Keyboard,
-                                title = stringResource(R.string.userInputTitle),
-                                subtitle = "Komut veya metin girdisi gönder",
-                                shape = shape,
-                                onClick = {
-                                    showInGameMenu = false
-                                    val settings = viewModel.settingsController
-                                    if (settings.isUseExecString) {
-                                        viewModel.requestForNativeLib(GameLibRequest.USE_EXECUTOR)
-                                    } else {
-                                        viewModel.requestForNativeLib(GameLibRequest.USE_INPUT)
-                                    }
-                                }
-                            )
-                        }
-                    )
-                )
-
+                // Group 2: Hile Modları & Kullanıcı Girdisi (Cheat Modes & User Input)
                 val isCheatsEnabled = prefs.getBoolean("enableCheats", false)
+                val group2Items = mutableListOf<@Composable (shape: Shape) -> Unit>()
+
                 if (isCheatsEnabled) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    ExpressiveMenuGroup(
-                        items = listOf(
-                            { shape ->
-                                ExpressiveMenuItem(
-                                    icon = Icons.Outlined.Code,
-                                    title = stringResource(R.string.cheatModesTitle),
-                                    subtitle = "Değişken editörü, kilitler, ışınlanma ve konsol",
-                                    shape = shape,
-                                    onClick = {
-                                        showInGameMenu = false
-                                        showCheatModesSheet = true
-                                    }
-                                )
+                    group2Items.add { shape ->
+                        ExpressiveMenuItem(
+                            icon = Icons.Outlined.Code,
+                            title = stringResource(R.string.cheatModesTitle),
+                            shape = shape,
+                            onClick = {
+                                showInGameMenu = false
+                                showCheatModesSheet = true
                             }
                         )
+                    }
+                }
+
+                group2Items.add { shape ->
+                    ExpressiveMenuItem(
+                        icon = Icons.Outlined.Keyboard,
+                        title = stringResource(R.string.userInputTitle),
+                        shape = shape,
+                        onClick = {
+                            showInGameMenu = false
+                            val settings = viewModel.settingsController
+                            if (settings.isUseExecString) {
+                                viewModel.requestForNativeLib(GameLibRequest.USE_EXECUTOR)
+                            } else {
+                                viewModel.requestForNativeLib(GameLibRequest.USE_INPUT)
+                            }
+                        }
                     )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                ExpressiveMenuGroup(items = group2Items)
 
-                // Group 3: Sistem & Çıkış
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Group 3: Ayarlar, Oyunu Yeniden Başlat & Oyunu Kapat
                 ExpressiveMenuGroup(
                     items = listOf(
                         { shape ->
                             ExpressiveMenuItem(
                                 icon = Icons.Outlined.Settings,
                                 title = stringResource(R.string.settingsTitle),
-                                subtitle = "Görünüm, ses ve genel ayarlar",
                                 shape = shape,
                                 onClick = {
                                     showInGameMenu = false
@@ -1093,9 +1124,19 @@ fun GameMainCompose(
                         },
                         { shape ->
                             ExpressiveMenuItem(
+                                icon = Icons.Outlined.Refresh,
+                                title = stringResource(R.string.restartGameTitle),
+                                shape = shape,
+                                onClick = {
+                                    showInGameMenu = false
+                                    showRestartDialog = true
+                                }
+                            )
+                        },
+                        { shape ->
+                            ExpressiveMenuItem(
                                 icon = Icons.AutoMirrored.Outlined.ExitToApp,
-                                title = stringResource(R.string.gameStockTitle),
-                                subtitle = "Oyunu kapat ve ana sayfaya dön",
+                                title = stringResource(R.string.closeGameTitle),
                                 shape = shape,
                                 onClick = {
                                     showInGameMenu = false
@@ -1135,7 +1176,7 @@ fun GameMainCompose(
             onDismissRequest = { showRestartDialog = false },
             icon = { Icon(Icons.Outlined.Refresh, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
             title = { Text(stringResource(R.string.restartGameTitle), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
-            text = { Text(stringResource(R.string.promptCloseGame), style = MaterialTheme.typography.bodyMedium) },
+            text = { Text(stringResource(R.string.promptRestartGame), style = MaterialTheme.typography.bodyMedium) },
             confirmButton = {
                 MorphingButton(onClick = {
                     showRestartDialog = false
@@ -1166,7 +1207,7 @@ fun ExpressiveMenuGroup(
     ) {
         val total = items.size
         for (index in 0 until total) {
-            val shape = getGroupedItemShape(index, total, outerRadius = 20.dp, innerRadius = 4.dp)
+            val shape = getGroupedItemShape(index, total, outerRadius = 24.dp, innerRadius = 4.dp)
             items[index](shape)
         }
     }
@@ -1176,32 +1217,29 @@ fun ExpressiveMenuGroup(
 fun ExpressiveMenuItem(
     icon: ImageVector,
     title: String,
-    subtitle: String,
     shape: Shape,
+    subtitle: String? = null,
     onClick: () -> Unit
 ) {
-    val context = LocalContext.current
-    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
-    val isAmoled = prefs.getString("themeMode", "system") == "3" || prefs.getString("themeMode", "system") == "amoled"
-    val itemBg = if (isAmoled) Color(0xFF0D0D0D) else Color(0xFF1B1D24)
-    val iconBg = if (isAmoled) Color(0xFF181818) else Color(0xFF262832)
+    val itemBg = MaterialTheme.colorScheme.surfaceContainer
+    val iconBg = MaterialTheme.colorScheme.surfaceContainerHigh
 
     MorphingSurface(
         shape = shape,
         color = itemBg,
-        pressedRadius = 24.dp,
+        pressedRadius = 28.dp,
         onClick = onClick,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .padding(horizontal = 14.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(38.dp)
+                    .size(32.dp)
                     .clip(CircleShape)
                     .background(iconBg),
                 contentAlignment = Alignment.Center
@@ -1210,29 +1248,25 @@ fun ExpressiveMenuItem(
                     imageVector = icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(17.dp)
                 )
             }
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.size(18.dp)
-            )
         }
     }
 }
@@ -1243,15 +1277,45 @@ fun GameListItemCard(
     shape: Shape = RoundedCornerShape(20.dp),
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    val gameViewModel: GameViewModel = viewModel()
+
+    LaunchedEffect(item.name, item.image) {
+        Log.d("QUEST_INVENTORY", "Rendering item: name=${item.name}, image=${item.image}")
+    }
+
+    val resolvedImagePath = remember(item.image, item.name) {
+        if (!item.image.isNullOrBlank()) {
+            item.image
+        } else if (!item.name.isNullOrBlank() && item.name.contains("<img", ignoreCase = true)) {
+            val match = Regex("""src=["']?([^"'>\s]+)["']?""", RegexOption.IGNORE_CASE).find(item.name)
+            val relPath = match?.groupValues?.getOrNull(1)?.replace("\\", "/")
+            if (!relPath.isNullOrBlank()) {
+                val curDir = gameViewModel.getCurGameDir().get()
+                if (curDir != null) {
+                    val docFile = fromRelPath(context, relPath, curDir)
+                    if (docFile != null && docFile.exists()) {
+                        docFile.uri.toString()
+                    } else {
+                        relPath
+                    }
+                } else {
+                    relPath
+                }
+            } else ""
+        } else ""
+    }
+
     val textParsed = remember(item.name) {
-        if (item.name.isNullOrBlank()) "" else HtmlCompat.fromHtml(item.name, HtmlCompat.FROM_HTML_MODE_LEGACY).toString().trim()
+        if (item.name.isNullOrBlank()) ""
+        else HtmlCompat.fromHtml(item.name, HtmlCompat.FROM_HTML_MODE_LEGACY).toString().trim()
     }
 
     MorphingSurface(
         shape = shape,
         color = MaterialTheme.colorScheme.secondaryContainer,
         tonalElevation = 3.dp,
-        pressedRadius = 24.dp,
+        pressedRadius = 12.dp,
         onClick = onClick,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -1261,15 +1325,15 @@ fun GameListItemCard(
                 .padding(horizontal = 18.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (!item.image.isNullOrBlank()) {
+            if (!resolvedImagePath.isNullOrBlank()) {
                 Surface(
                     shape = RoundedCornerShape(10.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerHighest,
                     modifier = Modifier.size(38.dp)
                 ) {
                     SubcomposeAsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(item.image)
+                        model = ImageRequest.Builder(context)
+                            .data(resolvedImagePath)
                             .crossfade(true)
                             .diskCachePolicy(CachePolicy.ENABLED)
                             .memoryCachePolicy(CachePolicy.ENABLED)
@@ -1292,15 +1356,19 @@ fun GameListItemCard(
                         modifier = Modifier.fillMaxSize()
                     )
                 }
-                Spacer(modifier = Modifier.width(14.dp))
+                if (textParsed.isNotBlank()) {
+                    Spacer(modifier = Modifier.width(14.dp))
+                }
             }
-            Text(
-                text = textParsed,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.weight(1f)
-            )
+            if (textParsed.isNotBlank()) {
+                Text(
+                    text = textParsed,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }
@@ -1382,12 +1450,13 @@ fun SaveSlotsSheet(
 
     val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
     val isAmoled = prefs.getString("themeMode", "system") == "3" || prefs.getString("themeMode", "system") == "amoled"
-    val sheetBg = if (isAmoled) Color(0xFF000000) else Color(0xFF101216)
-    val slotItemBg = if (isAmoled) Color(0xFF0D0D0D) else Color(0xFF1B1D24)
+    val sheetBg = if (isAmoled) Color(0xFF000000) else MaterialTheme.colorScheme.surfaceContainerLow
+    val slotItemBg = if (isAmoled) Color(0xFF0D0D0D) else MaterialTheme.colorScheme.surfaceContainer
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = sheetBg,
+        dragHandle = { CustomDrawerHandle() },
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(
@@ -1395,6 +1464,7 @@ fun SaveSlotsSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 4.dp)
                 .padding(bottom = 24.dp)
+                .navigationBarsPadding()
         ) {
             Text(
                 text = if (isSave) stringResource(R.string.saveTitle) else stringResource(R.string.loadTitle),
@@ -1432,11 +1502,17 @@ fun SaveSlotsSheet(
                                             if (isSave) {
                                                 val saveFile = findOrCreateFile(context, savesDir, "${slot.index + 1}.sav", MimeType.TEXT)
                                                 if (saveFile != null) {
+                                                    Log.d("SaveSlotsSheet", "Saving game to slot ${slot.index + 1}: ${saveFile.uri}")
                                                     viewModel.requestForNativeLib(GameLibRequest.SAVE_FILE, saveFile.uri)
+                                                } else {
+                                                    Log.e("SaveSlotsSheet", "Failed to create/find save file for slot ${slot.index + 1}")
                                                 }
                                             } else {
                                                 if (slot.fileUri != null) {
+                                                    Log.d("SaveSlotsSheet", "Loading game from slot ${slot.index + 1}: ${slot.fileUri}")
                                                     viewModel.requestForNativeLib(GameLibRequest.LOAD_FILE, slot.fileUri)
+                                                } else {
+                                                    Log.e("SaveSlotsSheet", "Slot ${slot.index + 1} fileUri is null!")
                                                 }
                                             }
                                         }
@@ -1466,7 +1542,7 @@ fun SaveSlotsSheet(
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = "Slot ${slot.index + 1}",
+                                                text = stringResource(R.string.slotLabel, slot.index + 1),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = MaterialTheme.colorScheme.onSurface

@@ -286,6 +286,11 @@ fun SettingsMainScreen(
                         onFocusChanged = { localSearchActive = it },
                         focusRequester = searchFocusRequester,
                         onSearch = { focusManager.clearFocus() },
+                        onCancel = {
+                            localSearchActive = false
+                            localSearchQuery = ""
+                            focusManager.clearFocus()
+                        },
                         modifier = Modifier.weight(1f)
                     )
                 }

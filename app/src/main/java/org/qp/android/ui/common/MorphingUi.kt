@@ -82,22 +82,22 @@ fun rememberMorphingShape(
 
     val animTopStart by animateDpAsState(
         targetValue = if (isPressed) pressedRadius else resting?.topStart.toDp(),
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "morphTS"
     )
     val animTopEnd by animateDpAsState(
         targetValue = if (isPressed) pressedRadius else resting?.topEnd.toDp(),
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "morphTE"
     )
     val animBottomStart by animateDpAsState(
         targetValue = if (isPressed) pressedRadius else resting?.bottomStart.toDp(),
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "morphBS"
     )
     val animBottomEnd by animateDpAsState(
         targetValue = if (isPressed) pressedRadius else resting?.bottomEnd.toDp(),
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
         label = "morphBE"
     )
 
@@ -182,8 +182,8 @@ fun MorphingButton(
     val cornerRadius by animateDpAsState(
         targetValue = if (isPressed) pressedRadius else restingRadius,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
         ),
         label = "btnCornerMorph"
     )
@@ -234,8 +234,8 @@ fun MorphingOutlinedButton(
     val cornerRadius by animateDpAsState(
         targetValue = if (isPressed) pressedRadius else restingRadius,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
         ),
         label = "outlinedBtnCornerMorph"
     )

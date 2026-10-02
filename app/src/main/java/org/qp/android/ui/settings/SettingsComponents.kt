@@ -107,8 +107,8 @@ fun ExpressiveSearchBar(
 ) {
     val isSearchActiveOrFocused = isFocused || query.isNotEmpty()
     val searchElevation by animateDpAsState(
-        targetValue = if (isSearchActiveOrFocused) 4.dp else 1.dp,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+        targetValue = if (isSearchActiveOrFocused) 3.dp else 0.dp,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "searchElevationAnim"
     )
 
@@ -190,10 +190,20 @@ fun ExpressiveSearchBar(
         if (showCancelButton) {
             AnimatedVisibility(
                 visible = isSearchActiveOrFocused,
-                enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
-                        expandHorizontally(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)),
-                exit = fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
-                        shrinkHorizontally(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
+                enter = fadeIn(animationSpec = tween(durationMillis = 180)) +
+                        expandHorizontally(
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            )
+                        ),
+                exit = fadeOut(animationSpec = tween(durationMillis = 120)) +
+                        shrinkHorizontally(
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            )
+                        )
             ) {
                 Text(
                     text = stringResource(R.string.cancel),
@@ -202,6 +212,7 @@ fun ExpressiveSearchBar(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
                         .padding(start = 12.dp)
+                        .clip(CircleShape)
                         .clickable {
                             onCancel?.invoke()
                         }

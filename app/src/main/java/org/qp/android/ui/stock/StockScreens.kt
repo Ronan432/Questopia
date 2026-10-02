@@ -128,7 +128,7 @@ fun StockMainScreen(
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = MaterialTheme.colorScheme.surface,
         bottomBar = {
             val navColors = rememberNavThemeColors()
             Column(
@@ -234,10 +234,20 @@ fun StockMainScreen(
 
                                             AnimatedVisibility(
                                                 visible = !isSearchFocused && searchQuery.isEmpty(),
-                                                enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
-                                                        expandHorizontally(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)),
-                                                exit = fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
-                                                        shrinkHorizontally(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
+                                                enter = fadeIn(animationSpec = tween(durationMillis = 180)) +
+                                                        expandHorizontally(
+                                                            animationSpec = spring(
+                                                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                                                stiffness = Spring.StiffnessMediumLow
+                                                            )
+                                                        ),
+                                                exit = fadeOut(animationSpec = tween(durationMillis = 120)) +
+                                                        shrinkHorizontally(
+                                                            animationSpec = spring(
+                                                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                                                stiffness = Spring.StiffnessMediumLow
+                                                            )
+                                                        )
                                             ) {
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                                     Spacer(modifier = Modifier.width(10.dp))
@@ -246,7 +256,7 @@ fun StockMainScreen(
                                                     val addCornerRadius by animateDpAsState(
                                                         targetValue = if (isAddPressed) 12.dp else 24.dp,
                                                         animationSpec = spring(
-                                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                            dampingRatio = Spring.DampingRatioNoBouncy,
                                                             stiffness = Spring.StiffnessMediumLow
                                                         ),
                                                         label = "addMorphRadius"
@@ -254,7 +264,7 @@ fun StockMainScreen(
 
                                                     Surface(
                                                         shape = RoundedCornerShape(addCornerRadius),
-                                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
                                                         tonalElevation = 2.dp,
                                                         modifier = Modifier
                                                             .size(48.dp)
@@ -272,7 +282,7 @@ fun StockMainScreen(
                                                             Icon(
                                                                 imageVector = Icons.Default.Add,
                                                                 contentDescription = stringResource(R.string.btnAddGame),
-                                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                                tint = MaterialTheme.colorScheme.primary,
                                                                 modifier = Modifier.size(24.dp)
                                                             )
                                                         }

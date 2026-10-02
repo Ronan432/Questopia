@@ -14,7 +14,6 @@ object LocaleHelper {
     fun getDefaultLanguage(): String {
         val systemLang = Locale.getDefault().language.lowercase(Locale.ROOT)
         return when {
-            systemLang == "tr" -> "tr"
             RUSSIAN_SPEAKING_LANGS.contains(systemLang) -> "ru"
             else -> "en"
         }

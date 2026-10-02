@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Application -->
-    <string name="appName">Questopia</string>
-    <string name="extendedName" translatable="false">Questopia -VERSION-</string>
+    <string name="appName">Questopia-RE</string>
+    <string name="extendedName" translatable="false">Questopia-RE -VERSION-</string>
 
     <!-- Navigation & Tabs -->
     <string name="nav_home">Главная</string>
     <string name="tabZeroName">Игры</string>
-    <string name="tabOneName">Репозиторий игр</string>
+    <string name="tabOneName">Репозиторий</string>
     <string name="search">Поиск</string>
     <string name="settingsTitle">Настройки</string>
     <string name="gameStockTitle">Полка игр</string>
@@ -274,6 +274,10 @@
         <item>Курсив</item>
         <item>Sans-Serif Тонкий</item>
         <item>Sans-Serif Сжатый</item>
+        <item>Sans-Serif Жирный (Black)</item>
+        <item>Sans-Serif Сверхтонкий (Thin)</item>
+        <item>Casual</item>
+        <item>Serif Monospace</item>
     </string-array>
     <string-array name="fontValue">
         <item>0</item>
@@ -285,6 +289,10 @@
         <item>6</item>
         <item>7</item>
         <item>8</item>
+        <item>9</item>
+        <item>10</item>
+        <item>11</item>
+        <item>12</item>
     </string-array>
     <string-array name="fontSize">
         <item>12</item>
@@ -297,12 +305,10 @@
     <string-array name="langName">
         <item>English</item>
         <item>Русский</item>
-        <item>Türkçe</item>
     </string-array>
     <string-array name="langValue">
         <item>en</item>
         <item>ru</item>
-        <item>tr</item>
     </string-array>
     <string-array name="binPrefName">
         <item>B/KB/MB/GB/TB</item>

@@ -1,6 +1,7 @@
 package org.qp.android.ui.settings
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 
-import android.app.Activity
 import android.content.Context
 import android.os.Build
 import android.os.VibrationEffect
@@ -12,19 +13,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material3.IconButton
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,18 +25,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Brightness4
 import androidx.compose.material.icons.outlined.Code
@@ -68,14 +51,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -88,8 +68,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.preference.PreferenceManager
 import org.qp.android.BuildConfig
@@ -225,9 +203,9 @@ fun SettingsMainScreen(
                     }
                     if (vibrator?.hasVibrator() == true) {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            vibrator.vibrate(VibrationEffect.createOneShot(35L, VibrationEffect.DEFAULT_AMPLITUDE))
+                            vibrator.vibrate(VibrationEffect.createOneShot(12L, 40))
                         } else {
-                            @Suppress("DEPRECATION") vibrator.vibrate(35L)
+                            @Suppress("DEPRECATION") vibrator.vibrate(12L)
                         }
                     }
                 } catch (e: Exception) {
@@ -281,8 +259,8 @@ fun SettingsMainScreen(
                             shape = CircleShape,
                             color = MaterialTheme.colorScheme.surfaceContainerHigh,
                             modifier = Modifier
-                                .padding(end = 8.dp)
-                                .size(40.dp)
+                                .padding(end = 10.dp)
+                                .size(48.dp)
                                 .clip(CircleShape)
                                 .clickable {
                                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
@@ -294,7 +272,7 @@ fun SettingsMainScreen(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = stringResource(R.string.cancel),
                                     tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                         }
@@ -333,8 +311,7 @@ fun SettingsMainScreen(
                             shape = shape,
                             onValueSelected = { newTheme ->
                                 themeMode = newTheme
-                                prefs.edit().putString("themeMode", newTheme).commit()
-                                (context as? Activity)?.recreate()
+                                prefs.edit().putString("themeMode", newTheme).apply()
                             },
                             icon = Icons.Outlined.Brightness4
                         )
@@ -350,8 +327,7 @@ fun SettingsMainScreen(
                             shape = shape,
                             onValueSelected = { newColor ->
                                 themeColor = newColor
-                                prefs.edit().putString("themeColor", newColor).commit()
-                                (context as? Activity)?.recreate()
+                                prefs.edit().putString("themeColor", newColor).apply()
                             },
                             icon = Icons.Outlined.Palette
                         )
@@ -369,7 +345,6 @@ fun SettingsMainScreen(
                                 lang = newLang
                                 prefs.edit().putString("lang", newLang).commit()
                                 LocaleHelper.applyAppLanguage(context)
-                                (context as? Activity)?.recreate()
                             },
                             icon = Icons.Outlined.Language
                         )
@@ -380,7 +355,7 @@ fun SettingsMainScreen(
             if (appearanceItems.isNotEmpty()) {
                 item {
                     ExpressiveSettingsGroup(items = appearanceItems)
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
 
@@ -389,7 +364,6 @@ fun SettingsMainScreen(
                     add { shape ->
                         ExpressiveSwitchPreferenceItem(
                             title = immTitle,
-                            subtitle = stringResource(R.string.immersiveModeSum),
                             checked = immersiveMode,
                             shape = shape,
                             onCheckedChange = {
@@ -404,7 +378,6 @@ fun SettingsMainScreen(
                     add { shape ->
                         ExpressiveSwitchPreferenceItem(
                             title = sepTitle,
-                            subtitle = sepSum,
                             checked = separator,
                             shape = shape,
                             onCheckedChange = {
@@ -419,7 +392,6 @@ fun SettingsMainScreen(
                     add { shape ->
                         ExpressiveSwitchPreferenceItem(
                             title = autoTitle,
-                            subtitle = stringResource(R.string.autoscrollSum),
                             checked = autoscroll,
                             shape = shape,
                             onCheckedChange = {
@@ -434,7 +406,6 @@ fun SettingsMainScreen(
                     add { shape ->
                         ExpressiveSwitchPreferenceItem(
                             title = cheatsTitle,
-                            subtitle = cheatsSum,
                             checked = enableCheats,
                             shape = shape,
                             onCheckedChange = {
@@ -450,7 +421,7 @@ fun SettingsMainScreen(
             if (generalItems.isNotEmpty()) {
                 item {
                     ExpressiveSettingsGroup(items = generalItems)
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
 
@@ -497,7 +468,6 @@ fun SettingsMainScreen(
                     add { shape ->
                         ExpressiveSwitchPreferenceItem(
                             title = gameFontTitle,
-                            subtitle = stringResource(R.string.useGameFontSum),
                             checked = isUseGameFont,
                             shape = shape,
                             onCheckedChange = {
@@ -512,7 +482,6 @@ fun SettingsMainScreen(
                     add { shape ->
                         ExpressiveColorPreferenceItem(
                             title = txtColorTitle,
-                            subtitle = stringResource(R.string.textColorSum),
                             color = textColor,
                             shape = shape,
                             onColorSelected = {
@@ -528,7 +497,7 @@ fun SettingsMainScreen(
             if (section2Items.isNotEmpty()) {
                 item {
                     ExpressiveSettingsGroup(items = section2Items)
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
 
@@ -541,7 +510,6 @@ fun SettingsMainScreen(
                     add { shape ->
                         ExpressiveSwitchPreferenceItem(
                             title = disableImgTitle,
-                            subtitle = stringResource(R.string.disableImageSum),
                             checked = disableImage,
                             shape = shape,
                             onCheckedChange = {
@@ -556,7 +524,6 @@ fun SettingsMainScreen(
                     add { shape ->
                         ExpressiveSwitchPreferenceItem(
                             title = permTitle,
-                            subtitle = fullScreenImageSum,
                             checked = permImgDialog,
                             shape = shape,
                             onCheckedChange = {
@@ -572,7 +539,7 @@ fun SettingsMainScreen(
             if (section3Items.isNotEmpty()) {
                 item {
                     ExpressiveSettingsGroup(items = section3Items)
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
 
@@ -585,7 +552,6 @@ fun SettingsMainScreen(
                     add { shape ->
                         ExpressiveSwitchPreferenceItem(
                             title = playTitle,
-                            subtitle = stringResource(R.string.playAudioSum),
                             checked = isAudioPlay,
                             shape = shape,
                             onCheckedChange = {
@@ -600,7 +566,6 @@ fun SettingsMainScreen(
                     add { shape ->
                         ExpressiveSwitchPreferenceItem(
                             title = muteTitle,
-                            subtitle = stringResource(R.string.muteVideoSum),
                             checked = isMuteVideo,
                             shape = shape,
                             onCheckedChange = {
@@ -616,7 +581,7 @@ fun SettingsMainScreen(
             if (section4Items.isNotEmpty()) {
                 item {
                     ExpressiveSettingsGroup(items = section4Items)
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
 
@@ -629,7 +594,6 @@ fun SettingsMainScreen(
                     add { shape ->
                         ExpressivePreferenceItem(
                             title = aboutTitle,
-                            subtitle = stringResource(R.string.aboutSum),
                             shape = shape,
                             icon = Icons.Outlined.Info,
                             onClick = { showAboutDialog = true }
@@ -640,7 +604,6 @@ fun SettingsMainScreen(
                     add { shape ->
                         ExpressivePreferenceItem(
                             title = stringResource(R.string.appVersionTitle, BuildConfig.VERSION_NAME),
-                            subtitle = "${stringResource(R.string.versionInfoTitle)} (${BuildConfig.VERSION_CODE})",
                             shape = shape,
                             icon = Icons.Outlined.Code,
                             onClick = { showVersionDialog = true }
@@ -652,7 +615,7 @@ fun SettingsMainScreen(
             if (section5Items.isNotEmpty()) {
                 item {
                     ExpressiveSettingsGroup(items = section5Items)
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
 

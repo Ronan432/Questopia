@@ -1,4 +1,6 @@
 package org.qp.android.ui.stock
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 
 import android.content.Context
 import android.content.Intent
@@ -12,14 +14,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.core.content.IntentCompat
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -119,10 +118,7 @@ class StockActivity : ComponentActivity() {
         handleIncomingIntent(intent)
 
         setContent {
-            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-            val themeMode = prefs.getString("themeMode", "system") ?: "system"
-            val themeColor = prefs.getString("themeColor", "monochrome") ?: "monochrome"
-            QuestopiaTheme(themeMode = themeMode, themeColor = themeColor) {
+            QuestopiaTheme {
                 StockContent(
                     viewModel = stockViewModel,
                     isLoading = isLoadingState,
@@ -258,13 +254,13 @@ class StockActivity : ComponentActivity() {
                     stockViewModel.refreshGamesDirs(null)
                     isLoadingState = false
                     Log.i(TAG, "==> Successfully imported standalone game: $rawTitle")
-                    Toast.makeText(this@StockActivity, "Oyun eklendi: $rawTitle", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@StockActivity, "Game added: $rawTitle", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to import incoming game file: ${e.message}", e)
                 withContext(Dispatchers.Main) {
                     isLoadingState = false
-                    Toast.makeText(this@StockActivity, "Hata: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@StockActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -317,13 +313,13 @@ class StockActivity : ComponentActivity() {
                     stockViewModel.refreshGamesDirs(folder)
                     isLoadingState = false
                     Log.i(TAG, "==> Successfully registered in-place game '$finalTitle' with ${gameFiles.size} executable files!")
-                    Toast.makeText(this@StockActivity, "Oyun eklendi: $finalTitle", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@StockActivity, "Game added: $finalTitle", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error adding game in place: ${e.message}", e)
                 withContext(Dispatchers.Main) {
                     isLoadingState = false
-                    Toast.makeText(this@StockActivity, "Hata: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@StockActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
         }

@@ -30,6 +30,18 @@ public final class ViewUtil {
             return "sans-serif-bold";
         } else if (Typeface.create("cursive", Typeface.NORMAL).equals(typeface)) {
             return "cursive";
+        } else if (Typeface.create("sans-serif-light", Typeface.NORMAL).equals(typeface)) {
+            return "sans-serif-light";
+        } else if (Typeface.create("sans-serif-condensed", Typeface.NORMAL).equals(typeface)) {
+            return "sans-serif-condensed";
+        } else if (Typeface.create("sans-serif-black", Typeface.NORMAL).equals(typeface)) {
+            return "sans-serif-black";
+        } else if (Typeface.create("sans-serif-thin", Typeface.NORMAL).equals(typeface)) {
+            return "sans-serif-thin";
+        } else if (Typeface.create("casual", Typeface.NORMAL).equals(typeface)) {
+            return "casual";
+        } else if (Typeface.create("serif-monospace", Typeface.NORMAL).equals(typeface)) {
+            return "serif, monospace";
         }
         return "sans-serif";
     }

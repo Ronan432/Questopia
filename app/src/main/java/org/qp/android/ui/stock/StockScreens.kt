@@ -1,27 +1,16 @@
 package org.qp.android.ui.stock
+import androidx.compose.runtime.setValue
 
 import android.view.HapticFeedbackConstants
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -29,10 +18,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,59 +35,38 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.preference.PreferenceManager
 import org.qp.android.R
 import org.qp.android.dto.stock.GameData
 import org.qp.android.ui.settings.ExpressiveSearchBar
@@ -121,20 +87,36 @@ fun StockMainScreen(
     onRefreshLocal: () -> Unit = {},
     onRefreshRemote: () -> Unit = {}
 ) {
-    var currentNavTab by remember { mutableStateOf(StockNavigationTab.GAMES) }
+    val pagerState = rememberPagerState(initialPage = 0) { 3 }
+    val coroutineScope = rememberCoroutineScope()
+
     var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
     var isSearchFocused by remember { mutableStateOf(false) }
     var showExitDialog by remember { mutableStateOf(false) }
 
     val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val view = LocalView.current
 
-    BackHandler(enabled = currentNavTab != StockNavigationTab.GAMES) {
-        currentNavTab = StockNavigationTab.GAMES
+    val hideKeyboard = {
+        focusManager.clearFocus()
+        keyboardController?.hide()
     }
 
-    BackHandler(enabled = currentNavTab == StockNavigationTab.GAMES) {
+    val currentNavTab = when (pagerState.currentPage) {
+        0 -> StockNavigationTab.GAMES
+        1 -> StockNavigationTab.REPOSITORY
+        else -> StockNavigationTab.SETTINGS
+    }
+
+    BackHandler(enabled = pagerState.currentPage != 0) {
+        coroutineScope.launch {
+            pagerState.animateScrollToPage(0)
+        }
+    }
+
+    BackHandler(enabled = pagerState.currentPage == 0) {
         if (isSearchActive || searchQuery.isNotEmpty()) {
             isSearchActive = false
             searchQuery = ""
@@ -158,7 +140,11 @@ fun StockMainScreen(
             ) {
                 FlexibleNavigationBar(
                     currentTab = currentNavTab,
-                    onTabSelected = { currentNavTab = it }
+                    onTabSelected = { targetTab ->
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(targetTab.ordinal)
+                        }
+                    }
                 )
             }
         }
@@ -172,24 +158,13 @@ fun StockMainScreen(
                     })
                 }
         ) {
-            AnimatedContent(
-                targetState = currentNavTab,
-                transitionSpec = {
-                    (slideInHorizontally(
-                        initialOffsetX = { (it * 0.18f).toInt() },
-                        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)))
-                        .togetherWith(
-                            slideOutHorizontally(
-                                targetOffsetX = { -(it * 0.18f).toInt() },
-                                animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing)
-                            ) + fadeOut(animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing))
-                        )
-                },
-                label = "navTabTransition"
-            ) { targetTab ->
-                when (targetTab) {
-                    StockNavigationTab.GAMES -> {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                when (page) {
+                    0 -> {
+                        // GAMES TAB
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -205,62 +180,6 @@ fun StockMainScreen(
                                         .fillMaxWidth()
                                         .height(4.dp)
                                 )
-                            }
-
-                            // Top Row: Search Bar + Far Right Small (+) Add Game Button
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                ExpressiveSearchBar(
-                                    query = searchQuery,
-                                    onQueryChange = { searchQuery = it },
-                                    placeholderText = stringResource(R.string.searchGamesPlaceholder),
-                                    modifier = Modifier.weight(1f),
-                                    isFocused = isSearchFocused,
-                                    onFocusChanged = { isSearchFocused = it },
-                                    onSearch = { focusManager.clearFocus() }
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-
-                                val addInteractionSource = remember { MutableInteractionSource() }
-                                val isAddPressed by addInteractionSource.collectIsPressedAsState()
-                                val addCornerRadius by animateDpAsState(
-                                    targetValue = if (isAddPressed) 12.dp else 23.dp,
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                        stiffness = Spring.StiffnessMediumLow
-                                    ),
-                                    label = "addMorphRadius"
-                                )
-
-                                Surface(
-                                    shape = RoundedCornerShape(addCornerRadius),
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    tonalElevation = 2.dp,
-                                    modifier = Modifier
-                                        .size(46.dp)
-                                        .clip(RoundedCornerShape(addCornerRadius))
-                                        .clickable(
-                                            interactionSource = addInteractionSource,
-                                            indication = null,
-                                            onClick = {
-                                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                                onAddGameClicked()
-                                            }
-                                        )
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Default.Add,
-                                            contentDescription = stringResource(R.string.addGameContentDescription),
-                                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                    }
-                                }
                             }
 
                             val filteredLocalGames = remember(localGames, searchQuery) {
@@ -271,18 +190,17 @@ fun StockMainScreen(
                                 }
                             }
 
-                            var isPullRefreshing by remember { mutableStateOf(false) }
-                            LaunchedEffect(isLoading) {
-                                if (!isLoading) {
-                                    isPullRefreshing = false
-                                }
-                            }
+                            var isLocalPullRefreshing by remember { mutableStateOf(false) }
 
                             PullToRefreshBox(
-                                isRefreshing = isPullRefreshing || isLoading,
+                                isRefreshing = isLocalPullRefreshing,
                                 onRefresh = {
-                                    isPullRefreshing = true
-                                    onRefreshLocal()
+                                    coroutineScope.launch {
+                                        isLocalPullRefreshing = true
+                                        onRefreshLocal()
+                                        kotlinx.coroutines.delay(600)
+                                        isLocalPullRefreshing = false
+                                    }
                                 },
                                 modifier = Modifier.fillMaxSize()
                             ) {
@@ -291,13 +209,86 @@ fun StockMainScreen(
                                     onPlayGame = onPlayGame,
                                     onEditGame = onEditGame,
                                     onDeleteGame = onDeleteGame,
-                                    contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp, start = 16.dp, end = 16.dp)
+                                    headerContent = {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 4.dp, bottom = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            ExpressiveSearchBar(
+                                                query = searchQuery,
+                                                onQueryChange = { searchQuery = it },
+                                                placeholderText = stringResource(R.string.searchGamesPlaceholder),
+                                                modifier = Modifier.weight(1f),
+                                                isFocused = isSearchFocused,
+                                                onFocusChanged = { isSearchFocused = it },
+                                                onSearch = { hideKeyboard() },
+                                                onCancel = {
+                                                    isSearchFocused = false
+                                                    searchQuery = ""
+                                                    hideKeyboard()
+                                                },
+                                                showCancelButton = true
+                                            )
+
+                                            AnimatedVisibility(
+                                                visible = !isSearchFocused && searchQuery.isEmpty(),
+                                                enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
+                                                        expandHorizontally(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)),
+                                                exit = fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
+                                                        shrinkHorizontally(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow))
+                                            ) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Spacer(modifier = Modifier.width(10.dp))
+                                                    val addInteractionSource = remember { MutableInteractionSource() }
+                                                    val isAddPressed by addInteractionSource.collectIsPressedAsState()
+                                                    val addCornerRadius by animateDpAsState(
+                                                        targetValue = if (isAddPressed) 12.dp else 24.dp,
+                                                        animationSpec = spring(
+                                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                            stiffness = Spring.StiffnessMediumLow
+                                                        ),
+                                                        label = "addMorphRadius"
+                                                    )
+
+                                                    Surface(
+                                                        shape = RoundedCornerShape(addCornerRadius),
+                                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                                        tonalElevation = 2.dp,
+                                                        modifier = Modifier
+                                                            .size(48.dp)
+                                                            .clip(RoundedCornerShape(addCornerRadius))
+                                                            .clickable(
+                                                                interactionSource = addInteractionSource,
+                                                                indication = null,
+                                                                onClick = {
+                                                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                                                    onAddGameClicked()
+                                                                }
+                                                            )
+                                                    ) {
+                                                        Box(contentAlignment = Alignment.Center) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.Add,
+                                                                contentDescription = stringResource(R.string.btnAddGame),
+                                                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                                modifier = Modifier.size(24.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    contentPadding = PaddingValues(top = 4.dp, bottom = 80.dp, start = 16.dp, end = 16.dp)
                                 )
                             }
                         }
                     }
 
-                    StockNavigationTab.REPOSITORY -> {
+                    1 -> {
+                        // REPOSITORY TAB
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -315,19 +306,6 @@ fun StockMainScreen(
                                 )
                             }
 
-                            // Top Search Bar ONLY (No + button on repository)
-                            ExpressiveSearchBar(
-                                query = searchQuery,
-                                onQueryChange = { searchQuery = it },
-                                placeholderText = stringResource(R.string.searchGamesPlaceholder),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
-                                isFocused = isSearchFocused,
-                                onFocusChanged = { isSearchFocused = it },
-                                onSearch = { focusManager.clearFocus() }
-                            )
-
                             val filteredRemoteGames = remember(remoteGames, searchQuery) {
                                 if (searchQuery.isBlank()) remoteGames
                                 else remoteGames.filter {
@@ -336,12 +314,7 @@ fun StockMainScreen(
                                 }
                             }
 
-                            var isPullRefreshing by remember { mutableStateOf(false) }
-                            LaunchedEffect(isLoading) {
-                                if (!isLoading) {
-                                    isPullRefreshing = false
-                                }
-                            }
+                            var isRemotePullRefreshing by remember { mutableStateOf(false) }
 
                             LaunchedEffect(Unit) {
                                 if (remoteGames.isEmpty()) {
@@ -350,27 +323,55 @@ fun StockMainScreen(
                             }
 
                             PullToRefreshBox(
-                                isRefreshing = isPullRefreshing || isLoading,
+                                isRefreshing = isRemotePullRefreshing,
                                 onRefresh = {
-                                    isPullRefreshing = true
-                                    onRefreshRemote()
+                                    coroutineScope.launch {
+                                        isRemotePullRefreshing = true
+                                        onRefreshRemote()
+                                        kotlinx.coroutines.delay(800)
+                                        isRemotePullRefreshing = false
+                                    }
                                 },
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 RemoteGamesList(
                                     games = filteredRemoteGames,
-                                    isLoading = isLoading,
+                                    isLoading = isLoading && remoteGames.isEmpty(),
                                     onDownloadGame = onDownloadGame,
                                     onRefresh = onRefreshRemote,
-                                    contentPadding = PaddingValues(top = 8.dp, bottom = 80.dp, start = 16.dp, end = 16.dp)
+                                    headerContent = {
+                                        ExpressiveSearchBar(
+                                            query = searchQuery,
+                                            onQueryChange = { searchQuery = it },
+                                            placeholderText = stringResource(R.string.searchGamesPlaceholder),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(top = 4.dp, bottom = 4.dp),
+                                            isFocused = isSearchFocused,
+                                            onFocusChanged = { isSearchFocused = it },
+                                            onSearch = { hideKeyboard() },
+                                            onCancel = {
+                                                isSearchFocused = false
+                                                searchQuery = ""
+                                                hideKeyboard()
+                                            },
+                                            showCancelButton = true
+                                        )
+                                    },
+                                    contentPadding = PaddingValues(top = 4.dp, bottom = 80.dp, start = 16.dp, end = 16.dp)
                                 )
                             }
                         }
                     }
 
-                    StockNavigationTab.SETTINGS -> {
+                    2 -> {
+                        // SETTINGS TAB
                         SettingsApp(
-                            onFinish = { currentNavTab = StockNavigationTab.GAMES },
+                            onFinish = {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(0)
+                                }
+                            },
                             searchQuery = searchQuery,
                             isSearchActive = isSearchActive,
                             showBackButton = false,

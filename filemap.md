@@ -1,6 +1,6 @@
-# Questopia Dosya Haritası (Filemap)
+# Questopia-RE Dosya Haritası (Filemap)
 
-Bu belge, Questopia projesindeki tüm modülleri, kaynak kodlarını, yerel C/Rust/JNI katmanlarını ve kaynak dizinlerini ayrıntılı olarak haritalandırır.
+Bu belge, Questopia-RE projesindeki tüm modülleri, kaynak kodlarını, yerel C/Rust/JNI katmanlarını ve kaynak dizinlerini ayrıntılı olarak haritalandırır.
 
 ---
 

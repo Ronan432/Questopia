@@ -54,7 +54,8 @@ public class SettingsController {
     @NonNull
     private static SettingsController from(@NonNull SharedPreferences preferences) {
         SettingsController settingsController = new SettingsController();
-        settingsController.typeface = Integer.parseInt(preferences.getString("typeface", "0"));
+        String fontPref = preferences.getString("fontStyle", preferences.getString("typeface", "0"));
+        settingsController.typeface = Integer.parseInt(fontPref != null ? fontPref : "0");
         settingsController.fontSize = Integer.parseInt(preferences.getString("fontSize", "16"));
         settingsController.binaryPrefixes = Integer.parseInt(preferences.getString("binPref", "1000"));
         settingsController.actionsHeightRatio = parseActionsHeightRatio(preferences.getString("actsHeight", "1/3"));
@@ -62,9 +63,9 @@ public class SettingsController {
         settingsController.isUseExecString = preferences.getBoolean("execString", false);
         settingsController.isCheatsEnabled = preferences.getBoolean("enableCheats", false);
         settingsController.isUseSeparator = preferences.getBoolean("separator", false);
-        settingsController.isUseGameFont = preferences.getBoolean("useGameFont", false);
+        settingsController.isUseGameFont = preferences.getBoolean("isUseGameFont", preferences.getBoolean("useGameFont", false));
         settingsController.isUseImmersiveMode = preferences.getBoolean("immersiveMode", true);
-        settingsController.language = preferences.getString("lang", "ru");
+        settingsController.language = preferences.getString("lang", "en");
         imageSettings(settingsController, preferences);
         colorSettings(settingsController, preferences);
         soundSettings(settingsController, preferences);
@@ -123,6 +124,10 @@ public class SettingsController {
             case 6 -> Typeface.create("cursive", Typeface.NORMAL);
             case 7 -> Typeface.create("sans-serif-light", Typeface.NORMAL);
             case 8 -> Typeface.create("sans-serif-condensed", Typeface.NORMAL);
+            case 9 -> Typeface.create("sans-serif-black", Typeface.NORMAL);
+            case 10 -> Typeface.create("sans-serif-thin", Typeface.NORMAL);
+            case 11 -> Typeface.create("casual", Typeface.NORMAL);
+            case 12 -> Typeface.create("serif-monospace", Typeface.NORMAL);
             default -> Typeface.DEFAULT;
         };
     }

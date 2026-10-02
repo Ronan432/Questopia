@@ -1,17 +1,27 @@
 package org.qp.android.ui.theme
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.preference.PreferenceManager
 
 // --- Monochrome Schemes (High Contrast Black & White / Grayscale) ---
@@ -274,18 +284,83 @@ fun getColorScheme(
     }
 }
 
+fun getTypography(fontStyle: String): Typography {
+    val fontFamily = when (fontStyle) {
+        "1" -> FontFamily.Serif
+        "2" -> FontFamily.Monospace
+        "3", "4", "6", "7", "8", "9" -> FontFamily.SansSerif
+        "5", "10" -> FontFamily.Cursive
+        "11" -> FontFamily.Serif
+        else -> FontFamily.Default
+    }
+    val weightOverride = when (fontStyle) {
+        "3" -> FontWeight.Medium
+        "4" -> FontWeight.Bold
+        "6" -> FontWeight.Light
+        "8" -> FontWeight.Black
+        "9" -> FontWeight.Thin
+        else -> null
+    }
+
+    val defaultTypography = Typography()
+    fun TextStyle.applyFont(): TextStyle {
+        return this.copy(
+            fontFamily = fontFamily,
+            fontWeight = weightOverride ?: this.fontWeight
+        )
+    }
+
+    return Typography(
+        displayLarge = defaultTypography.displayLarge.applyFont(),
+        displayMedium = defaultTypography.displayMedium.applyFont(),
+        displaySmall = defaultTypography.displaySmall.applyFont(),
+        headlineLarge = defaultTypography.headlineLarge.applyFont(),
+        headlineMedium = defaultTypography.headlineMedium.applyFont(),
+        headlineSmall = defaultTypography.headlineSmall.applyFont(),
+        titleLarge = defaultTypography.titleLarge.applyFont(),
+        titleMedium = defaultTypography.titleMedium.applyFont(),
+        titleSmall = defaultTypography.titleSmall.applyFont(),
+        bodyLarge = defaultTypography.bodyLarge.applyFont(),
+        bodyMedium = defaultTypography.bodyMedium.applyFont(),
+        bodySmall = defaultTypography.bodySmall.applyFont(),
+        labelLarge = defaultTypography.labelLarge.applyFont(),
+        labelMedium = defaultTypography.labelMedium.applyFont(),
+        labelSmall = defaultTypography.labelSmall.applyFont()
+    )
+}
+
 @Composable
 fun QuestopiaTheme(
     themeMode: String? = null,
     themeColor: String? = null,
+    fontStyle: String? = null,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
     val systemInDark = isSystemInDarkTheme()
-    val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
 
-    val effectiveMode = themeMode ?: prefs.getString("themeMode", "system") ?: "system"
-    val effectiveColor = themeColor ?: prefs.getString("themeColor", "monochrome") ?: "monochrome"
+    var currentMode by remember { mutableStateOf(prefs.getString("themeMode", "system") ?: "system") }
+    var currentColor by remember { mutableStateOf(prefs.getString("themeColor", "monochrome") ?: "monochrome") }
+    var currentFontStyle by remember { mutableStateOf(prefs.getString("fontStyle", "0") ?: "0") }
+
+    DisposableEffect(prefs) {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { sp, key ->
+            when (key) {
+                "themeMode" -> currentMode = sp.getString("themeMode", "system") ?: "system"
+                "themeColor" -> currentColor = sp.getString("themeColor", "monochrome") ?: "monochrome"
+                "fontStyle" -> currentFontStyle = sp.getString("fontStyle", "0") ?: "0"
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
+
+    val effectiveMode = themeMode ?: currentMode
+    val effectiveColor = themeColor ?: currentColor
+    val effectiveFontStyle = fontStyle ?: currentFontStyle
 
     val colorScheme = getColorScheme(
         themeMode = effectiveMode,
@@ -293,9 +368,11 @@ fun QuestopiaTheme(
         context = context,
         systemInDark = systemInDark
     )
+    val typography = getTypography(effectiveFontStyle)
 
     MaterialTheme(
         colorScheme = colorScheme,
+        typography = typography,
         content = content
     )
 }

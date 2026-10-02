@@ -10,12 +10,12 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId "com.test.questopia"
+        applicationId "com.questopia.re"
         minSdk 26
         targetSdk 34
         versionCode 202505
         versionName "3.25.5"
-        resourceConfigurations += ['en', 'ru', 'tr']
+        resourceConfigurations += ['en', 'ru']
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {

@@ -34,34 +34,34 @@ fun StockScreen(
         listOf(
             DesktopGameItem(
                 id = "stock_1",
-                title = "Görkemin Labirenti",
-                author = "Questopia Topluluğu",
+                title = "Labyrinth of Splendor",
+                author = "Questopia Community",
                 version = "1.2.0",
-                description = "Antik zindanlarda gizemli bulmacaları çöz ve kayıp hazineye ulaş.",
+                description = "Solve mysterious puzzles in ancient dungeons and find the lost treasure.",
                 gameFilePath = ""
             ),
             DesktopGameItem(
                 id = "stock_2",
-                title = "Gece Vardiyası",
+                title = "Night Shift",
                 author = "T. Kara",
                 version = "2.0.1",
-                description = "Terk edilmiş bir araştırma istasyonunda geçen gerilim ve hayatta kalma macerası.",
+                description = "A suspense and survival adventure set in an abandoned research station.",
                 gameFilePath = ""
             ),
             DesktopGameItem(
                 id = "stock_3",
-                title = "Zamanın Ötesinde",
+                title = "Beyond Time",
                 author = "E. Demir",
                 version = "1.0.4",
-                description = "Zaman yolculuğu paradokslarını çözen bir dedektifin interaktif hikayesi.",
+                description = "An interactive story of a detective solving time-travel paradoxes.",
                 gameFilePath = ""
             ),
             DesktopGameItem(
                 id = "stock_4",
-                title = "Yıldızlararası Seyirci",
+                title = "Interstellar Voyager",
                 author = "CosmoStudio",
                 version = "3.1.0",
-                description = "Bilinmeyen bir galakside hayatta kalma ve uzay gemisi yönetimi.",
+                description = "Survival and starship management in an unknown galaxy.",
                 gameFilePath = ""
             )
         )

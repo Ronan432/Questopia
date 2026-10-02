@@ -1,12 +1,12 @@
-# Questopia - Comprehensive Engineering & Architecture Specification
+# Questopia-RE - Comprehensive Engineering & Architecture Specification
 
-Welcome to the definitive architecture, design system, and technical handbook for **Questopia**, a modern, high-performance, multiplatform Interactive Fiction and QSP Text Quest engine designed for **Android** and **Windows Desktop (x64)**.
+Welcome to the definitive architecture, design system, and technical handbook for **Questopia-RE**, a modern, high-performance, multiplatform Interactive Fiction and QSP Text Quest engine designed for **Android** (`com.questopia.re`) and **Windows Desktop (x64)**.
 
 ---
 
 ## 1. Executive System Overview
 
-Questopia modernizes the classic Quest Soft Player (QSP) ecosystem by providing an expressive, hardware-accelerated, and secure runtime built on contemporary multiplatform technologies.
+Questopia-RE modernizes the classic Quest Soft Player (QSP) ecosystem by providing an expressive, hardware-accelerated, and secure runtime built on contemporary multiplatform technologies.
 
 ### Key Technical Specifications
 - **Core Languages**: Kotlin 2.0.21, Java 21, Modern C/C++ (C11/C++17), High-Performance Rust (2021 Edition)

@@ -1,4 +1,5 @@
 package org.qp.android.ui.stock
+import androidx.compose.runtime.setValue
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.runtime.remember
@@ -6,19 +7,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.preference.PreferenceManager
 import org.qp.android.ui.common.CustomDrawerHandle
 import org.qp.android.ui.common.MorphingButton
-import org.qp.android.ui.common.MorphingDialogButton
 import org.qp.android.ui.common.MorphingOutlinedButton
 import org.qp.android.ui.common.MorphingSurface
 import org.qp.android.ui.common.getGroupedItemShape
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.mutableStateListOf
@@ -27,16 +24,12 @@ import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -53,9 +46,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -67,21 +57,16 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -93,7 +78,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -157,7 +141,7 @@ fun CoilImageWithPlaceholder(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
-    errorIcon: ImageVector = Icons.Default.SportsEsports
+    errorIcon: ImageVector = Icons.Outlined.FolderZip
 ) {
     val tag = "QUESTLOGTEST"
     val hasModel = model != null && model.toString().isNotBlank()
@@ -231,6 +215,7 @@ fun InstalledGamesList(
     onPlayGame: (GameData) -> Unit,
     onEditGame: (GameData) -> Unit,
     onDeleteGame: (GameData) -> Unit,
+    headerContent: (@Composable () -> Unit)? = null,
     contentPadding: PaddingValues = PaddingValues(16.dp)
 ) {
     val selectedGameIds = remember { mutableStateListOf<Long>() }
@@ -244,13 +229,23 @@ fun InstalledGamesList(
                 start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
                 end = contentPadding.calculateRightPadding(LayoutDirection.Ltr)
             ),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(games, key = { it.id }) { game ->
+            if (headerContent != null) {
+                item {
+                    headerContent()
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+            }
+
+            items(games.size, key = { games[it].id }) { index ->
+                val game = games[index]
                 val isSelected = selectedGameIds.contains(game.id)
+                val itemShape = getGroupedItemShape(index, games.size)
                 GameCard(
                     game = game,
+                    shape = itemShape,
                     onPlay = { onPlayGame(game) },
                     onEdit = { onEditGame(game) },
                     onDelete = { onDeleteGame(game) },
@@ -306,7 +301,7 @@ fun InstalledGamesList(
                         }
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "${selectedGameIds.size} seçildi",
+                            text = "${selectedGameIds.size} ${stringResource(R.string.selectAllTitle)}",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -327,7 +322,7 @@ fun InstalledGamesList(
                                 }
                             }
                         ) {
-                            Text(if (selectedGameIds.size == games.size) "Seçimi Kaldır" else "Tümünü Seç")
+                            Text(if (selectedGameIds.size == games.size) stringResource(R.string.cancel) else stringResource(R.string.selectAllTitle))
                         }
 
                         MorphingButton(
@@ -343,7 +338,7 @@ fun InstalledGamesList(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Sil")
+                            Text(stringResource(R.string.deleteGameTitle))
                         }
                     }
                 }
@@ -356,6 +351,7 @@ fun InstalledGamesList(
 @Composable
 fun GameCard(
     game: GameData,
+    shape: Shape = RoundedCornerShape(16.dp),
     onPlay: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -368,20 +364,8 @@ fun GameCard(
     var showActionSheet by remember { mutableStateOf(false) }
     val hasIcon = game.iconUrl != null && game.iconUrl != Uri.EMPTY && game.iconUrl.toString().isNotBlank()
 
-    // Morphing Play Button Interaction Source & Radius
-    val playInteractionSource = remember { MutableInteractionSource() }
-    val isPlayPressed by playInteractionSource.collectIsPressedAsState()
-    val playCornerRadius by animateDpAsState(
-        targetValue = if (isPlayPressed) 10.dp else 20.dp,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
-        label = "playMorphRadius"
-    )
-
     MorphingSurface(
-        shape = RoundedCornerShape(18.dp),
+        shape = shape,
         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surfaceContainer,
         border = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null,
         modifier = Modifier.fillMaxWidth(),
@@ -403,22 +387,37 @@ fun GameCard(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            // Left Photo / Icon (Always clean, no badge on photo)
+            // Left Photo / Icon ONLY if game has an icon
             if (hasIcon) {
-                SubcomposeAsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(game.iconUrl)
-                        .crossfade(true)
-                        .diskCachePolicy(CachePolicy.ENABLED)
-                        .memoryCachePolicy(CachePolicy.ENABLED)
-                        .build(),
-                    contentDescription = game.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(42.dp)
+                ) {
+                    SubcomposeAsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(game.iconUrl)
+                            .crossfade(true)
+                            .diskCachePolicy(CachePolicy.ENABLED)
+                            .memoryCachePolicy(CachePolicy.ENABLED)
+                            .build(),
+                        contentDescription = game.title,
+                        contentScale = ContentScale.Crop,
+                        loading = { ShimmerPlaceholder(modifier = Modifier.fillMaxSize()) },
+                        error = {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Outlined.FolderZip,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
             }
 
             Column(modifier = Modifier.weight(1f)) {
@@ -485,13 +484,13 @@ fun GameCard(
                 }
             } else {
                 Surface(
-                    shape = RoundedCornerShape(playCornerRadius),
+                    shape = CircleShape,
                     color = MaterialTheme.colorScheme.primaryContainer,
                     modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(playCornerRadius))
+                        .size(38.dp)
+                        .clip(CircleShape)
                         .clickable(
-                            interactionSource = playInteractionSource,
+                            interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                             onClick = {
                                 view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
@@ -705,6 +704,7 @@ fun RemoteGamesList(
     isLoading: Boolean,
     onDownloadGame: (GameData) -> Unit,
     onRefresh: () -> Unit = {},
+    headerContent: (@Composable () -> Unit)? = null,
     contentPadding: PaddingValues = PaddingValues(16.dp)
 ) {
     if (isLoading) {
@@ -722,21 +722,37 @@ fun RemoteGamesList(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Filled.CloudDownload,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = stringResource(R.string.tabOneName),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = stringResource(R.string.refreshRepositoryPrompt),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             MorphingButton(onClick = onRefresh) {
-                Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.tabOneName))
             }
@@ -744,12 +760,22 @@ fun RemoteGamesList(
     } else {
         LazyColumn(
             contentPadding = contentPadding,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(games, key = { it.id }) { game ->
+            if (headerContent != null) {
+                item {
+                    headerContent()
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+            }
+
+            items(games.size, key = { games[it].id }) { index ->
+                val game = games[index]
+                val itemShape = getGroupedItemShape(index, games.size)
                 RemoteGameCard(
                     game = game,
+                    shape = itemShape,
                     onDownload = { onDownloadGame(game) }
                 )
             }
@@ -760,13 +786,14 @@ fun RemoteGamesList(
 @Composable
 fun RemoteGameCard(
     game: GameData,
+    shape: Shape = RoundedCornerShape(16.dp),
     onDownload: () -> Unit
 ) {
     val view = LocalView.current
     val hasIcon = game.iconUrl != null && game.iconUrl != Uri.EMPTY && game.iconUrl.toString().isNotBlank()
 
     MorphingSurface(
-        shape = RoundedCornerShape(18.dp),
+        shape = shape,
         color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier.fillMaxWidth(),
         onClick = onDownload
@@ -777,22 +804,46 @@ fun RemoteGameCard(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            if (hasIcon) {
-                SubcomposeAsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(game.iconUrl)
-                        .crossfade(true)
-                        .diskCachePolicy(CachePolicy.ENABLED)
-                        .memoryCachePolicy(CachePolicy.ENABLED)
-                        .build(),
-                    contentDescription = game.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
+            // Left Photo / Minimal Icon / Placeholder
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    if (hasIcon) {
+                        SubcomposeAsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(game.iconUrl)
+                                .crossfade(true)
+                                .diskCachePolicy(CachePolicy.ENABLED)
+                                .memoryCachePolicy(CachePolicy.ENABLED)
+                                .build(),
+                            contentDescription = game.title,
+                            contentScale = ContentScale.Crop,
+                            loading = { ShimmerPlaceholder(modifier = Modifier.fillMaxSize()) },
+                            error = {
+                                Icon(
+                                    imageVector = Icons.Filled.CloudDownload,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.CloudDownload,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
+            Spacer(modifier = Modifier.width(14.dp))
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = game.title ?: "Untitled",
@@ -833,15 +884,27 @@ fun RemoteGameCard(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Minimal Download button
+            // Minimal Download button with Morph Shaping
+            val dlInteractionSource = remember { MutableInteractionSource() }
+            val isDlPressed by dlInteractionSource.collectIsPressedAsState()
+            val dlCornerRadius by animateDpAsState(
+                targetValue = if (isDlPressed) 8.dp else 19.dp,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                ),
+                label = "dlMorphRadius"
+            )
+
             Surface(
-                shape = CircleShape,
+                shape = RoundedCornerShape(dlCornerRadius),
                 color = MaterialTheme.colorScheme.primaryContainer,
+                tonalElevation = 2.dp,
                 modifier = Modifier
                     .size(38.dp)
-                    .clip(CircleShape)
+                    .clip(RoundedCornerShape(dlCornerRadius))
                     .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
+                        interactionSource = dlInteractionSource,
                         indication = null
                     ) {
                         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)

@@ -79,7 +79,7 @@ public final class DirUtil {
 
     @WorkerThread
     public static long calculateDirSize(DocumentFile dir) {
-        if (dir.exists()) {
+        if (dir != null && dir.exists()) {
             long result = 0;
             var fileList = dir.listFiles();
             for (var file : fileList) {
@@ -87,6 +87,25 @@ public final class DirUtil {
                     result += calculateDirSize(file);
                 } else {
                     result += file.length();
+                }
+            }
+            return result;
+        }
+        return 0;
+    }
+
+    @WorkerThread
+    public static long calculateDirSize(java.io.File dir) {
+        if (dir != null && dir.exists()) {
+            long result = 0;
+            var fileList = dir.listFiles();
+            if (fileList != null) {
+                for (var file : fileList) {
+                    if (file.isDirectory()) {
+                        result += calculateDirSize(file);
+                    } else {
+                        result += file.length();
+                    }
                 }
             }
             return result;

@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -113,7 +114,7 @@ fun StockMainScreen(
 
     BackHandler(enabled = pagerState.currentPage != 0) {
         coroutineScope.launch {
-            pagerState.animateScrollToPage(0)
+            pagerState.scrollToPage(0)
         }
     }
 
@@ -131,23 +132,14 @@ fun StockMainScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.surface,
         bottomBar = {
-            val navColors = rememberNavThemeColors()
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(navColors.navBarColor)
-                    .navigationBarsPadding(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                FlexibleNavigationBar(
-                    currentTab = currentNavTab,
-                    onTabSelected = { targetTab ->
-                        coroutineScope.launch {
-                            pagerState.animateScrollToPage(targetTab.ordinal)
-                        }
+            FlexibleNavigationBar(
+                currentTab = currentNavTab,
+                onTabSelected = { targetTab ->
+                    coroutineScope.launch {
+                        pagerState.scrollToPage(targetTab.ordinal)
                     }
-                )
-            }
+                }
+            )
         }
     ) { _ ->
         Box(
@@ -292,7 +284,7 @@ fun StockMainScreen(
                                             }
                                         }
                                     },
-                                    contentPadding = PaddingValues(top = 4.dp, bottom = 80.dp, start = 16.dp, end = 16.dp)
+                                    contentPadding = PaddingValues(top = 4.dp, bottom = 96.dp, start = 16.dp, end = 16.dp)
                                 )
                             }
                         }
@@ -369,7 +361,7 @@ fun StockMainScreen(
                                             showCancelButton = true
                                         )
                                     },
-                                    contentPadding = PaddingValues(top = 4.dp, bottom = 80.dp, start = 16.dp, end = 16.dp)
+                                    contentPadding = PaddingValues(top = 4.dp, bottom = 96.dp, start = 16.dp, end = 16.dp)
                                 )
                             }
                         }

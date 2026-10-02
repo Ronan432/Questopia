@@ -130,6 +130,8 @@
     <string name="themeColorTeal">Бирюзовый</string>
     <string name="themeColorAmber">Желтый</string>
     <string name="themeColorMonochrome">Монохромный</string>
+    <string name="navBarBlurTitle">Размытие панели навигации</string>
+    <string name="navBarBlurSum">Включить эффект матового стекла для панели навигации</string>
     <string name="versionInfoTitle">Информация о версии</string>
     <string name="searchSettingsPlaceholder">Поиск в настройках…</string>
     <string name="noSearchResults">Результатов не найдено для «%1$s»</string>

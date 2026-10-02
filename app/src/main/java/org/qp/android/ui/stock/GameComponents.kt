@@ -1,5 +1,6 @@
 package org.qp.android.ui.stock
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.sp
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.runtime.remember
@@ -10,6 +11,11 @@ import org.qp.android.ui.common.MorphingButton
 import org.qp.android.ui.common.MorphingOutlinedButton
 import org.qp.android.ui.common.MorphingSurface
 import org.qp.android.ui.common.getGroupedItemShape
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.togetherWith
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -44,6 +50,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -94,6 +107,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
@@ -220,32 +234,141 @@ fun InstalledGamesList(
 ) {
     val selectedGameIds = remember { mutableStateListOf<Long>() }
     val isSelectionMode = selectedGameIds.isNotEmpty()
+    val view = LocalView.current
+
+    BackHandler(enabled = isSelectionMode) {
+        selectedGameIds.clear()
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(
-            contentPadding = PaddingValues(
-                top = contentPadding.calculateTopPadding(),
-                bottom = contentPadding.calculateBottomPadding() + if (isSelectionMode) 72.dp else 0.dp,
-                start = contentPadding.calculateLeftPadding(LayoutDirection.Ltr),
-                end = contentPadding.calculateRightPadding(LayoutDirection.Ltr)
-            ),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            contentPadding = contentPadding,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            if (headerContent != null) {
-                item {
-                    headerContent()
-                    Spacer(modifier = Modifier.height(4.dp))
+            if (headerContent != null || isSelectionMode) {
+                item(span = { GridItemSpan(2) }) {
+                    AnimatedContent(
+                        targetState = isSelectionMode,
+                        transitionSpec = {
+                            fadeIn(tween(200)) togetherWith fadeOut(tween(150))
+                        },
+                        label = "headerSelectionTransition"
+                    ) { selectionActive ->
+                        if (selectionActive) {
+                            Surface(
+                                shape = RoundedCornerShape(24.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                tonalElevation = 4.dp,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .height(56.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.padding(horizontal = 12.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconButton(
+                                            onClick = {
+                                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                                selectedGameIds.clear()
+                                            },
+                                            modifier = Modifier.size(40.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = stringResource(R.string.cancel),
+                                                tint = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "${selectedGameIds.size} / ${games.size}",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        TextButton(
+                                            onClick = {
+                                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                                if (selectedGameIds.size == games.size) {
+                                                    selectedGameIds.clear()
+                                                } else {
+                                                    selectedGameIds.clear()
+                                                    selectedGameIds.addAll(games.map { it.id })
+                                                }
+                                            }
+                                        ) {
+                                            Text(
+                                                text = if (selectedGameIds.size == games.size) {
+                                                    stringResource(R.string.cancel)
+                                                } else {
+                                                    stringResource(R.string.selectAllTitle)
+                                                },
+                                                style = MaterialTheme.typography.labelLarge,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+
+                                        FilledTonalButton(
+                                            onClick = {
+                                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                                val toDelete = games.filter { selectedGameIds.contains(it.id) }
+                                                toDelete.forEach { onDeleteGame(it) }
+                                                selectedGameIds.clear()
+                                            },
+                                            colors = ButtonDefaults.filledTonalButtonColors(
+                                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                            ),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                            shape = RoundedCornerShape(16.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = stringResource(R.string.deleteGameTitle),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = stringResource(R.string.deleteGameTitle),
+                                                style = MaterialTheme.typography.labelLarge
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            if (headerContent != null) {
+                                headerContent()
+                            }
+                        }
+                    }
                 }
             }
 
-            items(games.size, key = { games[it].id }) { index ->
-                val game = games[index]
+            itemsIndexed(
+                items = games,
+                key = { index, game ->
+                    if (game.id != 0L) "${game.id}_$index" else (game.gameDirUri?.toString() ?: "${game.title}_$index")
+                }
+            ) { _, game ->
                 val isSelected = selectedGameIds.contains(game.id)
-                val itemShape = getGroupedItemShape(index, games.size)
                 GameCard(
                     game = game,
-                    shape = itemShape,
+                    shape = RoundedCornerShape(20.dp),
                     onPlay = { onPlayGame(game) },
                     onEdit = { onEditGame(game) },
                     onDelete = { onDeleteGame(game) },
@@ -266,84 +389,6 @@ fun InstalledGamesList(
                 )
             }
         }
-
-        // Selection Action Bar at Bottom
-        AnimatedVisibility(
-            visible = isSelectionMode,
-            enter = slideInVertically { it } + fadeIn(),
-            exit = slideOutVertically { it } + fadeOut(),
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp, start = 16.dp, end = 16.dp)
-        ) {
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                tonalElevation = 8.dp,
-                shadowElevation = 6.dp,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { selectedGameIds.clear() }) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "${selectedGameIds.size} ${stringResource(R.string.selectAllTitle)}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        TextButton(
-                            onClick = {
-                                if (selectedGameIds.size == games.size) {
-                                    selectedGameIds.clear()
-                                } else {
-                                    selectedGameIds.clear()
-                                    selectedGameIds.addAll(games.map { it.id })
-                                }
-                            }
-                        ) {
-                            Text(if (selectedGameIds.size == games.size) stringResource(R.string.cancel) else stringResource(R.string.selectAllTitle))
-                        }
-
-                        MorphingButton(
-                            onClick = {
-                                val toDelete = games.filter { selectedGameIds.contains(it.id) }
-                                toDelete.forEach { onDeleteGame(it) }
-                                selectedGameIds.clear()
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(stringResource(R.string.deleteGameTitle))
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -351,7 +396,7 @@ fun InstalledGamesList(
 @Composable
 fun GameCard(
     game: GameData,
-    shape: Shape = RoundedCornerShape(16.dp),
+    shape: Shape = RoundedCornerShape(20.dp),
     onPlay: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -367,7 +412,8 @@ fun GameCard(
     MorphingSurface(
         shape = shape,
         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surfaceContainer,
-        border = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null,
+        border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+        tonalElevation = if (isSelected) 4.dp else 1.dp,
         modifier = Modifier.fillMaxWidth(),
         onClick = {
             if (isSelectionMode) {
@@ -381,19 +427,20 @@ fun GameCard(
             onLongClick()
         }
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(10.dp)
         ) {
-            // Left Photo / Icon ONLY if game has an icon
-            if (hasIcon) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    modifier = Modifier.size(42.dp)
-                ) {
+            // Game Cover / App Logo
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(130.dp)
+            ) {
+                if (hasIcon) {
                     SubcomposeAsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(game.iconUrl)
@@ -406,105 +453,118 @@ fun GameCard(
                         loading = { ShimmerPlaceholder(modifier = Modifier.fillMaxSize()) },
                         error = {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Outlined.FolderZip,
+                                AsyncImage(
+                                    model = R.mipmap.ic_launcher,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(22.dp)
+                                    modifier = Modifier.size(48.dp)
                                 )
                             }
                         },
                         modifier = Modifier.fillMaxSize()
                     )
-                }
-                Spacer(modifier = Modifier.width(14.dp))
-            }
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = game.title ?: "Untitled",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                val author = game.author?.trim().orEmpty()
-                val sizeStr = if (game.fileSize > 0) FileUtil.formatFileSize(game.fileSize, 1000) else ""
-                val subtitle = when {
-                    author.isNotBlank() && sizeStr.isNotBlank() -> "$author • $sizeStr"
-                    author.isNotBlank() -> author
-                    sizeStr.isNotBlank() -> sizeStr
-                    else -> null
-                }
-                if (!subtitle.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        AsyncImage(
+                            model = R.mipmap.ic_launcher,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Vertical divider line
-            Box(
-                modifier = Modifier
-                    .width(1.dp)
-                    .height(28.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+            // Game Title
+            Text(
+                text = game.title ?: "Untitled",
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-            // Right Action Area: Selection Check Button (In place of Play button) OR Play button
-            if (isSelectionMode) {
-                Surface(
-                    shape = CircleShape,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
-                    border = if (!isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else null,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .clickable { onCardClick() }
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        if (isSelected) {
+            // Bottom row: Size on bottom-left, Play button / Selection check on bottom-right
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val sizeStr = if (game.fileSize > 0) FileUtil.formatFileSize(game.fileSize, 1000) else ""
+                Text(
+                    text = sizeStr,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+
+                if (isSelectionMode) {
+                    Surface(
+                        shape = CircleShape,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
+                        border = if (!isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline) else null,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .clickable { onCardClick() }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    val playInteractionSource = remember { MutableInteractionSource() }
+                    val isPlayPressed by playInteractionSource.collectIsPressedAsState()
+                    val playRadius by animateDpAsState(
+                        targetValue = if (isPlayPressed) 8.dp else 18.dp,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        ),
+                        label = "playRadius"
+                    )
+                    val playShape = RoundedCornerShape(playRadius)
+
+                    Surface(
+                        shape = playShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(playShape)
+                            .clickable(
+                                interactionSource = playInteractionSource,
+                                indication = null,
+                                onClick = {
+                                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                    onPlay()
+                                }
+                            )
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimary,
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = stringResource(R.string.play),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
-                    }
-                }
-            } else {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {
-                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                                onPlay()
-                            }
-                        )
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = stringResource(R.string.play),
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
                     }
                 }
             }
@@ -707,78 +767,54 @@ fun RemoteGamesList(
     headerContent: (@Composable () -> Unit)? = null,
     contentPadding: PaddingValues = PaddingValues(16.dp)
 ) {
-    if (isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
-        }
-    } else if (games.isEmpty()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier.size(56.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Filled.CloudDownload,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.tabOneName),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = stringResource(R.string.refreshRepositoryPrompt),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(20.dp))
-            MorphingButton(onClick = onRefresh) {
-                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.tabOneName))
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        contentPadding = contentPadding,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        if (headerContent != null) {
+            item(span = { GridItemSpan(2) }) {
+                headerContent()
             }
         }
-    } else {
-        LazyColumn(
-            contentPadding = contentPadding,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            if (headerContent != null) {
-                item {
-                    headerContent()
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
-            }
 
-            items(games.size, key = { games[it].id }) { index ->
-                val game = games[index]
-                val itemShape = getGroupedItemShape(index, games.size)
-                RemoteGameCard(
-                    game = game,
-                    shape = itemShape,
-                    onDownload = { onDownloadGame(game) }
-                )
+        if (games.isEmpty() && !isLoading) {
+            item(span = { GridItemSpan(2) }) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 40.dp, bottom = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = stringResource(R.string.refreshRepositoryPrompt),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    MorphingButton(onClick = onRefresh) {
+                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.tabOneName))
+                    }
+                }
             }
+        }
+
+        itemsIndexed(
+            items = games,
+            key = { index, game ->
+                if (!game.fileUrl.isNullOrBlank()) "${game.fileUrl}_$index" else (if (game.id != 0L) "${game.id}_$index" else "${game.title}_$index")
+            }
+        ) { _, game ->
+            RemoteGameCard(
+                game = game,
+                shape = RoundedCornerShape(20.dp),
+                onDownload = { onDownloadGame(game) }
+            )
         }
     }
 }
@@ -786,7 +822,7 @@ fun RemoteGamesList(
 @Composable
 fun RemoteGameCard(
     game: GameData,
-    shape: Shape = RoundedCornerShape(16.dp),
+    shape: Shape = RoundedCornerShape(20.dp),
     onDownload: () -> Unit
 ) {
     val view = LocalView.current
@@ -795,129 +831,128 @@ fun RemoteGameCard(
     MorphingSurface(
         shape = shape,
         color = MaterialTheme.colorScheme.surfaceContainer,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+        tonalElevation = 1.dp,
         modifier = Modifier.fillMaxWidth(),
         onClick = onDownload
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(10.dp)
         ) {
-            // Left Photo / Minimal Icon / Placeholder
+            // Game Cover / App Logo
             Surface(
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(14.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(130.dp)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    if (hasIcon) {
-                        SubcomposeAsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(game.iconUrl)
-                                .crossfade(true)
-                                .diskCachePolicy(CachePolicy.ENABLED)
-                                .memoryCachePolicy(CachePolicy.ENABLED)
-                                .build(),
-                            contentDescription = game.title,
-                            contentScale = ContentScale.Crop,
-                            loading = { ShimmerPlaceholder(modifier = Modifier.fillMaxSize()) },
-                            error = {
-                                Icon(
-                                    imageVector = Icons.Filled.CloudDownload,
+                if (hasIcon) {
+                    SubcomposeAsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(game.iconUrl)
+                            .crossfade(true)
+                            .diskCachePolicy(CachePolicy.ENABLED)
+                            .memoryCachePolicy(CachePolicy.ENABLED)
+                            .build(),
+                        contentDescription = game.title,
+                        contentScale = ContentScale.Crop,
+                        loading = { ShimmerPlaceholder(modifier = Modifier.fillMaxSize()) },
+                        error = {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                AsyncImage(
+                                    model = R.mipmap.ic_launcher,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(48.dp)
                                 )
-                            },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Filled.CloudDownload,
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        AsyncImage(
+                            model = R.mipmap.ic_launcher,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Game Title
+            Text(
+                text = game.title ?: "Untitled",
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Bottom row: Size / author on bottom-left, Install (Download) button on bottom-right
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val sizeStr = if (game.fileSize > 0) FileUtil.formatFileSize(game.fileSize, 1000) else ""
+                Text(
+                    text = sizeStr,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+
+                val downloadInteractionSource = remember { MutableInteractionSource() }
+                val isDownloadPressed by downloadInteractionSource.collectIsPressedAsState()
+                val downloadRadius by animateDpAsState(
+                    targetValue = if (isDownloadPressed) 8.dp else 18.dp,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    ),
+                    label = "downloadRadius"
+                )
+                val downloadShape = RoundedCornerShape(downloadRadius)
+
+                // Install (Download) Button at bottom right
+                Surface(
+                    shape = downloadShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(downloadShape)
+                        .clickable(
+                            interactionSource = downloadInteractionSource,
+                            indication = null,
+                            onClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                onDownload()
+                            }
+                        )
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = stringResource(R.string.downloadButton),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                }
-            }
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = game.title ?: "Untitled",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                val author = game.author?.trim().orEmpty()
-                val sizeStr = if (game.fileSize > 0) FileUtil.formatFileSize(game.fileSize, 1000) else ""
-                val subtitle = when {
-                    author.isNotBlank() && sizeStr.isNotBlank() -> "$author • $sizeStr"
-                    author.isNotBlank() -> author
-                    sizeStr.isNotBlank() -> sizeStr
-                    else -> null
-                }
-                if (!subtitle.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Vertical divider line
-            Box(
-                modifier = Modifier
-                    .width(1.dp)
-                    .height(28.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Minimal Download button with Morph Shaping
-            val dlInteractionSource = remember { MutableInteractionSource() }
-            val isDlPressed by dlInteractionSource.collectIsPressedAsState()
-            val dlCornerRadius by animateDpAsState(
-                targetValue = if (isDlPressed) 8.dp else 19.dp,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                ),
-                label = "dlMorphRadius"
-            )
-
-            Surface(
-                shape = RoundedCornerShape(dlCornerRadius),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                tonalElevation = 2.dp,
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(RoundedCornerShape(dlCornerRadius))
-                    .clickable(
-                        interactionSource = dlInteractionSource,
-                        indication = null
-                    ) {
-                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                        onDownload()
-                    }
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        contentDescription = stringResource(R.string.downloadButton),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
                 }
             }
         }

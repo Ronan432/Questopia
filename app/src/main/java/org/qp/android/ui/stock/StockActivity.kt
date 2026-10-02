@@ -151,7 +151,7 @@ class StockActivity : ComponentActivity() {
                         }
                     },
                     onDeleteGame = { gameData ->
-                        stockViewModel.delEntryDirFromList(stockViewModel.tempList, gameData, stockViewModel.listDirsFile)
+                        stockViewModel.deleteGame(gameData)
                     },
                     onDownloadGame = { gameData ->
                         stockViewModel.startFileDownload(gameData)

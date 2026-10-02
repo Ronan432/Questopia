@@ -130,6 +130,8 @@
     <string name="themeColorTeal">Teal</string>
     <string name="themeColorAmber">Yellow</string>
     <string name="themeColorMonochrome">Monochrome</string>
+    <string name="navBarBlurTitle">Navigation Bar Blur</string>
+    <string name="navBarBlurSum">Enable frosted glass blur effect on navigation bar</string>
     <string name="versionInfoTitle">Version Information</string>
     <string name="searchSettingsPlaceholder">Search in settings…</string>
     <string name="noSearchResults">No results found for \"%1$s\"</string>

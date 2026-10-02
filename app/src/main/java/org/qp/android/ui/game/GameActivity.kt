@@ -97,8 +97,8 @@ import org.qp.android.ui.common.MorphingSurface
 import org.qp.android.ui.common.getGroupedItemShape
 import org.qp.android.ui.dialogs.GameDialogType
 import org.qp.android.ui.settings.SettingsActivity
-import org.qp.android.ui.stock.AnimatedExpressiveNavigationBar
 import org.qp.android.ui.stock.ExpressiveNavItem
+import org.qp.android.ui.stock.MaterialYouNavigationItem
 import org.qp.android.ui.stock.rememberNavThemeColors
 import org.qp.android.ui.stock.ShimmerPlaceholder
 import org.qp.android.ui.theme.QuestopiaTheme
@@ -787,12 +787,12 @@ fun GameMainCompose(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Combined Morphing overlay for Back button + Title
                     MorphingSurface(
-                        shape = RoundedCornerShape(24.dp),
+                        shape = RoundedCornerShape(20.dp),
                         pressedRadius = 8.dp,
                         color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         onClick = if (isTitleTruncated || isTitleExpanded) {
@@ -805,7 +805,7 @@ fun GameMainCompose(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 4.dp, vertical = 4.dp),
+                                .padding(horizontal = 4.dp, vertical = 2.dp),
                             verticalAlignment = if (isTitleExpanded) Alignment.Top else Alignment.CenterVertically
                         ) {
                             IconButton(
@@ -813,12 +813,13 @@ fun GameMainCompose(
                                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                                     onExitRequested()
                                 },
-                                modifier = Modifier.size(40.dp)
+                                modifier = Modifier.size(36.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = stringResource(R.string.close),
-                                    tint = MaterialTheme.colorScheme.onSurface
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
 
@@ -826,8 +827,10 @@ fun GameMainCompose(
 
                             Text(
                                 text = gameTitle.ifBlank { stringResource(R.string.closeGameTitle) },
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
+                                ),
                                 color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = if (isTitleExpanded) 5 else 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -838,7 +841,7 @@ fun GameMainCompose(
                                 },
                                 modifier = Modifier
                                     .weight(1f)
-                                    .padding(end = 12.dp, top = if (isTitleExpanded) 8.dp else 0.dp, bottom = if (isTitleExpanded) 8.dp else 0.dp)
+                                    .padding(end = 12.dp, top = if (isTitleExpanded) 6.dp else 0.dp, bottom = if (isTitleExpanded) 6.dp else 0.dp)
                             )
                         }
                     }
@@ -848,13 +851,13 @@ fun GameMainCompose(
                     // Separate Morphing overlay for 3-dots Menu button
                     MorphingSurface(
                         shape = CircleShape,
-                        pressedRadius = 12.dp,
+                        pressedRadius = 10.dp,
                         color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         onClick = {
                             view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             showInGameMenu = true
                         },
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
                         Box(
                             contentAlignment = Alignment.Center,
@@ -863,7 +866,8 @@ fun GameMainCompose(
                             Icon(
                                 imageVector = Icons.Outlined.MoreVert,
                                 contentDescription = stringResource(R.string.menu),
-                                tint = MaterialTheme.colorScheme.onSurface
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -898,19 +902,47 @@ fun GameMainCompose(
                 )
             )
 
-            AnimatedExpressiveNavigationBar(
-                items = gameNavItems,
-                selectedIndex = currentTab,
-                onTabSelected = { tab ->
-                    onTabSelected(tab)
-                },
-                navBarColor = navColors.navBarColor,
-                indicatorColor = navColors.indicatorColor,
-                selectedIconColor = navColors.selectedIconColor,
-                unselectedIconColor = navColors.unselectedIconColor,
-                selectedTextColor = navColors.selectedTextColor,
-                unselectedTextColor = navColors.unselectedTextColor
-            )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = navColors.navBarColor,
+                tonalElevation = if (navColors.isAmoled) 0.dp else 2.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(NavigationBarDefaults.windowInsets)
+                        .height(54.dp)
+                        .padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    gameNavItems.forEachIndexed { index, item ->
+                        val isSelected = index == currentTab
+                        MaterialYouNavigationItem(
+                            selected = isSelected,
+                            onClick = { onTabSelected(index) },
+                            icon = {
+                                BadgedBox(
+                                    badge = {
+                                        if (item.showBadge) {
+                                            Badge()
+                                        }
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                                        contentDescription = item.contentDescription ?: item.label,
+                                        tint = if (isSelected) navColors.selectedIconColor else navColors.unselectedIconColor,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            },
+                            label = null,
+                            indicatorColor = navColors.indicatorColor
+                        )
+                    }
+                }
+            }
         }
     ) { paddingValues ->
         Box(

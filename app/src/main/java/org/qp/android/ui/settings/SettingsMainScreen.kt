@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.BlurOn
 import androidx.compose.material.icons.outlined.Brightness4
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.FormatSize
@@ -136,6 +137,8 @@ fun SettingsMainScreen(
     // String resources
     val appThemeTitle = stringResource(R.string.appThemeTitle)
     val themeColorTitle = stringResource(R.string.themeColorTitle)
+    val navBarBlurTitle = stringResource(R.string.navBarBlurTitle)
+    val navBarBlurSum = stringResource(R.string.navBarBlurSum)
     val langTitle = stringResource(R.string.langTitle)
     val immTitle = stringResource(R.string.immersiveModeTitle)
     val sepTitle = stringResource(R.string.separatorTitle)

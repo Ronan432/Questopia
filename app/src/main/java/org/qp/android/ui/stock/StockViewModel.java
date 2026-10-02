@@ -32,41 +32,27 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
-import android.webkit.CookieManager;
-import android.widget.ImageView;
 
 import androidx.annotation.IdRes;
 import androidx.annotation.NonNull;
-import androidx.appcompat.view.ActionMode;
 import androidx.core.app.ActivityCompat;
 import androidx.documentfile.provider.DocumentFile;
-import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.Observer;
 
 import com.anggrayudi.storage.callback.FileCallback;
 import com.anggrayudi.storage.file.DocumentFileCompat;
 import com.anggrayudi.storage.file.MimeType;
 
 import org.qp.android.R;
-import org.qp.android.databinding.DialogAddBinding;
-import org.qp.android.databinding.DialogEditBinding;
 import org.qp.android.dto.stock.GameData;
 import org.qp.android.dto.stock.RemoteDataList;
 import org.qp.android.dto.stock.RemoteGameData;
 import org.qp.android.helpers.ErrorType;
-import org.qp.android.helpers.bus.Events;
 import org.qp.android.model.archive.ArchiveUnpack;
 import org.qp.android.model.notify.NotifyBuilder;
 import org.qp.android.model.repository.LocalGame;
 import org.qp.android.model.repository.RemoteGameRepository;
-import org.qp.android.ui.dialogs.StockDialogFrags;
-import org.qp.android.ui.dialogs.StockDialogType;
 import org.qp.android.ui.game.GameActivity;
 import org.qp.android.ui.settings.SettingsController;
 
@@ -93,9 +79,6 @@ import java.util.concurrent.Executors;
 
 public class StockViewModel extends AndroidViewModel {
 
-    public static final int CODE_PICK_IMAGE_FILE = 300;
-    public static final int CODE_PICK_PATH_FILE = 301;
-    public static final int CODE_PICK_MOD_FILE = 302;
     public static final long DISABLE_CALC_SIZE = -1;
     public static final String EXT_GAME_LIST_NAME = "extGameDirs";
     private static final String INNER_GAME_DIR_NAME = "games-dir";
@@ -103,8 +86,6 @@ public class StockViewModel extends AndroidViewModel {
     public final MutableLiveData<List<GameData>> remoteDataList = new MutableLiveData<>();
     public final MutableLiveData<List<GameData>> localDataList = new MutableLiveData<>();
     public final File listDirsFile;
-    protected final List<GameData> tempList = new ArrayList<>();
-    protected final List<GameData> selectList = new ArrayList<>();
     private final ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     private final ExecutorService singleExecutor = Executors.newSingleThreadExecutor();
     private final HashMap<Long, GameData> gamesMap = new HashMap<>();
@@ -118,17 +99,8 @@ public class StockViewModel extends AndroidViewModel {
             action.confirmResolution(ConflictResolution.REPLACE);
         }
     };
-    public MutableLiveData<Boolean> doIsHideFAB = new MutableLiveData<>();
-    public MutableLiveData<Integer> outputIntObserver;
     public List<DocumentFile> extGamesListDir = new ArrayList<>();
     public GameData currGameData;
-    public Events.Emitter actEmit = new Events.Emitter();
-    public Events.Emitter fragLocalRVEmit = new Events.Emitter();
-    protected boolean isEnableDeleteMode = false;
-    private DocumentFile tempImageFile, tempPathFile, tempModFile;
-    private DialogEditBinding editBinding;
-    private DialogAddBinding addBinding;
-    private StockDialogFrags dialogFragments = new StockDialogFrags();
     private long downloadId = 0L;
 
     public StockViewModel(@NonNull Application application) {
@@ -146,31 +118,6 @@ public class StockViewModel extends AndroidViewModel {
     }
 
     // region Getter/Setter
-    public void setTempPathFile(DocumentFile tempPathFile) {
-        this.tempPathFile = tempPathFile;
-        if (editBinding == null) return;
-        editBinding.buttonSelectPath.setText(tempPathFile.getName());
-    }
-
-    public void setTempModFile(DocumentFile tempModFile) {
-        this.tempModFile = tempModFile;
-        if (editBinding == null) return;
-        editBinding.buttonSelectMod.setText(tempModFile.getName());
-    }
-
-    public void setTempImageFile(@NonNull DocumentFile tempImageFile) {
-        this.tempImageFile = tempImageFile;
-        if (editBinding != null) {
-            editBinding.buttonSelectIcon.setText(tempImageFile.getName());
-            editBinding.imageView.setScaleType(ImageView.ScaleType.FIT_XY);
-            editBinding.imageView.setImageURI(tempImageFile.getUri());
-        }
-        if (addBinding != null) {
-            addBinding.buttonSelectIcon.setText(tempImageFile.getName());
-            addBinding.imageView.setScaleType(ImageView.ScaleType.FIT_XY);
-            addBinding.imageView.setImageURI(tempImageFile.getUri());
-        }
-    }
 
     public void setDataList(List<GameData> insertList) {
         if (localDataList.hasActiveObservers()) {
@@ -403,339 +350,6 @@ public class StockViewModel extends AndroidViewModel {
 
     // endregion Getter/Setter
 
-    public void doOnShowFilePicker(int requestCode, String[] mimeTypes) {
-        actEmit.waitAndExecuteOnce(new StockFragmentNavigation.ShowFilePicker(requestCode, mimeTypes));
-    }
-
-    public void doOnShowErrorDialog(String errorMessage, ErrorType errorType) {
-        actEmit.emitAndExecuteOnce(new StockFragmentNavigation.ShowErrorDialog(errorMessage, errorType));
-    }
-
-    public void doOnShowDeleteDialog(String errorMessage) {
-        actEmit.waitAndExecuteOnce(new StockFragmentNavigation.ShowDeleteDialog(errorMessage));
-    }
-
-    public void doOnShowActionMode(ActionMode.Callback callback) {
-        actEmit.waitAndExecute(new StockFragmentNavigation.ShowActionMode(callback));
-    }
-
-    public void doOnFinishActionMode() {
-        actEmit.waitAndExecute(new StockFragmentNavigation.FinishActionMode());
-    }
-
-    public void doOnChangeElementColorToDKGray() {
-        fragLocalRVEmit.emitAndExecute(new StockFragmentNavigation.ChangeElementColorToDKGray());
-    }
-
-    public void doOnChangeElementColorToLTGray() {
-        fragLocalRVEmit.emitAndExecute(new StockFragmentNavigation.ChangeElementColorToLTGray());
-    }
-
-    public void onListItemClick(GameData entryToShow) {
-        if (isEnableDeleteMode) return;
-        currGameData = entryToShow;
-        doIsHideFAB.setValue(true);
-    }
-
-    public void onListItemClick(int position) {
-        if (!isEnableDeleteMode) return;
-        CompletableFuture
-                .runAsync(() -> {
-                    var curMapValues = gamesMap.values();
-
-                    for (var gameData : curMapValues) {
-                        if (!isGameInstalled(gameData)) continue;
-                        tempList.add(gameData);
-                    }
-                }, executor)
-                .thenRun(() -> {
-                    var gameData = tempList.get(position);
-                    if (selectList.isEmpty() || !selectList.contains(gameData)) {
-                        selectList.add(gameData);
-                        new Handler(Looper.getMainLooper()).post(() -> {
-                            fragLocalRVEmit.emitAndExecute(new StockFragmentNavigation.SelectOnce(position));
-                        });
-                    } else {
-                        selectList.remove(gameData);
-                        new Handler(Looper.getMainLooper()).post(() -> {
-                            fragLocalRVEmit.emitAndExecute(new StockFragmentNavigation.UnselectOnce(position));
-                        });
-                    }
-                });
-    }
-
-    public void onLongListItemClick() {
-        if (isEnableDeleteMode) return;
-
-        var pageNumber = currPageNumber.getValue();
-        if (pageNumber == null) return;
-        if (pageNumber == 1) return;
-
-        var callback = new ActionMode.Callback() {
-            Observer<Integer> observer = integer -> {
-                if (integer == 1) {
-                    for (var data : selectList) {
-                        delEntryDirFromList(tempList, data, listDirsFile);
-                    }
-                    doOnFinishActionMode();
-                } else {
-                    for (var data : selectList) {
-                        delEntryFromList(tempList, data, listDirsFile);
-                    }
-                    doOnFinishActionMode();
-                }
-            };
-
-            @Override
-            public boolean onCreateActionMode(ActionMode mode, Menu menu) {
-                mode.getMenuInflater().inflate(R.menu.menu_delete, menu);
-                return true;
-            }
-
-            @Override
-            public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-                tempList.addAll(gamesMap.values());
-                isEnableDeleteMode = true;
-                return true;
-            }
-
-            @SuppressLint("NonConstantResourceId")
-            @Override
-            public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-                int itemId = item.getItemId();
-                switch (itemId) {
-                    case R.id.delete_game -> {
-                        doOnShowDeleteDialog(String.valueOf(selectList.size()));
-                        outputIntObserver.observeForever(observer);
-                    }
-                    case R.id.select_all -> {
-                        if (selectList.size() == tempList.size()) {
-                            selectList.clear();
-                            doOnChangeElementColorToDKGray();
-                        } else {
-                            selectList.clear();
-                            selectList.addAll(tempList);
-                            doOnChangeElementColorToLTGray();
-                        }
-                    }
-                }
-                return true;
-            }
-
-            @Override
-            public void onDestroyActionMode(ActionMode mode) {
-                doOnChangeElementColorToDKGray();
-                isEnableDeleteMode = false;
-                tempList.clear();
-                selectList.clear();
-                doIsHideFAB.setValue(false);
-                observer = null;
-            }
-        };
-
-        doIsHideFAB.setValue(true);
-
-        doOnShowActionMode(callback);
-    }
-
-    // region Dialog
-    public void showAddDialogFragment(FragmentManager manager,
-                                      DocumentFile rootDir) {
-        dialogFragments = new StockDialogFrags();
-        dialogFragments.setDialogType(StockDialogType.ADD_DIALOG);
-        dialogFragments.setAddBinding(setupAddView(rootDir));
-        dialogFragments.show(manager, "addDialogFragment");
-    }
-
-    public void showDialogFragment(FragmentManager manager,
-                                   StockDialogType dialogType,
-                                   String errorMessage) {
-        var fragment = manager.findFragmentByTag(dialogFragments.getTag());
-        if (fragment != null && fragment.isAdded()) {
-            fragment.onDestroy();
-        } else {
-            if (manager.isDestroyed()) return;
-            switch (dialogType) {
-                case DELETE_DIALOG -> {
-                    outputIntObserver = new MutableLiveData<>();
-                    dialogFragments = new StockDialogFrags();
-                    dialogFragments.setMessage(errorMessage);
-                    dialogFragments.setDialogType(StockDialogType.DELETE_DIALOG);
-                    dialogFragments.show(manager, "deleteDialogFragment");
-                }
-                case EDIT_DIALOG -> {
-                    dialogFragments = new StockDialogFrags();
-                    dialogFragments.setDialogType(StockDialogType.EDIT_DIALOG);
-                    dialogFragments.setEditBinding(formingEditView());
-                    dialogFragments.show(manager, "editDialogFragment");
-                }
-                case ERROR_DIALOG -> {
-                    var message = Optional.ofNullable(errorMessage);
-                    dialogFragments.setDialogType(StockDialogType.ERROR_DIALOG);
-                    message.ifPresent(s -> dialogFragments.setMessage(s));
-                    dialogFragments.show(manager, "errorDialogFragment");
-                }
-                case SELECT_DIALOG -> {
-                    outputIntObserver = new MutableLiveData<>();
-                    dialogFragments.setDialogType(StockDialogType.SELECT_DIALOG);
-                    dialogFragments.setNames(getNamesDir(getApplication(), currGameData.gameFilesUri));
-                    dialogFragments.show(manager, "selectDialogFragment");
-                }
-            }
-        }
-    }
-
-    public DialogAddBinding setupAddView(DocumentFile rootDir) {
-        addBinding = DialogAddBinding.inflate(LayoutInflater.from(getApplication()));
-
-        var titleText = addBinding.ET0.getEditText();
-        if (titleText != null) {
-            titleText.setText(rootDir.getName());
-        }
-        addBinding.buttonSelectIcon.setOnClickListener(this::sendIntent);
-        addBinding.addBT.setOnClickListener(v -> createAddIntent(rootDir));
-
-        return addBinding;
-    }
-
-    private void createAddIntent(DocumentFile rootDir) {
-        try {
-            var nameDir = rootDir.getName();
-            var secureRandom = new SecureRandom();
-
-            if (!isNotEmptyOrBlank(nameDir)) {
-                nameDir = "game#" + secureRandom.nextInt();
-            }
-
-            var newGameData = new GameData();
-            newGameData.id = secureRandom.nextInt();
-            var editTextTitle = addBinding.ET0.getEditText();
-            if (editTextTitle != null) {
-                var title = editTextTitle.getText().toString();
-                newGameData.title = isNotEmptyOrBlank(title)
-                        ? title
-                        : nameDir;
-            }
-            var editTextAuthor = addBinding.ET1.getEditText();
-            if (editTextAuthor != null) {
-                newGameData.author = editTextAuthor.getText().toString();
-            }
-            var editTextVersion = addBinding.ET2.getEditText();
-            if (editTextVersion != null) {
-                newGameData.version = editTextVersion.getText().toString();
-            }
-            if (tempImageFile != null) {
-                newGameData.iconUrl = tempImageFile.getUri();
-            }
-            if (addBinding.sizeDirSW.isChecked()) {
-                calculateSizeDir(newGameData);
-            } else {
-                newGameData.fileSize = DISABLE_CALC_SIZE;
-            }
-
-            dialogFragments.dismiss();
-
-            CompletableFuture
-                    .supplyAsync(() -> localGame.searchAndWriteFileInfo(rootDir, newGameData), executor)
-                    .thenApply(aBoolean -> {
-                        if (aBoolean) {
-                            return localGame.tryCreateDataIntoFolder(rootDir, newGameData);
-                        }
-                        return false;
-                    })
-                    .thenCompose(aBoolean -> {
-                        if (aBoolean) {
-                            return saveDirToFile(rootDir);
-                        }
-                        return null;
-                    })
-                    .thenRun(() -> refreshGamesDirs(rootDir));
-        } catch (NullPointerException ex) {
-            doOnShowErrorDialog(ex.getMessage(), ErrorType.EXCEPTION);
-        }
-    }
-
-    @NonNull
-    private DialogEditBinding formingEditView() {
-        editBinding = DialogEditBinding.inflate(LayoutInflater.from(getApplication()));
-        editBinding.buttonSelectMod.setVisibility(isModsDirExist() ? android.view.View.VISIBLE : android.view.View.GONE);
-
-        var data = currGameData;
-        if (data != null) {
-            var iconPath = data.iconUrl;
-            if (isNotEmptyOrBlank(String.valueOf(iconPath))) {
-                org.qp.android.helpers.CoilHelper.load(editBinding.imageView, iconPath);
-            }
-        }
-
-        if (getGameSize() == DISABLE_CALC_SIZE) {
-            editBinding.sizeDirSW.setChecked(false);
-        }
-
-        editBinding.buttonSelectPath.setOnClickListener(this::sendIntent);
-        editBinding.buttonSelectMod.setOnClickListener(this::sendIntent);
-        editBinding.buttonSelectIcon.setOnClickListener(this::sendIntent);
-        editBinding.editBT.setOnClickListener(v -> createEditIntent());
-
-        return editBinding;
-    }
-
-    public void createEditIntent() {
-        try {
-            var editTextTitle = editBinding.ET0.getEditText();
-            if (editTextTitle != null) {
-                currGameData.title = editTextTitle.getText().toString().isEmpty()
-                        ? removeExtension(currGameData.title)
-                        : editTextTitle.getText().toString();
-            }
-            var editTextAuthor = editBinding.ET1.getEditText();
-            if (editTextAuthor != null) {
-                currGameData.author = editTextAuthor.getText().toString().isEmpty()
-                        ? removeExtension(currGameData.author)
-                        : editTextAuthor.getText().toString();
-            }
-            var editTextVersion = editBinding.ET2.getEditText();
-            if (editTextVersion != null) {
-                currGameData.version = editTextVersion.toString().isEmpty()
-                        ? removeExtension(currGameData.version)
-                        : editTextVersion.getText().toString();
-            }
-            if (tempImageFile != null) currGameData.iconUrl = tempImageFile.getUri();
-            if (editBinding.sizeDirSW.isChecked() || getGameSize() != DISABLE_CALC_SIZE) {
-                calculateSizeDir(currGameData);
-            }
-
-            var gameDir = DocumentFileCompat.fromUri(getApplication(), currGameData.gameDirUri);
-            if (isWritableFile(getApplication(), tempPathFile) && isWritableDir(getApplication(), gameDir)) {
-                CompletableFuture
-                        .runAsync(() -> copyFileToDir(getApplication(), tempPathFile, gameDir, callback));
-            }
-            if (isWritableFile(getApplication(), tempModFile) && isWritableDir(getApplication(), gameDir)) {
-                var modDir = fromRelPath(getApplication(), MOD_DIR_NAME, gameDir);
-                CompletableFuture
-                        .runAsync(() -> copyFileToDir(getApplication(), tempModFile, modDir, callback));
-            }
-
-            localGame.createDataIntoFolder(currGameData, gameDir);
-            refreshGamesDirs(gameDir);
-            dialogFragments.dismiss();
-        } catch (NullPointerException ex) {
-            doOnShowErrorDialog(ex.getMessage(), ErrorType.EXCEPTION);
-        }
-    }
-
-    private void calculateSizeDir(GameData gameData) {
-        var gameDir = DocumentFileCompat.fromUri(getApplication(), gameData.gameDirUri);
-        if (!isWritableDir(getApplication(), gameDir)) return;
-
-        CompletableFuture
-                .supplyAsync(() -> calculateDirSize(gameDir), executor)
-                .thenAccept(aLong -> {
-                    gameData.fileSize = aLong;
-                    localGame.createDataIntoFolder(gameData, gameDir);
-                });
-    }
-
     public void saveGameData(GameData gameData) {
         if (gameData == null || gameData.gameDirUri == null) return;
         CompletableFuture.runAsync(() -> {
@@ -765,19 +379,6 @@ public class StockViewModel extends AndroidViewModel {
             return Optional.empty();
         }
     }
-
-    @SuppressLint("NonConstantResourceId")
-    public void sendIntent(@NonNull View view) {
-        switch (view.getId()) {
-            case R.id.buttonSelectIcon ->
-                    doOnShowFilePicker(CODE_PICK_IMAGE_FILE, new String[]{"image/png", "image/jpeg"});
-            case R.id.buttonSelectPath ->
-                    doOnShowFilePicker(CODE_PICK_PATH_FILE, new String[]{"application/octet-stream"});
-            case R.id.buttonSelectMod ->
-                    doOnShowFilePicker(CODE_PICK_MOD_FILE, new String[]{"application/octet-stream"});
-        }
-    }
-    // endregion Dialog
 
     // region Refresh
     public void loadExternalDirsFromCache() {
@@ -829,7 +430,6 @@ public class StockViewModel extends AndroidViewModel {
                 refreshGameData();
             } else {
                 Log.w("QUESTLOGTEST", "gameExDir does not exist or not writable: " + gameExDir.getUri());
-                doOnShowErrorDialog(null, ErrorType.FOLDER_ERROR);
                 var dirName = gameExDir.getName();
                 if (isNotEmptyOrBlank(dirName)) {
                     removeDirFromListDirsFile(listDirsFile, dirName);
@@ -899,9 +499,7 @@ public class StockViewModel extends AndroidViewModel {
 
         if (pageNumber == 0) {
             syncFromDisk();
-            doIsHideFAB.postValue(false);
         } else if (pageNumber == 1) {
-            doIsHideFAB.postValue(true);
             syncRemote();
         }
     }
@@ -918,7 +516,31 @@ public class StockViewModel extends AndroidViewModel {
                 .thenAcceptAsync(externalGameData -> {
                     gamesMap.clear();
                     externalGameData.forEach(localGameData -> {
-                        Log.d("QUESTLOGTEST", "Found game: '" + localGameData.title + "' (ID: " + localGameData.id + ", URI: " + localGameData.gameDirUri + ")");
+                        if (localGameData.id == 0L) {
+                            localGameData.id = (long) (localGameData.gameDirUri != null && localGameData.gameDirUri != Uri.EMPTY ? localGameData.gameDirUri.hashCode() : (localGameData.title != null ? localGameData.title.hashCode() : System.currentTimeMillis()));
+                        }
+                        if (localGameData.gameDirUri != null && localGameData.gameDirUri != Uri.EMPTY) {
+                            try {
+                                var docDir = DocumentFileCompat.fromUri(getApplication(), localGameData.gameDirUri);
+                                if (docDir != null && docDir.exists()) {
+                                    long actualSize = calculateDirSize(docDir);
+                                    if (actualSize > 0) {
+                                        localGameData.fileSize = actualSize;
+                                    }
+                                } else if ("file".equalsIgnoreCase(localGameData.gameDirUri.getScheme())) {
+                                    var fileDir = new File(localGameData.gameDirUri.getPath());
+                                    if (fileDir.exists()) {
+                                        long actualSize = calculateDirSize(fileDir);
+                                        if (actualSize > 0) {
+                                            localGameData.fileSize = actualSize;
+                                        }
+                                    }
+                                }
+                            } catch (Exception e) {
+                                Log.w("QUESTLOGTEST", "Error calculating actual folder size: " + e.getMessage());
+                            }
+                        }
+                        Log.d("QUESTLOGTEST", "Found game: '" + localGameData.title + "' (ID: " + localGameData.id + ", Size: " + localGameData.fileSize + ")");
                         gamesMap.put(localGameData.id, localGameData);
                     });
                 }, executor)
@@ -939,7 +561,6 @@ public class StockViewModel extends AndroidViewModel {
                 })
                 .exceptionally(throwable -> {
                     Log.e("QUESTLOGTEST", "syncFromDisk error: " + throwable.getMessage(), throwable);
-                    doOnShowErrorDialog(throwable.toString(), ErrorType.EXCEPTION);
                     return null;
                 });
     }
@@ -965,9 +586,14 @@ public class StockViewModel extends AndroidViewModel {
                         var dataList = xmlToObject(xmlStr, RemoteDataList.class);
                         if (dataList != null && dataList.game != null) {
                             var games = new ArrayList<GameData>();
+                            long fallbackId = 1L;
                             for (var rem : dataList.game) {
                                 if (isNotEmptyOrBlank(rem.title)) {
-                                    games.add(new GameData(rem));
+                                    var g = new GameData(rem);
+                                    if (g.id == 0L) {
+                                        g.id = fallbackId++;
+                                    }
+                                    games.add(g);
                                 }
                             }
                             Log.i("QUESTLOGTEST", "Successfully parsed " + games.size() + " games from repository!");
@@ -989,9 +615,14 @@ public class StockViewModel extends AndroidViewModel {
         fetchRemoteData().thenAccept(remDataList -> {
             if (remDataList != null && !remDataList.isEmpty()) {
                 var games = new ArrayList<GameData>();
+                long fallbackId = 1L;
                 for (var rem : remDataList) {
                     if (isNotEmptyOrBlank(rem.title)) {
-                        games.add(new GameData(rem));
+                        var g = new GameData(rem);
+                        if (g.id == 0L) {
+                            g.id = fallbackId++;
+                        }
+                        games.add(g);
                     }
                 }
                 Log.d("QUESTLOGTEST", "Loaded " + games.size() + " remote games from cache fallback");
@@ -1061,23 +692,17 @@ public class StockViewModel extends AndroidViewModel {
         }
     }
 
-    public void delEntryDirFromList(List<GameData> tempList, GameData data, File listDirsFile) {
-        if (data.gameDirUri == null) return;
+    public void deleteGame(GameData data) {
+        if (data == null || data.gameDirUri == null) return;
         var gameDir = DocumentFileCompat.fromUri(getApplication(), data.gameDirUri);
         if (gameDir == null) return;
         var nameGameDir = gameDir.getName();
         if (!isNotEmptyOrBlank(nameGameDir)) return;
 
         boolean isInternalDir = data.gameDirUri.toString().contains(rootInDir.getName());
-        Log.i("QUESTLOGTEST", "delEntryDirFromList for: " + nameGameDir + " (isInternal=" + isInternalDir + ")");
+        Log.i("QUESTLOGTEST", "deleteGame for: " + nameGameDir + " (isInternal=" + isInternalDir + ")");
 
-        CompletableFuture
-                .runAsync(() -> tempList.remove(data), executor)
-                .thenCombineAsync(
-                        removeDirFromListDirsFile(listDirsFile, nameGameDir),
-                        (unused, unused2) -> null,
-                        executor
-                )
+        removeDirFromListDirsFile(listDirsFile, nameGameDir)
                 .thenRunAsync(() -> {
                     if (isInternalDir) {
                         Log.d("QUESTLOGTEST", "Deleting internal game folder: " + nameGameDir);
@@ -1089,29 +714,7 @@ public class StockViewModel extends AndroidViewModel {
                 .thenRunAsync(() -> dropPersistable(data.gameDirUri), executor)
                 .thenRun(this::refreshGameData)
                 .exceptionally(ex -> {
-                    doOnShowErrorDialog(ex.getMessage(), ErrorType.EXCEPTION);
-                    return null;
-                });
-    }
-
-    public void delEntryFromList(List<GameData> tempList, GameData data, File listDirsFile) {
-        if (data.gameDirUri == null) return;
-        var gameDir = DocumentFileCompat.fromUri(getApplication(), data.gameDirUri);
-        if (!isWritableDir(getApplication(), gameDir)) return;
-        var nameGameDir = gameDir.getName();
-        if (!isNotEmptyOrBlank(nameGameDir)) return;
-
-        CompletableFuture
-                .runAsync(() -> tempList.remove(data), executor)
-                .thenCombineAsync(
-                        removeDirFromListDirsFile(listDirsFile, nameGameDir),
-                        (unused, unused2) -> null,
-                        executor
-                )
-                .thenRunAsync(() -> dropPersistable(data.gameDirUri), executor)
-                .thenRun(this::refreshGameData)
-                .exceptionally(ex -> {
-                    doOnShowErrorDialog(ex.getMessage(), ErrorType.EXCEPTION);
+                    Log.e("QUESTLOGTEST", "Error deleting game: ", ex);
                     return null;
                 });
     }
@@ -1153,7 +756,7 @@ public class StockViewModel extends AndroidViewModel {
                     runOnUiThread(this::refreshGameData);
                 })
                 .exceptionally(throwable -> {
-                    doOnShowErrorDialog(throwable.getMessage(), ErrorType.EXCEPTION);
+                    Log.e("QUESTLOGTEST", "removeDirFromListDirsFile error: ", throwable);
                     return null;
                 });
     }
@@ -1166,7 +769,7 @@ public class StockViewModel extends AndroidViewModel {
                     try {
                         var convUrl = new URL(gameData.fileUrl);
 
-                        var cookie = CookieManager.getInstance().getCookie(gameData.fileUrl);
+                        var cookie = android.webkit.CookieManager.getInstance().getCookie(gameData.fileUrl);
                         var con = (HttpURLConnection) convUrl.openConnection();
                         con.setRequestProperty("Cookie", cookie);
                         con.setRequestMethod("HEAD");
@@ -1177,7 +780,7 @@ public class StockViewModel extends AndroidViewModel {
                         var contentSplit = content.split("filename=");
                         return contentSplit[1].replace("filename=", "").replace("\"", "").trim();
                     } catch (IOException exception) {
-                        doOnShowErrorDialog(exception.toString(), ErrorType.EXCEPTION);
+                        Log.e("QUESTLOGTEST", "startFileDownload HEAD request failed: ", exception);
                         return "";
                     }
                 })
@@ -1196,7 +799,7 @@ public class StockViewModel extends AndroidViewModel {
                     downloadId = downloadManager.enqueue(request);
                 })
                 .exceptionally(throwable -> {
-                    doOnShowErrorDialog(throwable.getMessage(), ErrorType.EXCEPTION);
+                    Log.e("QUESTLOGTEST", "startFileDownload error: ", throwable);
                     return null;
                 });
     }
@@ -1241,7 +844,7 @@ public class StockViewModel extends AndroidViewModel {
                                 notificationManager.notify(UNPACK_GAME_NOTIFICATION_ID, notification);
                             })
                             .exceptionally(throwable -> {
-                                doOnShowErrorDialog(throwable.toString(), ErrorType.EXCEPTION);
+                                Log.e("QUESTLOGTEST", "postProcessingDownload extract error: ", throwable);
                                 return null;
                             });
                 }

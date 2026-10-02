@@ -1,6 +1,6 @@
 package org.qp.android.ui.stock
-import androidx.compose.runtime.setValue
 
+import android.os.Build
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
@@ -30,6 +30,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudDownload
@@ -43,10 +49,11 @@ import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarDefaults
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,98 +71,19 @@ import androidx.preference.PreferenceManager
 import org.qp.android.R
 
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.platform.LocalDensity
+
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.foundation.layout.RowScope
 
 enum class StockNavigationTab {
     GAMES,
     REPOSITORY,
     SETTINGS
-}
-
-@Composable
-fun FlexibleNavItem(
-    selected: Boolean,
-    onClick: () -> Unit,
-    icon: ImageVector,
-    selectedIcon: ImageVector,
-    label: String,
-    modifier: Modifier = Modifier
-) {
-    val view = LocalView.current
-    val context = LocalContext.current
-    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
-    val themeColor = prefs.getString("themeColor", "monochrome") ?: "monochrome"
-    val isMonochrome = themeColor == "monochrome"
-
-    val activePillColor = if (isMonochrome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
-    val activeIconColor = if (isMonochrome) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
-
-    val pillColor by animateColorAsState(
-        targetValue = if (selected) activePillColor else Color.Transparent,
-        animationSpec = tween(durationMillis = 280),
-        label = "navPillColor"
-    )
-    val pillWidthHorizontal by animateDpAsState(
-        targetValue = if (selected) 22.dp else 6.dp,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "navPillWidth"
-    )
-    val iconColor by animateColorAsState(
-        targetValue = if (selected) activeIconColor else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(durationMillis = 280),
-        label = "navIconColor"
-    )
-    val textColor by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(durationMillis = 280),
-        label = "navTextColor"
-    )
-
-    Column(
-        modifier = modifier
-            .fillMaxHeight()
-            .clip(RoundedCornerShape(20.dp))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = {
-                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                    onClick()
-                }
-            ),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .clip(CircleShape)
-                .background(pillColor)
-                .padding(horizontal = pillWidthHorizontal, vertical = 5.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Crossfade(
-                targetState = selected,
-                animationSpec = tween(durationMillis = 320),
-                label = "navIconCrossfade"
-            ) { isSelected ->
-                Icon(
-                    imageVector = if (isSelected) selectedIcon else icon,
-                    contentDescription = label,
-                    tint = iconColor,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(3.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            color = textColor
-        )
-    }
 }
 
 data class ExpressiveNavItem(
@@ -166,219 +94,62 @@ data class ExpressiveNavItem(
     val showBadge: Boolean = false
 )
 
-@Composable
-fun AnimatedExpressiveNavigationBar(
-    items: List<ExpressiveNavItem>,
-    selectedIndex: Int,
-    onTabSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-    navBarColor: Color = MaterialTheme.colorScheme.surfaceContainer,
-    indicatorColor: Color = MaterialTheme.colorScheme.primaryContainer,
-    selectedIconColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
-    unselectedIconColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-    selectedTextColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
-    unselectedTextColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
-) {
-    if (items.isEmpty()) return
-    val view = LocalView.current
-    val hasLabels = remember(items) { items.any { it.label.isNotBlank() } }
-
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .background(navBarColor)
-    ) {
-        val count = items.size
-        val totalWidth = this.maxWidth
-        val itemWidth = totalWidth / count
-
-        // Calculate dynamic pill width for each tab based on its label length
-        val itemPillWidths = remember(items, itemWidth) {
-            items.map { item ->
-                if (item.label.isBlank()) {
-                    48.dp
-                } else {
-                    val estTextWidth = item.label.length * 7.2f
-                    (20 + 6 + estTextWidth + 20).dp.coerceIn(72.dp, itemWidth - 6.dp)
-                }
-            }
-        }
-
-        val targetPillWidth = itemPillWidths.getOrElse(selectedIndex) { 80.dp }
-
-        val animatedPillWidth by animateDpAsState(
-            targetValue = targetPillWidth,
-            animationSpec = spring(
-                dampingRatio = 0.82f,
-                stiffness = Spring.StiffnessMediumLow
-            ),
-            label = "navPillWidth"
-        )
-
-        val pillHeight = if (hasLabels) 34.dp else 30.dp
-
-        val targetCenterX = itemWidth * selectedIndex + itemWidth / 2
-        val targetLeft = targetCenterX - animatedPillWidth / 2
-
-        val animatedLeft by animateDpAsState(
-            targetValue = targetLeft,
-            animationSpec = spring(
-                dampingRatio = 0.82f,
-                stiffness = Spring.StiffnessMediumLow
-            ),
-            label = "navIndicatorX"
-        )
-
-        val distanceToTarget = (animatedLeft - targetLeft).value.let { if (it < 0) -it else it }
-        val isMoving = distanceToTarget > 1.5f
-
-        val pillScaleX by animateFloatAsState(
-            targetValue = if (isMoving) 1.08f else 1.0f,
-            animationSpec = tween(180, easing = FastOutSlowInEasing),
-            label = "pillScaleX"
-        )
-        val pillScaleY by animateFloatAsState(
-            targetValue = if (isMoving) 0.92f else 1.0f,
-            animationSpec = tween(180, easing = FastOutSlowInEasing),
-            label = "pillScaleY"
-        )
-
-        // Single Shared Active Indicator Pill
-        Box(
-            modifier = Modifier
-                .offset(x = animatedLeft, y = (56.dp - pillHeight) / 2)
-                .width(animatedPillWidth)
-                .height(pillHeight)
-                .graphicsLayer {
-                    scaleX = pillScaleX
-                    scaleY = pillScaleY
-                }
-                .clip(CircleShape)
-                .background(indicatorColor)
-        )
-
-        // Items Row
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            items.forEachIndexed { index, item ->
-                val isSelected = index == selectedIndex
-
-                val iconScale by animateFloatAsState(
-                    targetValue = if (isSelected) 1.0f else 0.92f,
-                    animationSpec = spring(
-                        dampingRatio = 0.8f,
-                        stiffness = Spring.StiffnessMediumLow
-                    ),
-                    label = "iconScale"
-                )
-
-                val iconColor by animateColorAsState(
-                    targetValue = if (isSelected) selectedIconColor else unselectedIconColor,
-                    animationSpec = tween(250),
-                    label = "iconColor"
-                )
-
-                val textColor by animateColorAsState(
-                    targetValue = if (isSelected) selectedTextColor else unselectedTextColor,
-                    animationSpec = tween(250),
-                    label = "textColor"
-                )
-
-                val labelAlpha by animateFloatAsState(
-                    targetValue = if (isSelected) 1.0f else 0.72f,
-                    animationSpec = tween(250),
-                    label = "labelAlpha"
-                )
-
-                val labelOffsetY by animateDpAsState(
-                    targetValue = if (isSelected) 0.dp else 1.dp,
-                    animationSpec = tween(250),
-                    label = "labelOffsetY"
-                )
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                            onTabSelected(index)
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        BadgedBox(
-                            badge = {
-                                if (item.showBadge) {
-                                    Badge()
-                                }
-                            }
-                        ) {
-                            Icon(
-                                imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                                contentDescription = item.contentDescription ?: item.label,
-                                tint = iconColor,
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .graphicsLayer {
-                                        scaleX = iconScale
-                                        scaleY = iconScale
-                                    }
-                            )
-                        }
-                        if (item.label.isNotBlank()) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = item.label,
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontSize = 11.5.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                                ),
-                                color = textColor,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier
-                                    .graphicsLayer { alpha = labelAlpha }
-                                    .offset(y = labelOffsetY)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 data class NavThemeColors(
     val navBarColor: Color,
     val indicatorColor: Color,
     val selectedIconColor: Color,
     val unselectedIconColor: Color,
     val selectedTextColor: Color,
-    val unselectedTextColor: Color
+    val unselectedTextColor: Color,
+    val isAmoled: Boolean
 )
 
 @Composable
 fun rememberNavThemeColors(): NavThemeColors {
     val context = LocalContext.current
     val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
-    val themeMode = prefs.getString("themeMode", "system") ?: "system"
-    val themeColor = prefs.getString("themeColor", "monochrome") ?: "monochrome"
+    var themeMode by remember { mutableStateOf(prefs.getString("themeMode", "system") ?: "system") }
+    var themeColor by remember { mutableStateOf(prefs.getString("themeColor", "monochrome") ?: "monochrome") }
+
+    DisposableEffect(prefs) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { sp, key ->
+            when (key) {
+                "themeMode" -> themeMode = sp.getString("themeMode", "system") ?: "system"
+                "themeColor" -> themeColor = sp.getString("themeColor", "monochrome") ?: "monochrome"
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
+    }
+
     val isAmoled = themeMode == "amoled" || themeMode == "3"
     val isMonochrome = themeColor == "monochrome"
 
-    val navBarColor = if (isAmoled) Color.Black else MaterialTheme.colorScheme.surfaceContainer
-    val indicatorColor = if (isAmoled || isMonochrome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
-    val selectedIconColor = if (isAmoled || isMonochrome) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
+    val navBarColor = when {
+        isAmoled -> Color.Black
+        else -> MaterialTheme.colorScheme.surfaceContainer
+    }
+
+    val indicatorColor = when {
+        isAmoled -> Color(0xFF2C2C2C)
+        isMonochrome -> MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+        else -> MaterialTheme.colorScheme.secondaryContainer
+    }
+
+    val selectedIconColor = when {
+        isAmoled -> Color.White
+        isMonochrome -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.onSecondaryContainer
+    }
+
+    val selectedTextColor = when {
+        isAmoled -> Color.White
+        isMonochrome -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+
     val unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     return NavThemeColors(
@@ -386,9 +157,72 @@ fun rememberNavThemeColors(): NavThemeColors {
         indicatorColor = indicatorColor,
         selectedIconColor = selectedIconColor,
         unselectedIconColor = unselectedColor,
-        selectedTextColor = selectedIconColor,
-        unselectedTextColor = unselectedColor
+        selectedTextColor = selectedTextColor,
+        unselectedTextColor = unselectedColor,
+        isAmoled = isAmoled
     )
+}
+
+@Composable
+fun RowScope.MaterialYouNavigationItem(
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: @Composable () -> Unit,
+    label: (@Composable () -> Unit)? = null,
+    indicatorColor: Color
+) {
+    val view = LocalView.current
+    val indicatorWidth by animateDpAsState(
+        targetValue = if (selected) 56.dp else 0.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "indicatorWidth"
+    )
+
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .fillMaxHeight()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                onClick()
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .height(32.dp)
+                    .width(56.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (selected) {
+                    Box(
+                        modifier = Modifier
+                            .width(indicatorWidth)
+                            .height(32.dp)
+                            .clip(CircleShape)
+                            .background(indicatorColor)
+                    )
+                }
+                Box(contentAlignment = Alignment.Center) {
+                    icon()
+                }
+            }
+            if (label != null) {
+                Spacer(modifier = Modifier.height(4.dp))
+                label()
+            }
+        }
+    }
 }
 
 @Composable
@@ -401,9 +235,9 @@ fun FlexibleNavigationBar(
 
     val navItems = listOf(
         ExpressiveNavItem(
-            selectedIcon = Icons.Filled.SportsEsports,
-            unselectedIcon = Icons.Outlined.SportsEsports,
-            label = stringResource(R.string.tabZeroName)
+            selectedIcon = Icons.Filled.Home,
+            unselectedIcon = Icons.Outlined.Home,
+            label = stringResource(R.string.nav_home)
         ),
         ExpressiveNavItem(
             selectedIcon = Icons.Filled.CloudDownload,
@@ -423,25 +257,54 @@ fun FlexibleNavigationBar(
         StockNavigationTab.SETTINGS -> 2
     }
 
-    AnimatedExpressiveNavigationBar(
-        items = navItems,
-        selectedIndex = selectedIndex,
-        onTabSelected = { idx ->
-            val newTab = when (idx) {
-                0 -> StockNavigationTab.GAMES
-                1 -> StockNavigationTab.REPOSITORY
-                else -> StockNavigationTab.SETTINGS
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = navColors.navBarColor,
+        tonalElevation = if (navColors.isAmoled) 0.dp else 2.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(NavigationBarDefaults.windowInsets)
+                .height(54.dp)
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            navItems.forEachIndexed { index, item ->
+                val isSelected = index == selectedIndex
+                MaterialYouNavigationItem(
+                    selected = isSelected,
+                    onClick = {
+                        val newTab = when (index) {
+                            0 -> StockNavigationTab.GAMES
+                            1 -> StockNavigationTab.REPOSITORY
+                            else -> StockNavigationTab.SETTINGS
+                        }
+                        onTabSelected(newTab)
+                    },
+                    icon = {
+                        BadgedBox(
+                            badge = {
+                                if (item.showBadge) {
+                                    Badge()
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                                contentDescription = item.contentDescription ?: item.label,
+                                tint = if (isSelected) navColors.selectedIconColor else navColors.unselectedIconColor,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    },
+                    label = null,
+                    indicatorColor = navColors.indicatorColor
+                )
             }
-            onTabSelected(newTab)
-        },
-        navBarColor = navColors.navBarColor,
-        indicatorColor = navColors.indicatorColor,
-        selectedIconColor = navColors.selectedIconColor,
-        unselectedIconColor = navColors.unselectedIconColor,
-        selectedTextColor = navColors.selectedTextColor,
-        unselectedTextColor = navColors.unselectedTextColor,
-        modifier = modifier
-    )
+        }
+    }
 }
 
 @Composable

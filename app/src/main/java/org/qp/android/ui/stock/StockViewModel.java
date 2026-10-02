@@ -26,7 +26,9 @@ import android.annotation.SuppressLint;
 import android.app.Application;
 import android.app.DownloadManager;
 import android.app.NotificationManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
@@ -69,9 +71,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
@@ -82,6 +86,9 @@ public class StockViewModel extends AndroidViewModel {
     public static final long DISABLE_CALC_SIZE = -1;
     public static final String EXT_GAME_LIST_NAME = "extGameDirs";
     private static final String INNER_GAME_DIR_NAME = "games-dir";
+    private static final String PREFS_FAVORITES = "QuestopiaFavorites";
+    private static final String KEY_FAVORITES = "favorite_game_ids";
+
     public final MutableLiveData<Integer> currPageNumber = new MutableLiveData<>();
     public final MutableLiveData<List<GameData>> remoteDataList = new MutableLiveData<>();
     public final MutableLiveData<List<GameData>> localDataList = new MutableLiveData<>();
@@ -89,6 +96,7 @@ public class StockViewModel extends AndroidViewModel {
     private final ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     private final ExecutorService singleExecutor = Executors.newSingleThreadExecutor();
     private final HashMap<Long, GameData> gamesMap = new HashMap<>();
+    private final Set<String> favoriteIds = Collections.synchronizedSet(new HashSet<>());
     private final LocalGame localGame = new LocalGame(getApplication());
     private final DownloadManager downloadManager = getApplication().getSystemService(DownloadManager.class);
     private final File rootInDir;
@@ -107,6 +115,7 @@ public class StockViewModel extends AndroidViewModel {
         super(application);
 
         currPageNumber.setValue(0);
+        loadFavoritesFromPrefs();
         var cache = getApplication().getExternalCacheDir();
         listDirsFile = findOrCreateFile(getApplication(), cache, EXT_GAME_LIST_NAME, MimeType.TEXT);
 
@@ -115,6 +124,54 @@ public class StockViewModel extends AndroidViewModel {
         Log.i("QUESTLOGTEST", "StockViewModel initialized. rootInDir: " + this.rootInDir.getAbsolutePath());
         loadExternalDirsFromCache();
         syncRemoteFromCache();
+    }
+
+    private void loadFavoritesFromPrefs() {
+        try {
+            var prefs = getApplication().getSharedPreferences(PREFS_FAVORITES, Context.MODE_PRIVATE);
+            var savedSet = prefs.getStringSet(KEY_FAVORITES, null);
+            if (savedSet != null) {
+                favoriteIds.addAll(savedSet);
+            }
+        } catch (Exception e) {
+            Log.w("QUESTLOGTEST", "Error loading favorites: " + e.getMessage());
+        }
+    }
+
+    private void saveFavoritesToPrefs() {
+        try {
+            var prefs = getApplication().getSharedPreferences(PREFS_FAVORITES, Context.MODE_PRIVATE);
+            prefs.edit().putStringSet(KEY_FAVORITES, new HashSet<>(favoriteIds)).apply();
+        } catch (Exception e) {
+            Log.w("QUESTLOGTEST", "Error saving favorites: " + e.getMessage());
+        }
+    }
+
+    public boolean isFavorite(GameData game) {
+        if (game == null) return false;
+        String keyById = String.valueOf(game.id);
+        String keyByTitle = game.title != null ? game.title.trim() : "";
+        return favoriteIds.contains(keyById) || (isNotEmptyOrBlank(keyByTitle) && favoriteIds.contains(keyByTitle));
+    }
+
+    public void toggleFavorite(GameData game) {
+        if (game == null) return;
+        String key = isNotEmptyOrBlank(game.title) ? game.title.trim() : String.valueOf(game.id);
+        if (isFavorite(game)) {
+            favoriteIds.remove(key);
+            favoriteIds.remove(String.valueOf(game.id));
+            game.isFavorite = false;
+        } else {
+            favoriteIds.add(key);
+            favoriteIds.add(String.valueOf(game.id));
+            game.isFavorite = true;
+        }
+        saveFavoritesToPrefs();
+        if (gamesMap.containsKey(game.id)) {
+            gamesMap.put(game.id, game);
+        }
+        var list = new ArrayList<>(gamesMap.values());
+        localDataList.postValue(list);
     }
 
     // region Getter/Setter
@@ -414,6 +471,7 @@ public class StockViewModel extends AndroidViewModel {
 
     public void addGameDataDirectly(GameData data) {
         if (data == null) return;
+        data.isFavorite = isFavorite(data);
         Log.i("QUESTLOGTEST", "addGameDataDirectly adding game: " + data.title + " (ID: " + data.id + ")");
         gamesMap.put(data.id, data);
         var list = new ArrayList<>(gamesMap.values());
@@ -540,7 +598,8 @@ public class StockViewModel extends AndroidViewModel {
                                 Log.w("QUESTLOGTEST", "Error calculating actual folder size: " + e.getMessage());
                             }
                         }
-                        Log.d("QUESTLOGTEST", "Found game: '" + localGameData.title + "' (ID: " + localGameData.id + ", Size: " + localGameData.fileSize + ")");
+                        localGameData.isFavorite = isFavorite(localGameData);
+                        Log.d("QUESTLOGTEST", "Found game: '" + localGameData.title + "' (ID: " + localGameData.id + ", Size: " + localGameData.fileSize + ", Fav: " + localGameData.isFavorite + ")");
                         gamesMap.put(localGameData.id, localGameData);
                     });
                 }, executor)

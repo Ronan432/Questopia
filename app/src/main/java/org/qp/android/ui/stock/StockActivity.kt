@@ -354,6 +354,7 @@ private fun StockContent(
         onDownloadGame = onDownloadGame,
         onAddGameClicked = onAddGameClicked,
         onExitApp = onExitApp,
+        onToggleFavorite = { gameData -> viewModel.toggleFavorite(gameData) },
         onRefreshLocal = { viewModel.refreshGamesDirs(null) },
         onRefreshRemote = { viewModel.fetchRemoteRepository() }
     )

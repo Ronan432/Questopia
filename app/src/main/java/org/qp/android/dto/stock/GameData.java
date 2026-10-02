@@ -28,6 +28,7 @@ public class GameData implements Serializable {
     public String modDate = "";
     public Uri gameDirUri = Uri.EMPTY;
     public List<Uri> gameFilesUri = Collections.emptyList();
+    public boolean isFavorite = false;
 
     public GameData() { }
 

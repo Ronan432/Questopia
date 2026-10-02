@@ -24,12 +24,16 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.ui.draw.scale
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
@@ -229,6 +233,7 @@ fun InstalledGamesList(
     onPlayGame: (GameData) -> Unit,
     onEditGame: (GameData) -> Unit,
     onDeleteGame: (GameData) -> Unit,
+    onToggleFavorite: ((GameData) -> Unit)? = null,
     headerContent: (@Composable () -> Unit)? = null,
     contentPadding: PaddingValues = PaddingValues(16.dp)
 ) {
@@ -372,6 +377,7 @@ fun InstalledGamesList(
                     onPlay = { onPlayGame(game) },
                     onEdit = { onEditGame(game) },
                     onDelete = { onDeleteGame(game) },
+                    onToggleFavorite = { onToggleFavorite?.invoke(game) },
                     isSelected = isSelected,
                     isSelectionMode = isSelectionMode,
                     onCardClick = {
@@ -400,6 +406,7 @@ fun GameCard(
     onPlay: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    onToggleFavorite: (() -> Unit)? = null,
     isSelected: Boolean = false,
     isSelectionMode: Boolean = false,
     onCardClick: () -> Unit = {},
@@ -432,43 +439,87 @@ fun GameCard(
                 .fillMaxWidth()
                 .padding(10.dp)
         ) {
-            // Game Cover / App Logo
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            // Game Cover / App Logo with Favorite button
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(130.dp)
             ) {
-                if (hasIcon) {
-                    SubcomposeAsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(game.iconUrl)
-                            .crossfade(true)
-                            .diskCachePolicy(CachePolicy.ENABLED)
-                            .memoryCachePolicy(CachePolicy.ENABLED)
-                            .build(),
-                        contentDescription = game.title,
-                        contentScale = ContentScale.Crop,
-                        loading = { ShimmerPlaceholder(modifier = Modifier.fillMaxSize()) },
-                        error = {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                AsyncImage(
-                                    model = R.mipmap.ic_launcher,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(48.dp)
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        AsyncImage(
-                            model = R.mipmap.ic_launcher,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp)
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    if (hasIcon) {
+                        SubcomposeAsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(game.iconUrl)
+                                .crossfade(true)
+                                .diskCachePolicy(CachePolicy.ENABLED)
+                                .memoryCachePolicy(CachePolicy.ENABLED)
+                                .build(),
+                            contentDescription = game.title,
+                            contentScale = ContentScale.Crop,
+                            loading = { ShimmerPlaceholder(modifier = Modifier.fillMaxSize()) },
+                            error = {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    AsyncImage(
+                                        model = R.mipmap.ic_launcher,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(48.dp)
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxSize()
                         )
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            AsyncImage(
+                                model = R.mipmap.ic_launcher,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (onToggleFavorite != null) {
+                    val favInteractionSource = remember { MutableInteractionSource() }
+                    val isFavPressed by favInteractionSource.collectIsPressedAsState()
+                    val favScale by animateFloatAsState(
+                        targetValue = if (isFavPressed) 0.82f else 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        ),
+                        label = "favScale"
+                    )
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(6.dp)
+                            .size(30.dp)
+                            .scale(favScale)
+                            .clip(CircleShape)
+                            .clickable(
+                                interactionSource = favInteractionSource,
+                                indication = null
+                            ) {
+                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                onToggleFavorite()
+                            }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = if (game.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                                contentDescription = "Favorite",
+                                tint = if (game.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
             }

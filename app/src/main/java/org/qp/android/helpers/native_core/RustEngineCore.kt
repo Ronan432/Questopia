@@ -19,6 +19,8 @@ object RustEngineCore {
     }
 
     external fun parseHtml(input: String): String
+    external fun parseRepositoryXml(xmlInput: String): String
+    external fun convertEncoding(bytes: ByteArray, fromCharset: String): String
     external fun extractArchive(archivePath: String, targetDir: String): Int
     external fun readArchiveFile(archivePath: String, entryPath: String): ByteArray?
 
@@ -35,6 +37,39 @@ object RustEngineCore {
             }
         } else {
             input
+        }
+    }
+
+    /**
+     * Parse remote repository stock XML with Rust quick-xml, with fallback.
+     */
+    fun fastParseRepositoryXml(xmlInput: String): String? {
+        if (!isLoaded || xmlInput.isBlank()) return null
+        return try {
+            val json = parseRepositoryXml(xmlInput)
+            if (json.isNotBlank()) json else null
+        } catch (e: Throwable) {
+            Log.w(TAG, "Error in Rust fastParseRepositoryXml: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * Convert charset with encoding_rs, with fallback to standard Java Charset.
+     */
+    fun fastConvertEncoding(bytes: ByteArray, charset: String): String {
+        if (isLoaded) {
+            try {
+                val res = convertEncoding(bytes, charset)
+                if (res.isNotEmpty()) return res
+            } catch (e: Throwable) {
+                Log.w(TAG, "Error in Rust fastConvertEncoding: ${e.message}")
+            }
+        }
+        return try {
+            String(bytes, java.nio.charset.Charset.forName(charset))
+        } catch (e: Exception) {
+            String(bytes, java.nio.charset.StandardCharsets.UTF_8)
         }
     }
 

@@ -81,146 +81,14 @@ import androidx.compose.ui.unit.sp
 import org.qp.android.BuildConfig
 import org.qp.android.R
 
+import org.qp.android.ui.common.ExpressiveSearchBar
+
 val Icons.AutoMirrored.Outlined.ChevronLeft: ImageVector
     get() = Icons.AutoMirrored.Outlined.KeyboardArrowLeft
 
 val Icons.AutoMirrored.Outlined.ChevronRight: ImageVector
     get() = Icons.AutoMirrored.Outlined.KeyboardArrowRight
 
-
-/**
- * Unified, reusable animated search bar used across Main Screen and Settings.
- * Features spring animations, elevation feedback, and animated cancel transition.
- */
-@Composable
-fun ExpressiveSearchBar(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    placeholderText: String,
-    modifier: Modifier = Modifier,
-    isFocused: Boolean = false,
-    onFocusChanged: ((Boolean) -> Unit)? = null,
-    focusRequester: FocusRequester? = null,
-    onSearch: (() -> Unit)? = null,
-    onCancel: (() -> Unit)? = null,
-    showCancelButton: Boolean = true
-) {
-    val isSearchActiveOrFocused = isFocused || query.isNotEmpty()
-    val searchElevation by animateDpAsState(
-        targetValue = if (isSearchActiveOrFocused) 3.dp else 0.dp,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label = "searchElevationAnim"
-    )
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = searchElevation,
-            modifier = Modifier
-                .weight(1f)
-                .padding(vertical = 4.dp)
-                .height(48.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 14.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = stringResource(R.string.search),
-                    tint = if (isSearchActiveOrFocused)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                BasicTextField(
-                    value = query,
-                    onValueChange = onQueryChange,
-                    modifier = Modifier
-                        .weight(1f)
-                        .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
-                        .onFocusChanged { onFocusChanged?.invoke(it.isFocused) },
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    ),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { onSearch?.invoke() }),
-                    decorationBox = { innerTextField ->
-                        Box(contentAlignment = Alignment.CenterStart) {
-                            if (query.isEmpty()) {
-                                Text(
-                                    text = placeholderText,
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontSize = 14.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                )
-                            }
-                            innerTextField()
-                        }
-                    }
-                )
-                if (query.isNotEmpty()) {
-                    IconButton(
-                        onClick = { onQueryChange("") },
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = stringResource(R.string.cancel),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        if (showCancelButton) {
-            AnimatedVisibility(
-                visible = isSearchActiveOrFocused,
-                enter = fadeIn(animationSpec = tween(durationMillis = 180)) +
-                        expandHorizontally(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
-                        ),
-                exit = fadeOut(animationSpec = tween(durationMillis = 120)) +
-                        shrinkHorizontally(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
-                        )
-            ) {
-                Text(
-                    text = stringResource(R.string.cancel),
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier
-                        .padding(start = 12.dp)
-                        .clip(CircleShape)
-                        .clickable {
-                            onCancel?.invoke()
-                        }
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun SwiftSectionHeader(

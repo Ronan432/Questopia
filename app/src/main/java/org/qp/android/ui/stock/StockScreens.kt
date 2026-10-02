@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -69,7 +70,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.qp.android.R
 import org.qp.android.dto.stock.GameData
-import org.qp.android.ui.settings.ExpressiveSearchBar
+import org.qp.android.ui.common.ExpressiveSearchBar
 import org.qp.android.ui.settings.SettingsApp
 
 @OptIn(ExperimentalMaterial3Api::class)

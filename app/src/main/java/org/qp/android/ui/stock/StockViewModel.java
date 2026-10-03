@@ -577,27 +577,6 @@ public class StockViewModel extends AndroidViewModel {
                         if (localGameData.id == 0L) {
                             localGameData.id = (long) (localGameData.gameDirUri != null && localGameData.gameDirUri != Uri.EMPTY ? localGameData.gameDirUri.hashCode() : (localGameData.title != null ? localGameData.title.hashCode() : System.currentTimeMillis()));
                         }
-                        if (localGameData.gameDirUri != null && localGameData.gameDirUri != Uri.EMPTY) {
-                            try {
-                                var docDir = DocumentFileCompat.fromUri(getApplication(), localGameData.gameDirUri);
-                                if (docDir != null && docDir.exists()) {
-                                    long actualSize = calculateDirSize(docDir);
-                                    if (actualSize > 0) {
-                                        localGameData.fileSize = actualSize;
-                                    }
-                                } else if ("file".equalsIgnoreCase(localGameData.gameDirUri.getScheme())) {
-                                    var fileDir = new File(localGameData.gameDirUri.getPath());
-                                    if (fileDir.exists()) {
-                                        long actualSize = calculateDirSize(fileDir);
-                                        if (actualSize > 0) {
-                                            localGameData.fileSize = actualSize;
-                                        }
-                                    }
-                                }
-                            } catch (Exception e) {
-                                Log.w("QUESTLOGTEST", "Error calculating actual folder size: " + e.getMessage());
-                            }
-                        }
                         localGameData.isFavorite = isFavorite(localGameData);
                         Log.d("QUESTLOGTEST", "Found game: '" + localGameData.title + "' (ID: " + localGameData.id + ", Size: " + localGameData.fileSize + ", Fav: " + localGameData.isFavorite + ")");
                         gamesMap.put(localGameData.id, localGameData);

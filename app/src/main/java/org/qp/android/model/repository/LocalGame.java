@@ -301,6 +301,7 @@ public class LocalGame {
                         item.gameFilesUri = qspFiles;
                         item.fileSize = totalSize > 0 ? totalSize : -1L;
                         Log.i("QUESTLOGTEST", "Constructed fallback GameData: " + item.title + " with " + qspFiles.size() + " files");
+                        tryCreateDataIntoFolder(data, item);
                     }
                 }
 

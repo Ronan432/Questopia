@@ -383,7 +383,7 @@ fun StockMainScreen(
                                                         StatMetric(
                                                             icon = androidx.compose.material.icons.Icons.Outlined.Folder,
                                                             value = "${localGames.size}",
-                                                            label = "Kütüphane"
+                                                            label = stringResource(R.string.statLibrary)
                                                         )
                                                         Box(
                                                             modifier = Modifier
@@ -394,7 +394,7 @@ fun StockMainScreen(
                                                         StatMetric(
                                                             icon = androidx.compose.material.icons.Icons.Outlined.Storage,
                                                             value = totalFormattedSize,
-                                                            label = "Boyut"
+                                                            label = stringResource(R.string.statSize)
                                                         )
                                                         Box(
                                                             modifier = Modifier
@@ -405,7 +405,7 @@ fun StockMainScreen(
                                                         StatMetric(
                                                             icon = androidx.compose.material.icons.Icons.Outlined.FavoriteBorder,
                                                             value = "$favCount",
-                                                            label = "Favori"
+                                                            label = stringResource(R.string.statFavorites)
                                                         )
                                                     }
                                                 }
@@ -417,7 +417,7 @@ fun StockMainScreen(
                                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                // "Hepsi" chip
+                                                // "All" chip
                                                 val isAllSelected = selectedHomeFilter == HomeFilter.ALL
                                                 val allInteractionSource = remember { MutableInteractionSource() }
                                                 val isAllPressed by allInteractionSource.collectIsPressedAsState()
@@ -450,7 +450,7 @@ fun StockMainScreen(
                                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                                                     ) {
                                                         Text(
-                                                            text = "Hepsi",
+                                                            text = stringResource(R.string.filterHomeAll),
                                                             style = MaterialTheme.typography.labelMedium.copy(
                                                                 fontWeight = if (isAllSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium
                                                             ),
@@ -474,7 +474,7 @@ fun StockMainScreen(
                                                     }
                                                 }
 
-                                                // "Favoriler" chip
+                                                // "Favorites" chip
                                                 val isFavSelected = selectedHomeFilter == HomeFilter.FAVORITES
                                                 val favInteractionSource = remember { MutableInteractionSource() }
                                                 val isFavPressed by favInteractionSource.collectIsPressedAsState()
@@ -513,7 +513,7 @@ fun StockMainScreen(
                                                             modifier = Modifier.size(14.dp)
                                                         )
                                                         Text(
-                                                            text = "Favoriler",
+                                                            text = stringResource(R.string.filterFavorites),
                                                             style = MaterialTheme.typography.labelMedium.copy(
                                                                 fontWeight = if (isFavSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium
                                                             ),

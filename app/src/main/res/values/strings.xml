@@ -57,6 +57,11 @@
     <string name="deleteGameAction">Remove game and files</string>
     <string name="searchGamesPlaceholder">Search games…</string>
     <string name="refreshRepositoryPrompt">Pull down or refresh to load games from repository</string>
+    <string name="filterHomeAll">All</string>
+    <string name="filterFavorites">Favorites</string>
+    <string name="statLibrary">Library</string>
+    <string name="statSize">Size</string>
+    <string name="statFavorites">Favorites</string>
 
     <!-- Notifications -->
     <string name="channelInstallGame">Unpack game</string>

@@ -57,6 +57,11 @@
     <string name="deleteGameAction">Удалить игру и файлы</string>
     <string name="searchGamesPlaceholder">Поиск игр…</string>
     <string name="refreshRepositoryPrompt">Обновите, чтобы загрузить игры из репозитория</string>
+    <string name="filterHomeAll">Все</string>
+    <string name="filterFavorites">Избранное</string>
+    <string name="statLibrary">Библиотека</string>
+    <string name="statSize">Размер</string>
+    <string name="statFavorites">Избранное</string>
 
     <!-- Notifications -->
     <string name="channelInstallGame">Распаковка игры</string>

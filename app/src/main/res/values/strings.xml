@@ -218,6 +218,8 @@
     <string name="command">Command</string>
     <string name="menu">Menu</string>
     <string name="slotLabel">Slot %1$d</string>
+    <string name="slotEmptySubtitle">Empty Slot</string>
+    <string name="slotFilled">Saved • %1$s</string>
     <string name="addGameContentDescription">Add game</string>
     <string name="aboutDescription">QSP text-based quest game interpreter for Android.</string>
     <string name="buildInformation">Build Information</string>
@@ -269,6 +271,38 @@
     <string name="aboutCatTitle">About &amp; Build</string>
     <string name="aboutTitle">About Questopia</string>
     <string name="aboutSum">Questopia description and licenses</string>
+
+    <!-- Error Diagnostics -->
+    <string name="errorReportTitle">Engine Error Diagnostic</string>
+    <string name="errorLocation">Location: %1$s</string>
+    <string name="errorAction">Action: %1$d</string>
+    <string name="errorLine">Line: %1$d</string>
+    <string name="errorCode">Error Code: %1$d</string>
+    <string name="errorDesc">Description: %1$s</string>
+    <string name="copyErrorReport">Copy Error Report</string>
+    <string name="errorCopied">Error report copied to clipboard</string>
+
+    <!-- Gestures & Display Settings -->
+    <string name="pinchZoomTitle">Pinch to Zoom</string>
+    <string name="pinchZoomSummary">Scale game text and content using two-finger pinch gesture</string>
+    <string name="squarePostersTitle">Square Posters</string>
+    <string name="squarePostersSummary">Use rectangular poster cards instead of rounded oval cards</string>
+
+    <!-- Auto-Save -->
+    <string name="autosaveTitle">Auto-Save</string>
+    <string name="autosaveSummary">Automatically save game progress after a set number of actions</string>
+    <string name="autosaveIntervalTitle">Auto-Save Interval</string>
+    <string name="autosaveIntervalSummary">Save after %1$d actions</string>
+
+    <!-- Poster Context Menu -->
+    <string name="copyImage">Copy Image</string>
+    <string name="downloadImage">Download Image</string>
+    <string name="yandexImageSearch">Yandex Image Search</string>
+    <string name="imageSaved">Image saved to gallery</string>
+    <string name="imageCopied">Image copied to clipboard</string>
+
+    <string name="autoSaveSlotLabel">Auto-Save Slot</string>
+    <string name="pageIndicator">Page %1$d</string>
 
     <!-- Arrays -->
     <string-array name="fontName">

@@ -413,11 +413,16 @@ fun GameCard(
     onLongClick: () -> Unit = {}
 ) {
     val view = LocalView.current
+    val context = LocalContext.current
+    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+    val isSquarePosters = prefs.getBoolean("squarePosters", false)
+    val cardShape = if (isSquarePosters) RoundedCornerShape(4.dp) else shape
+    val coverShape = if (isSquarePosters) RoundedCornerShape(2.dp) else RoundedCornerShape(14.dp)
     var showActionSheet by remember { mutableStateOf(false) }
     val hasIcon = game.iconUrl != null && game.iconUrl != Uri.EMPTY && game.iconUrl.toString().isNotBlank()
 
     MorphingSurface(
-        shape = shape,
+        shape = cardShape,
         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surfaceContainer,
         border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
         tonalElevation = if (isSelected) 4.dp else 1.dp,
@@ -446,7 +451,7 @@ fun GameCard(
                     .height(130.dp)
             ) {
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
+                    shape = coverShape,
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -877,10 +882,15 @@ fun RemoteGameCard(
     onDownload: () -> Unit
 ) {
     val view = LocalView.current
+    val context = LocalContext.current
+    val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+    val isSquarePosters = prefs.getBoolean("squarePosters", false)
+    val cardShape = if (isSquarePosters) RoundedCornerShape(4.dp) else shape
+    val coverShape = if (isSquarePosters) RoundedCornerShape(2.dp) else RoundedCornerShape(14.dp)
     val hasIcon = game.iconUrl != null && game.iconUrl != Uri.EMPTY && game.iconUrl.toString().isNotBlank()
 
     MorphingSurface(
-        shape = shape,
+        shape = cardShape,
         color = MaterialTheme.colorScheme.surfaceContainer,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
         tonalElevation = 1.dp,
@@ -894,7 +904,7 @@ fun RemoteGameCard(
         ) {
             // Game Cover / App Logo
             Surface(
-                shape = RoundedCornerShape(14.dp),
+                shape = coverShape,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 modifier = Modifier
                     .fillMaxWidth()

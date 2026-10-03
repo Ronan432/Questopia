@@ -22,6 +22,7 @@ import android.content.res.Configuration;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Handler;
+import android.util.Log;
 import android.view.View;
 import android.webkit.MimeTypeMap;
 import android.webkit.WebResourceRequest;
@@ -66,17 +67,18 @@ import java.util.concurrent.CountDownLatch;
 
 public class GameViewModel extends AndroidViewModel implements GameInterface {
 
+    private static final String TAG = "GameViewModel";
     private static final String PAGE_HEAD_TEMPLATE = """
             <!DOCTYPE html>
             <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes">
             <style type="text/css">
               body {
                 margin: 0;
                 padding: 12px;
                 color: QSPTEXTCOLOR;
                 background-color: QSPBACKCOLOR;
-                font-size: QSPFONTSIZE;
+                font-size: QSPFONTSIZEpx;
                 font-family: QSPFONTSTYLE;
                 line-height: 1.45;
                 word-wrap: break-word;
@@ -95,7 +97,7 @@ public class GameViewModel extends AndroidViewModel implements GameInterface {
                 border-radius: 8px;
               }
               a { color: QSPLINKCOLOR; text-decoration: underline; }
-              a:link { color: QSPLINKCOLOR; }
+              a:link, a:visited, a:active { color: QSPLINKCOLOR; }
             </style>
             </head>
             """;
@@ -195,10 +197,10 @@ public class GameViewModel extends AndroidViewModel implements GameInterface {
     }
 
     public boolean isDarkTheme() {
-        var themeMode = preferences.getString("themeMode", "system");
-        if ("dark".equals(themeMode) || "amoled".equals(themeMode)) {
+        var themeMode = preferences.getString("themeMode", "1");
+        if ("2".equals(themeMode) || "3".equals(themeMode) || "dark".equalsIgnoreCase(themeMode) || "amoled".equalsIgnoreCase(themeMode)) {
             return true;
-        } else if ("light".equals(themeMode)) {
+        } else if ("4".equals(themeMode) || "light".equalsIgnoreCase(themeMode)) {
             return false;
         } else {
             int nightModeFlags = getApplication().getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
@@ -207,8 +209,8 @@ public class GameViewModel extends AndroidViewModel implements GameInterface {
     }
 
     public boolean isAmoledTheme() {
-        var themeMode = preferences.getString("themeMode", "system");
-        return "amoled".equals(themeMode);
+        var themeMode = preferences.getString("themeMode", "1");
+        return "3".equals(themeMode) || "amoled".equalsIgnoreCase(themeMode);
     }
 
     public int getTextColor() {
@@ -291,14 +293,9 @@ public class GameViewModel extends AndroidViewModel implements GameInterface {
         return Optional.ofNullable(savesDir);
     }
 
-    @NonNull
-    private GameActivity getGameActivity() {
-        var activity = activityObserver.getValue();
-        if (activity != null) {
-            return activity;
-        } else {
-            throw new NullPointerException("Activity is null");
-        }
+    @Nullable
+    public GameActivity getGameActivity() {
+        return activityObserver.getValue();
     }
 
     public LibIConfig getIConfig() {
@@ -330,33 +327,35 @@ public class GameViewModel extends AndroidViewModel implements GameInterface {
     }
 
     private void refreshMainDesc() {
-        var libMainDesc = getHtml(getLibGameState().mainDesc);
-        var dirtyHTML = pageTemplate.replace("REPLACETEXT", libMainDesc);
-        var cleanHTML = "";
+        var rawDesc = getLibGameState().mainDesc;
+        var cleanBody = "";
         if (getSettingsController().isImageDisabled) {
-            cleanHTML = getHtmlProcessor().getCleanHtmlRemMedia(dirtyHTML);
+            cleanBody = getHtmlProcessor().getCleanHtmlRemMedia(rawDesc);
         } else {
-            cleanHTML = getHtmlProcessor().getCleanHtmlAndMedia(getApplication(), dirtyHTML);
+            cleanBody = getHtmlProcessor().getCleanHtmlAndMedia(getApplication(), rawDesc);
         }
-        if (!cleanHTML.isBlank()) {
+        updatePageTemplate();
+        var fullHtml = pageTemplate.replace("REPLACETEXT", cleanBody != null ? cleanBody : "");
+        if (!cleanBody.isBlank()) {
             getGameActivity().warnUser(GameActivity.TAB_MAIN_DESC_AND_ACTIONS);
         }
-        mainDescLiveData.postValue(cleanHTML);
+        mainDescLiveData.postValue(fullHtml);
     }
 
     private void refreshVarsDesc() {
-        final var libVarsDesc = getHtml(getLibGameState().varsDesc);
-        final var dirtyHTML = pageTemplate.replace("REPLACETEXT", libVarsDesc);
-        var cleanHTML = "";
+        final var rawVarsDesc = getLibGameState().varsDesc;
+        var cleanBody = "";
         if (getSettingsController().isImageDisabled) {
-            cleanHTML = getHtmlProcessor().getCleanHtmlRemMedia(dirtyHTML);
+            cleanBody = getHtmlProcessor().getCleanHtmlRemMedia(rawVarsDesc);
         } else {
-            cleanHTML = getHtmlProcessor().getCleanHtmlAndMedia(getApplication(), dirtyHTML);
+            cleanBody = getHtmlProcessor().getCleanHtmlAndMedia(getApplication(), rawVarsDesc);
         }
-        if (!cleanHTML.isBlank()) {
+        updatePageTemplate();
+        var fullHtml = pageTemplate.replace("REPLACETEXT", cleanBody != null ? cleanBody : "");
+        if (!cleanBody.isBlank()) {
             getGameActivity().warnUser(GameActivity.TAB_VARS_DESC);
         }
-        varsDescLiveData.postValue(cleanHTML);
+        varsDescLiveData.postValue(fullHtml);
     }
 
     public void onActionClicked(int index) {
@@ -580,17 +579,37 @@ public class GameViewModel extends AndroidViewModel implements GameInterface {
 
             switch (uri.getScheme()) {
                 case "exec" -> {
-                    var tempUriDecode = uriDecode.substring(5);
-                    if (isBase64(tempUriDecode)) {
-                        tempUriDecode = decodeBase64(uriDecode.substring(5));
-                    } else {
-                        tempUriDecode = uriDecode.substring(5);
+                    var uriStr = uri.toString();
+                    Log.d(TAG, "shouldOverrideUrlLoading raw uri: " + uriStr);
+                    var tempUriDecode = uriStr.length() > 5 && uriStr.startsWith("exec:") ? uriStr.substring(5) : uriStr;
+                    tempUriDecode = Uri.decode(tempUriDecode);
+                    if (tempUriDecode.startsWith("base64:") || tempUriDecode.startsWith("BASE64:")) {
+                        tempUriDecode = decodeBase64(tempUriDecode.substring(7));
+                    } else if (isBase64(tempUriDecode)) {
+                        try {
+                            tempUriDecode = decodeBase64(tempUriDecode);
+                        } catch (Exception e) {
+                            Log.w(TAG, "Base64 decode failed for exec: " + tempUriDecode, e);
+                        }
                     }
+                    tempUriDecode = tempUriDecode
+                            .replace("<br>", "\n")
+                            .replace("<br/>", "\n")
+                            .replace("<br />", "\n")
+                            .replace("<BR>", "\n")
+                            .replace("<BR/>", "\n")
+                            .replace("<BR />", "\n")
+                            .replace("&amp;", "&")
+                            .replace("&quot;", "\"")
+                            .replace("&lt;", "<")
+                            .replace("&gt;", ">")
+                            .replace("&apos;", "'");
                     if (isHasHTMLTags(tempUriDecode)) {
-                        getLibProxy().execute(removeHtmlTags(tempUriDecode));
-                    } else {
-                        getLibProxy().execute(tempUriDecode);
+                        tempUriDecode = removeHtmlTags(tempUriDecode);
                     }
+                    tempUriDecode = tempUriDecode.trim();
+                    Log.i(TAG, "Executing QSP command: [" + tempUriDecode + "] (len=" + tempUriDecode.length() + ")");
+                    getLibProxy().execute(tempUriDecode);
                 }
                 case "https", "http" -> {
                     var viewLink = new Intent(Intent.ACTION_VIEW, Uri.parse(uriDecode));

@@ -39,6 +39,10 @@ public class SettingsController {
     public boolean isUseImageDebug;
     public boolean isUseMusicDebug;
     public boolean isVideoMute;
+    public boolean isPinchZoomEnabled;
+    public boolean isSquarePosters;
+    public boolean isAutosaveEnabled;
+    public int autosaveClickInterval;
     public String language;
     private static SettingsController INSTANCE;
 
@@ -65,6 +69,10 @@ public class SettingsController {
         settingsController.isUseSeparator = preferences.getBoolean("separator", false);
         settingsController.isUseGameFont = preferences.getBoolean("isUseGameFont", preferences.getBoolean("useGameFont", false));
         settingsController.isUseImmersiveMode = preferences.getBoolean("immersiveMode", true);
+        settingsController.isPinchZoomEnabled = preferences.getBoolean("pinchZoom", true);
+        settingsController.isSquarePosters = preferences.getBoolean("squarePosters", false);
+        settingsController.isAutosaveEnabled = preferences.getBoolean("autosave", false);
+        settingsController.autosaveClickInterval = Math.max(10, preferences.getInt("autosaveInterval", 15));
         settingsController.language = preferences.getString("lang", "en");
         imageSettings(settingsController, preferences);
         colorSettings(settingsController, preferences);

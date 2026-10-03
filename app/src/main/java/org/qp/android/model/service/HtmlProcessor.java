@@ -24,9 +24,11 @@ public class HtmlProcessor {
 
     private final String TAG = this.getClass().getSimpleName();
 
-    private static final Pattern EXEC_PATTERN = Pattern.compile("href=\"exec:([\\s\\S]*?)\"", Pattern.CASE_INSENSITIVE);
+    private static final Pattern EXEC_PATTERN = Pattern.compile(
+            "href\\s*=\\s*(?:\"exec:(.*?)\"|'exec:(.*?)'|\\\\\"exec:(.*?)\\\\\"|\"\"exec:(.*?)\"\"|exec:([^\">\\s]+))",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+    );
     private static final Pattern HTML_PATTERN = Pattern.compile("<(\"[^\"]*\"|'[^']*'|[^'\">])*>");
-    private static final Pattern BODY_PATTERN = Pattern.compile(".*?<body.*?>(.*?)</body>.*?", Pattern.DOTALL);
 
     private final ExecutorService executors = Executors.newSingleThreadExecutor();
 
@@ -49,25 +51,27 @@ public class HtmlProcessor {
                                        @NonNull String dirtyHtml) {
         if (isNullOrEmpty(dirtyHtml)) return "";
 
-        var document = Jsoup.parse(preHandleHtml(dirtyHtml));
-        document.outputSettings().prettyPrint(true);
+        var webHtml = convertLibHtmlToWebHtml(dirtyHtml);
+        var document = Jsoup.parseBodyFragment(webHtml);
+        document.outputSettings().prettyPrint(false);
         var body = document.body();
         handleImagesInHtml(context , body);
         handleVideosInHtml(body);
 
-        return document.toString();
+        return body.html();
     }
 
     public String getCleanHtmlRemMedia(String dirtyHtml) {
         if (isNullOrEmpty(dirtyHtml)) return "";
 
-        var document = Jsoup.parse(preHandleHtml(dirtyHtml));
+        var webHtml = convertLibHtmlToWebHtml(dirtyHtml);
+        var document = Jsoup.parseBodyFragment(webHtml);
         document.outputSettings().prettyPrint(false);
         var body = document.body();
         body.select("img").remove();
         body.select("video").remove();
 
-        return document.toString();
+        return body.html();
     }
 
     public String getTestHtml(String dirtyHtml) {
@@ -121,6 +125,13 @@ public class HtmlProcessor {
     public String removeHtmlTags(String html) {
         if (isNullOrEmpty(html)) return "";
 
+        html = html.replace("<br>", "\n")
+                   .replace("<br/>", "\n")
+                   .replace("<br />", "\n")
+                   .replace("<BR>", "\n")
+                   .replace("<BR/>", "\n")
+                   .replace("<BR />", "\n");
+
         var result = new StringBuilder();
         var len = html.length();
         var fromIdx = 0;
@@ -144,20 +155,39 @@ public class HtmlProcessor {
 
     @NonNull
     private String unescapeQuotes(String str) {
-        return str.replace("\\\"", "'");
+        return str.replace("\\\"", "\"");
     }
 
     @NonNull
     private String encodeExec(String html) {
+        if (isNullOrEmpty(html)) return "";
         var matcher = EXEC_PATTERN.matcher(html);
-        var buffer = new StringBuffer();
+        var buffer = new StringBuilder();
+        int lastEnd = 0;
         while (matcher.find()) {
-            if (matcher.group(1) == null) continue;
-            var exec = normalizePathsInExec(matcher.group(1));
-            var encodedExec = encodeBase64(exec, Base64.NO_WRAP);
-            matcher.appendReplacement(buffer, "href=\"exec:" + encodedExec + "\"");
+            buffer.append(html, lastEnd, matcher.start());
+            String exec = null;
+            for (int i = 1; i <= matcher.groupCount(); i++) {
+                if (matcher.group(i) != null) {
+                    exec = matcher.group(i);
+                    break;
+                }
+            }
+            if (exec != null) {
+                exec = normalizePathsInExec(exec);
+                exec = exec.replace("&amp;", "&")
+                           .replace("&quot;", "\"")
+                           .replace("&lt;", "<")
+                           .replace("&gt;", ">")
+                           .replace("&apos;", "'");
+                var encodedExec = encodeBase64(exec, Base64.NO_WRAP);
+                buffer.append("href=\"exec:").append(encodedExec).append("\"");
+            } else {
+                buffer.append(matcher.group(0));
+            }
+            lastEnd = matcher.end();
         }
-        matcher.appendTail(buffer);
+        buffer.append(html, lastEnd, html.length());
         return buffer.toString();
     }
 
@@ -186,6 +216,7 @@ public class HtmlProcessor {
                 if (!dynBlackList.contains(img.attr("src"))) {
                     img.attr("onclick", "img.onClickImage(this.src);");
                 }
+                img.attr("oncontextmenu", "img.onLongClickImage(this.src); return false;");
             });
         }
 
@@ -214,31 +245,4 @@ public class HtmlProcessor {
             videoElement.removeAttr("muted");
         }
     }
-
-    private String preHandleHtml(String dirtyHtml) {
-        var bodyDirt = extractBody(dirtyHtml);
-
-        if (bodyDirt.contains("\\\"")) {
-            unescapeQuotes(bodyDirt);
-        }
-        if (EXEC_PATTERN.matcher(bodyDirt).find()) {
-            encodeExec(bodyDirt);
-        }
-        if (bodyDirt.contains("\n") || bodyDirt.contains("\r")) {
-            lineBreaksInHTML(bodyDirt);
-        }
-
-        var headDirt = dirtyHtml.split(".*?<body.*?>(.*?)</body>.*?")[0];
-        return headDirt+"<body>"+bodyDirt+"</body>";
-    }
-
-    private String extractBody(String html) {
-        var match = BODY_PATTERN.matcher(html);
-        while (match.find()) {
-            if (match.group(1) == null) continue;
-            return match.group(1);
-        }
-        return "";
-    }
-
 }

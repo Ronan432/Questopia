@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.AspectRatio
 import androidx.compose.material.icons.outlined.BlurOn
 import androidx.compose.material.icons.outlined.Brightness4
 import androidx.compose.material.icons.outlined.Code
@@ -42,10 +43,13 @@ import androidx.compose.material.icons.outlined.ImageNotSupported
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Style
 import androidx.compose.material.icons.outlined.TableRows
 import androidx.compose.material.icons.outlined.TextFields
+import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material.icons.outlined.VerticalAlignBottom
+import androidx.compose.material.icons.outlined.ZoomIn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -114,6 +118,10 @@ fun SettingsMainScreen(
 
     var disableImage by remember { mutableStateOf(prefs.getBoolean("pref_disable_image", false)) }
     var permImgDialog by remember { mutableStateOf(prefs.getBoolean("permImgDialog", false)) }
+    var pinchZoom by remember { mutableStateOf(prefs.getBoolean("pinchZoom", true)) }
+    var squarePosters by remember { mutableStateOf(prefs.getBoolean("squarePosters", false)) }
+    var autosave by remember { mutableStateOf(prefs.getBoolean("autosave", false)) }
+    var autosaveInterval by remember { mutableIntStateOf(prefs.getInt("autosaveInterval", 15)) }
 
     var isAudioPlay by remember { mutableStateOf(prefs.getBoolean("pref_audio_play", true)) }
     var isMuteVideo by remember { mutableStateOf(prefs.getBoolean("pref_mute_video", false)) }
@@ -144,6 +152,10 @@ fun SettingsMainScreen(
     val sepTitle = stringResource(R.string.separatorTitle)
     val sepSum = stringResource(R.string.separatorSum)
     val autoTitle = stringResource(R.string.autoscrollTitle)
+    val pinchZoomTitle = stringResource(R.string.pinchZoomTitle)
+    val squarePostersTitle = stringResource(R.string.squarePostersTitle)
+    val autosaveTitle = stringResource(R.string.autosaveTitle)
+    val autosaveIntervalTitle = stringResource(R.string.autosaveIntervalTitle)
     val edgeFeedbackTitle = stringResource(R.string.edgeFeedbackTitle)
     val cheatsTitle = stringResource(R.string.cheatModesTitle)
     val cheatsSum = stringResource(R.string.cheatModesSummary)
@@ -304,10 +316,6 @@ fun SettingsMainScreen(
             val showThemeMode = matchQuery(appThemeTitle) || activeQuery.isBlank()
             val showThemeColor = matchQuery(themeColorTitle) || activeQuery.isBlank()
             val showLang = matchQuery(langTitle)
-            val showImm = matchQuery(immTitle)
-            val showSep = matchQuery(sepTitle)
-            val showAuto = matchQuery(autoTitle)
-            val showCheats = matchQuery(cheatsTitle, cheatsSum)
 
             val appearanceItems = buildList<@Composable (Shape) -> Unit> {
                 if (showThemeMode) {
@@ -368,6 +376,14 @@ fun SettingsMainScreen(
                 }
             }
 
+            val showImm = matchQuery(immTitle)
+            val showSep = matchQuery(sepTitle)
+            val showAuto = matchQuery(autoTitle)
+            val showPinchZoom = matchQuery(pinchZoomTitle)
+            val showAutosave = matchQuery(autosaveTitle)
+            val showAutosaveInterval = matchQuery(autosaveIntervalTitle)
+            val showCheats = matchQuery(cheatsTitle, cheatsSum)
+
             val generalItems = buildList<@Composable (Shape) -> Unit> {
                 if (showImm) {
                     add { shape ->
@@ -380,6 +396,53 @@ fun SettingsMainScreen(
                                 prefs.edit().putBoolean("immersiveMode", it).apply()
                             },
                             icon = Icons.Outlined.Fullscreen
+                        )
+                    }
+                }
+                if (showPinchZoom) {
+                    add { shape ->
+                        ExpressiveSwitchPreferenceItem(
+                            title = pinchZoomTitle,
+                            checked = pinchZoom,
+                            shape = shape,
+                            onCheckedChange = {
+                                pinchZoom = it
+                                prefs.edit().putBoolean("pinchZoom", it).apply()
+                            },
+                            icon = Icons.Outlined.ZoomIn
+                        )
+                    }
+                }
+                if (showAutosave) {
+                    add { shape ->
+                        ExpressiveSwitchPreferenceItem(
+                            title = autosaveTitle,
+                            checked = autosave,
+                            shape = shape,
+                            onCheckedChange = {
+                                autosave = it
+                                prefs.edit().putBoolean("autosave", it).apply()
+                            },
+                            icon = Icons.Outlined.Save
+                        )
+                    }
+                }
+                if (autosave && showAutosaveInterval) {
+                    val autosaveIntervalEntries = listOf("10", "15", "20", "25", "30", "50")
+                    val autosaveIntervalValues = listOf("10", "15", "20", "25", "30", "50")
+                    add { shape ->
+                        ExpressiveListPreferenceItem(
+                            title = autosaveIntervalTitle,
+                            entries = autosaveIntervalEntries,
+                            entryValues = autosaveIntervalValues,
+                            currentValue = autosaveInterval.toString(),
+                            shape = shape,
+                            onValueSelected = {
+                                val count = it.toIntOrNull() ?: 15
+                                autosaveInterval = count
+                                prefs.edit().putInt("autosaveInterval", count).apply()
+                            },
+                            icon = Icons.Outlined.Timer
                         )
                     }
                 }
@@ -513,8 +576,23 @@ fun SettingsMainScreen(
             // --- SECTION 3: Images & graphics ---
             val showDisableImg = matchQuery(disableImgTitle)
             val showPerm = matchQuery(permTitle)
+            val showSquarePosters = matchQuery(squarePostersTitle)
 
             val section3Items = buildList<@Composable (Shape) -> Unit> {
+                if (showSquarePosters) {
+                    add { shape ->
+                        ExpressiveSwitchPreferenceItem(
+                            title = squarePostersTitle,
+                            checked = squarePosters,
+                            shape = shape,
+                            onCheckedChange = {
+                                squarePosters = it
+                                prefs.edit().putBoolean("squarePosters", it).apply()
+                            },
+                            icon = Icons.Outlined.AspectRatio
+                        )
+                    }
+                }
                 if (showDisableImg) {
                     add { shape ->
                         ExpressiveSwitchPreferenceItem(

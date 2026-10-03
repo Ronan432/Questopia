@@ -135,14 +135,21 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
         var errorData = getLastErrorData();
         var locName = getStringOrEmpty(errorData.locName);
         var desc = getStringOrEmpty(getErrorDesc(errorData.errorNum));
-        final var message = String.format(
-                Locale.getDefault(),
-                "Location: %s\nAction: %d\nLine: %d\nError number: %d\nDescription: %s",
-                locName,
-                errorData.actIndex,
-                errorData.intLineNum,
-                errorData.errorNum,
-                desc);
+        var intLine = getStringOrEmpty(errorData.intLine);
+        var sb = new StringBuilder();
+        sb.append("Location: ").append(locName.isEmpty() ? "<Main/None>" : locName).append("\n");
+        sb.append("Action Index: ").append(errorData.actIndex).append("\n");
+        sb.append("Line: ").append(errorData.intLineNum);
+        if (errorData.topLineNum > 0 && errorData.topLineNum != errorData.intLineNum) {
+            sb.append(" (Top Line: ").append(errorData.topLineNum).append(")");
+        }
+        sb.append("\n");
+        sb.append("Error Code: #").append(errorData.errorNum).append("\n");
+        sb.append("Description: ").append(desc.isEmpty() ? "Unknown error" : desc);
+        if (!intLine.isEmpty()) {
+            sb.append("\nCode: ").append(intLine);
+        }
+        final var message = sb.toString();
         Log.e(TAG, "QSP Engine Error encountered:\n" + message);
         if (gameInterface == null) return;
         gameInterface.showErrorDialog(message);
@@ -379,10 +386,18 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
     @Override
     public void onActionClicked(final int index) {
         runOnQspThread(() -> {
+            var actions = getActions();
+            if (actions == null || index < 0 || index >= actions.length) {
+                Log.w(TAG, "Invalid action index clicked: " + index + " (available: " + (actions != null ? actions.length : 0) + ")");
+                return;
+            }
             if (!setSelActIndex(index, false)) {
+                Log.e(TAG, "setSelActIndex failed for index: " + index);
                 showLastQspError();
+                return;
             }
             if (!execSelAction(true)) {
+                Log.e(TAG, "execSelAction failed for index: " + index);
                 showLastQspError();
             }
         });
@@ -391,7 +406,13 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
     @Override
     public void onObjectSelected(final int index) {
         runOnQspThread(() -> {
+            var objects = getObjects();
+            if (objects == null || index < 0 || index >= objects.length) {
+                Log.w(TAG, "Invalid object index clicked: " + index + " (available: " + (objects != null ? objects.length : 0) + ")");
+                return;
+            }
             if (!setSelObjIndex(index, true)) {
+                Log.e(TAG, "setSelObjIndex failed for index: " + index);
                 showLastQspError();
             }
         });
@@ -425,7 +446,9 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
     @Override
     public void execute(final String code) {
         runOnQspThread(() -> {
+            Log.d(TAG, "execString called with: [" + code + "] (len=" + (code != null ? code.length() : 0) + ")");
             if (!execString(code, true)) {
+                Log.e(TAG, "execString failed for code: [" + code + "]");
                 showLastQspError();
             }
         });

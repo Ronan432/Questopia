@@ -218,6 +218,8 @@
     <string name="command">Команда</string>
     <string name="menu">Меню</string>
     <string name="slotLabel">Слот %1$d</string>
+    <string name="slotEmptySubtitle">Пустой слот</string>
+    <string name="slotFilled">Занято • %1$s</string>
     <string name="addGameContentDescription">Добавить игру</string>
     <string name="aboutDescription">Текстовый интерпретатор игр-квестов QSP для Android.</string>
     <string name="buildInformation">Информация о сборке</string>
@@ -269,6 +271,38 @@
     <string name="aboutCatTitle">О программе и сборке</string>
     <string name="aboutTitle">О программе</string>
     <string name="aboutSum">Информация о приложении Questopia и лицензии</string>
+
+    <!-- Error Diagnostics -->
+    <string name="errorReportTitle">Диагностика ошибки движка</string>
+    <string name="errorLocation">Локация: %1$s</string>
+    <string name="errorAction">Действие: %1$d</string>
+    <string name="errorLine">Строка: %1$d</string>
+    <string name="errorCode">Код ошибки: %1$d</string>
+    <string name="errorDesc">Описание: %1$s</string>
+    <string name="copyErrorReport">Скопировать отчёт</string>
+    <string name="errorCopied">Отчёт скопирован в буфер обмена</string>
+
+    <!-- Gestures & Display Settings -->
+    <string name="pinchZoomTitle">Масштабирование щипком</string>
+    <string name="pinchZoomSummary">Масштабирование текста и контента игры жестом двумя пальцами</string>
+    <string name="squarePostersTitle">Квадратные постеры</string>
+    <string name="squarePostersSummary">Использовать прямоугольные постеры вместо овальных</string>
+
+    <!-- Auto-Save -->
+    <string name="autosaveTitle">Автосохранение</string>
+    <string name="autosaveSummary">Автоматически сохранять игру после заданного числа действий</string>
+    <string name="autosaveIntervalTitle">Интервал автосохранения</string>
+    <string name="autosaveIntervalSummary">Сохранять каждые %1$d действий</string>
+
+    <!-- Poster Context Menu -->
+    <string name="copyImage">Копировать изображение</string>
+    <string name="downloadImage">Скачать изображение</string>
+    <string name="yandexImageSearch">Поиск по картинке в Яндекс</string>
+    <string name="imageSaved">Изображение сохранено в галерею</string>
+    <string name="imageCopied">Изображение скопировано</string>
+
+    <string name="autoSaveSlotLabel">Слот автосохранения</string>
+    <string name="pageIndicator">Страница %1$d</string>
 
     <!-- Arrays -->
     <string-array name="fontName">

@@ -39,8 +39,8 @@ Questopia/
 ├── build.gradle                  # Kök Gradle yapılandırması
 ├── settings.gradle               # Modül ve repo ayarları (:app, :desktop)
 ├── gradle.properties             # JVM parametreleri ve AndroidX özellikleri
-├── GEMINI.md                     # Kapsamlı teknik mimari ve geliştirme rehberi
 ├── filemap.md                    # Proje dosya haritası (bu dosya)
+├── AGENTS.md                     # Agent geliştirme yönergeleri ve mimari kuralları
 └── README.md                     # Proje tanıtım belgesi
 ```
 
@@ -74,7 +74,7 @@ Questopia/
 | `model/lib/LibIProxy.java` | QSP motoru ile Android katmanı arasındaki arayüz sözleşmesi. |
 | `model/lib/LibProxyImpl.java` | `LibIProxy` uygulayıcısı; `QSPLib` JNI çağrılarını yönetir, callback'leri işler, arka plan iş parçacığıyla senkronize eder. Dosya yollarındaki ters bölü (`\`) karakterlerini otomatik normalize eder. |
 | `model/service/AudioPlayer.java` | QSP ses ve müzik komutlarını yürüten servis. |
-| `model/service/HtmlProcessor.java` | QSP metinlerindeki HTML/CSS etiketlerini ve resim yollarını ayrıştıran (`Jsoup`) servis. |
+| `model/service/HtmlProcessor.java` | QSP metinlerindeki HTML/CSS etiketlerini, çok satırlı `exec:` komutlarını ve resim yollarını ayrıştıran (`Jsoup`) servis. |
 | `model/service/ImageProvider.java` | QSP oyun içi grafiklerini ve görsellerini yükleyen/önbelleğe alan sağlayıcı. |
 | `model/repository/LocalGame.java` | Cihazdaki yerel oyun dizinlerini tarayan, `.gameInfo` doğrulayan ve yöneten depo sınıfı. |
 | `model/repository/RemoteGameRepository.kt` | Ktor Client ile uzak sunucudan oyun listesini çeken depo sınıfı. |
@@ -96,8 +96,14 @@ Questopia/
 ### E. Kullanıcı Arayüzü: Oyun Oynatma Ekranı (`org/qp/android/ui/game`)
 | Dosya Yolu | Sorumluluk / İşlev |
 | :--- | :--- |
-| `ui/game/GameActivity.kt` | QSP oyun oynama aktivitesi; Material 3 Compose UI + WebView (kaydırma titreşimi kapalı), derin karanlık menüler (`ModalBottomSheet`), açıklama metinleri temizlenmiş oyun içi menü (`showInGameMenu`) ve kayıt/yükleme slotları. |
+| `ui/game/GameActivity.kt` | QSP oyun oynama aktivitesi; Material 3 Compose UI Scaffold, başlık çubuğu, tab gezintisi ve yaşam döngüsü yönetimi (~380 satır). |
+| `ui/game/GameModels.kt` | Oyun ekranı için tüm UI veri sınıfları (`InputDialogData`, `MessageDialogData`, `MenuDialogData`, `ErrorDialogData`, `SlotInfo`). |
+| `ui/game/GameDialogs.kt` | Merkezi dialog yöneticisi (`GameDialogsHost`); Input, Executor, QSP Hata Raporu, Mesaj, Seçim Menüsü, Tam Ekran Resim ve Kapatma dialogları. |
+| `ui/game/InGameOptionsMenuSheet.kt` | 3 nokta seçenekler çekmecesi (`InGameOptionsMenuSheet`), Expressive menü grupları ve yeniden başlatma onay penceresi. |
+| `ui/game/SaveSlotsSheet.kt` | 60 kayıt/yükleme slotu, 10 sayfalık pagination çubuğu, bağımsız Auto-save alanı ve harici dosya seçici. |
 | `ui/game/CheatModesSheet.kt` | **Hile Modları & QSPSaveEditor**: 0 ms gecikmesiz anlık değişken değiştirme, dairesel kontrol butonları, `MorphingSurface` destekli lokasyon atlama (Teleport), eşya silme onay uyarısı (`AlertDialog`), dondurucu ve hile konsolu. |
+| `ui/game/GameMediaHelpers.kt` | Panoya kopyalama, galeriye kaydetme, Yandex tersine görsel arama JSON API yükleyicisi ve `PosterContextMenuSheet`. |
+| `ui/game/GameWebViewComponents.kt` | Pinch-to-zoom korumalı `GameHtmlWebView`, dinamik 1/2 column aksiyon gridi ve Morphing efektli `GameListItemCard`. |
 | `ui/game/GameViewModel.java` | Oyun döngüsü, kullanıcı girdileri, durum güncellemeleri ve motor iletişimini yöneten ViewModel. |
 
 ---
@@ -107,7 +113,8 @@ Questopia/
 | :--- | :--- |
 | `ui/settings/SettingsActivity.kt` | Material 3 Compose ayarlar aktivitesi. |
 | `ui/settings/SettingsComponents.kt` | Expressive segmented-list bileşenleri (`ExpressiveSettingsGroup`, `ExpressivePreferenceItem`, `ExpressiveSwitchPreferenceItem`, `ExpressiveListPreferenceItem`, `ExpressiveColorPreferenceItem`, `CustomDrawerHandle` çekmece seçim diyalogları). |
-| `ui/settings/SettingsMainScreen.kt` | Ayarlar ana menüsü; kayan arama çubuğu, zorunlu sınır titreşimi (`NestedScrollConnection`) ve gruplanmış kartlar. |
+| `ui/settings/SettingsMainScreen.kt` | Ayarlar ana menüsü; kayan arama çubuğu, zorunlu sınır titreşimi (`NestedScrollConnection`), poster şekli seçimi ve otomatik kayıt aralığı ayarları. |
+| `ui/settings/SettingsController.java` | Tercihleri yöneten ve varsayılanları sağlayan kontrolcü. |
 
 ---
 

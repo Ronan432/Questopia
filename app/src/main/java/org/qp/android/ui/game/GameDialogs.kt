@@ -131,19 +131,47 @@ fun GameDialogsHost(activity: GameActivity, viewModel: GameViewModel) {
         )
     }
 
-    // 3. Game Message Dialog
+    // 3. Game Message Dialog (Rendered with HTML / Image / Text support, No Blank Text)
     if (messageDialogData != null) {
+        val rawMessage = messageDialogData?.message ?: ""
+        val prefs = remember { PreferenceManager.getDefaultSharedPreferences(activity) }
+        val isAmoled = prefs.getString("themeMode", "system") == "3" || prefs.getString("themeMode", "system") == "amoled"
+        val dialogBg = if (isAmoled) Color(0xFF000000) else MaterialTheme.colorScheme.surfaceContainerLow
+
         AlertDialog(
             onDismissRequest = {
                 messageDialogData?.latch?.countDown()
                 activity.messageDialogState.value = null
             },
-            title = { Text(stringResource(R.string.mainDescTitle), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) },
-            text = {
+            containerColor = dialogBg,
+            title = {
                 Text(
-                    text = messageDialogData?.message ?: "",
-                    style = MaterialTheme.typography.bodyMedium
+                    text = activity.gameTitleState.value.ifBlank { stringResource(R.string.mainDescTitle) },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
+            },
+            text = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 40.dp, max = 360.dp)
+                ) {
+                    if (rawMessage.contains("<") && rawMessage.contains(">")) {
+                        GameHtmlWebView(
+                            htmlContent = rawMessage,
+                            viewModel = viewModel,
+                            activity = activity
+                        )
+                    } else {
+                        Text(
+                            text = rawMessage,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
             },
             confirmButton = {
                 MorphingButton(onClick = {

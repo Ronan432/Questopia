@@ -290,8 +290,7 @@ class GameActivity : AppCompatActivity() {
             latch.countDown()
             return
         }
-        val config = gameViewModel.iConfig
-        val processedMsg = if (config.useHtml) gameViewModel.removeHtmlTags(inputString) ?: "" else inputString ?: ""
+        val processedMsg = inputString ?: ""
         runOnUiThread {
             messageDialogState.value = MessageDialogData(processedMsg, latch)
         }

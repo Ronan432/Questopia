@@ -241,7 +241,7 @@ public class GameViewModel extends AndroidViewModel implements GameInterface {
         questopiaApplication = (QuestopiaApplication) getApplication();
     }
 
-    private HtmlProcessor getHtmlProcessor() {
+    public HtmlProcessor getHtmlProcessor() {
         var proc = questopiaApplication.getHtmlProcessor();
         proc.setController(getSettingsController());
         if (getCurGameDir().isPresent()) {

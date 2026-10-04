@@ -255,6 +255,7 @@ class GameActivity : AppCompatActivity() {
     }
 
     fun showSimpleDialog(inputString: String, dialogType: GameDialogType, errorType: ErrorType?) {
+        Log.i("QUEST_MEDIA", "showSimpleDialog called: dialogType=" + dialogType + ", inputString=[" + inputString + "], errorType=" + errorType)
         if (isFinishing || isDestroyed) return
         runOnUiThread {
             when (dialogType) {
@@ -272,6 +273,7 @@ class GameActivity : AppCompatActivity() {
                     errorDialogState.value = ErrorDialogData(msg)
                 }
                 GameDialogType.IMAGE_DIALOG -> {
+                    Log.i("QUEST_MEDIA", "Setting imageDialogState = [" + inputString + "]")
                     imageDialogState.value = inputString
                 }
                 GameDialogType.LOAD_DIALOG -> {
@@ -286,6 +288,7 @@ class GameActivity : AppCompatActivity() {
     }
 
     fun showMessageDialog(inputString: String?, latch: CountDownLatch) {
+        Log.i("QUEST_MEDIA", "showMessageDialog called with: [" + inputString + "]")
         if (isFinishing || isDestroyed) {
             latch.countDown()
             return

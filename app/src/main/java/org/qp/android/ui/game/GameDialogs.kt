@@ -2,6 +2,7 @@ package org.qp.android.ui.game
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import android.view.HapticFeedbackConstants
 import android.view.ViewGroup
 import androidx.compose.ui.viewinterop.AndroidView
@@ -134,6 +135,9 @@ fun GameDialogsHost(activity: GameActivity, viewModel: GameViewModel) {
     // 3. Game Message Dialog (Rendered with HTML / Image / Text support, No Blank Text)
     if (messageDialogData != null) {
         val rawMessage = messageDialogData?.message ?: ""
+        LaunchedEffect(rawMessage) {
+            Log.i("QUEST_MEDIA", "Rendering Game Message Dialog with content: [" + rawMessage + "]")
+        }
         val prefs = remember { PreferenceManager.getDefaultSharedPreferences(activity) }
         val isAmoled = prefs.getString("themeMode", "system") == "3" || prefs.getString("themeMode", "system") == "amoled"
         val dialogBg = if (isAmoled) Color(0xFF000000) else MaterialTheme.colorScheme.surfaceContainerLow
@@ -153,14 +157,35 @@ fun GameDialogsHost(activity: GameActivity, viewModel: GameViewModel) {
                 )
             },
             text = {
+                val isHtml = (rawMessage.contains("<") && rawMessage.contains(">")) ||
+                        rawMessage.contains(".jpg", ignoreCase = true) ||
+                        rawMessage.contains(".png", ignoreCase = true) ||
+                        rawMessage.contains(".gif", ignoreCase = true) ||
+                        rawMessage.contains(".webp", ignoreCase = true) ||
+                        rawMessage.contains(".ogv", ignoreCase = true)
+
+                val contentToRender = if (isHtml) {
+                    val rawHtml = if (!rawMessage.contains("<") && (rawMessage.endsWith(".jpg", true) || rawMessage.endsWith(".png", true) || rawMessage.endsWith(".gif", true) || rawMessage.endsWith(".webp", true) || rawMessage.endsWith(".ogv", true))) {
+                        "<center><img src=\"$rawMessage\"></center>"
+                    } else {
+                        rawMessage
+                    }
+                    val cleanBody = viewModel.htmlProcessor?.getCleanHtmlAndMedia(activity.application, rawHtml) ?: rawHtml
+                    viewModel.updatePageTemplate()
+                    val tpl = if (!viewModel.pageTemplate.isNullOrBlank()) viewModel.pageTemplate else "<html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><style>html,body{margin:0;padding:4px;background:transparent;}img,video{max-width:100%;height:auto;display:block;margin:0 auto;}</style></head><body>REPLACETEXT</body></html>"
+                    tpl.replace("REPLACETEXT", cleanBody ?: "")
+                } else {
+                    rawMessage
+                }
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 40.dp, max = 360.dp)
+                        .heightIn(min = 120.dp, max = 400.dp)
                 ) {
-                    if (rawMessage.contains("<") && rawMessage.contains(">")) {
+                    if (isHtml) {
                         GameHtmlWebView(
-                            htmlContent = rawMessage,
+                            htmlContent = contentToRender,
                             viewModel = viewModel,
                             activity = activity
                         )

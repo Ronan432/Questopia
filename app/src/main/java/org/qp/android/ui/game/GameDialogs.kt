@@ -341,13 +341,14 @@ fun GameDialogsHost(activity: GameActivity, viewModel: GameViewModel) {
         )
     }
 
-    // 6. Image / Video Preview Dialog
+    // 6. Image / Video Preview Dialog (Full media & OGV support)
     if (!imageDialogUri.isNullOrBlank()) {
         val uri = imageDialogUri!!
-        val isVideo = uri.endsWith(".webm", ignoreCase = true) ||
+        val isOgv = uri.endsWith(".ogv", ignoreCase = true) || uri.endsWith(".ogg", ignoreCase = true)
+        val isVideo = isOgv ||
+                uri.endsWith(".webm", ignoreCase = true) ||
                 uri.endsWith(".mp4", ignoreCase = true) ||
                 uri.endsWith(".m4v", ignoreCase = true) ||
-                uri.endsWith(".ogv", ignoreCase = true) ||
                 uri.endsWith(".mkv", ignoreCase = true) ||
                 uri.endsWith(".avi", ignoreCase = true)
         val view = LocalView.current
@@ -362,7 +363,37 @@ fun GameDialogsHost(activity: GameActivity, viewModel: GameViewModel) {
                     .clickable { activity.imageDialogState.value = null },
                 contentAlignment = Alignment.Center
             ) {
-                if (isVideo) {
+                if (isOgv) {
+                    // Render OGV via GameHtmlWebView with ogv.js support
+                    val ogvHtml = """
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+                        <style>
+                            html, body { margin:0; padding:0; width:100%; height:100%; background-color:#000000; display:flex; justify-content:center; align-items:center; overflow:hidden; }
+                            video { max-width:100%; max-height:100%; object-fit:contain; }
+                        </style>
+                        </head>
+                        <body>
+                            <video src="${uri}" autoplay loop playsinline webkit-playsinline></video>
+                        </body>
+                        </html>
+                    """.trimIndent()
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        GameHtmlWebView(
+                            htmlContent = ogvHtml,
+                            viewModel = viewModel,
+                            activity = activity
+                        )
+                    }
+                } else if (isVideo) {
                     AndroidView(
                         factory = { ctx ->
                             android.widget.VideoView(ctx).apply {

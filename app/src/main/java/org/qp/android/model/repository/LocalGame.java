@@ -26,6 +26,7 @@ import com.anggrayudi.storage.file.DocumentFileUtils;
 import com.anggrayudi.storage.file.MimeType;
 
 import org.qp.android.dto.stock.GameData;
+import org.qp.android.helpers.utils.DirUtil;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -165,19 +166,13 @@ public class LocalGame {
         }
 
         if (gameFiles.isEmpty()) {
-            var allFiles = DocumentFileUtils.search(
-                    rootDir,
-                    true,
-                    DocumentFileType.FILE,
-                    new String[]{MimeType.BINARY_FILE}
-            );
-            allFiles.forEach(d -> {
-                var dirExtension = documentWrap(d).getExtension();
-                var lcName = dirExtension.toLowerCase(Locale.ROOT);
-                if (lcName.endsWith("qsp") || lcName.endsWith("gam")) {
-                    gameFiles.add(d.getUri());
+            var deepLoc = DirUtil.findGameFileDeep(rootDir, 4);
+            if (deepLoc != null) {
+                gameFiles.add(deepLoc.gameFile.getUri());
+                if (data.gameDirUri == null || !Objects.equals(data.gameDirUri.getPath(), deepLoc.gameDir.getUri().getPath())) {
+                    data.gameDirUri = deepLoc.gameDir.getUri();
                 }
-            });
+            }
         }
 
         if (data.gameDirUri == null || !Objects.equals(data.gameDirUri.getPath(), rootDir.getUri().getPath())) {
@@ -279,28 +274,38 @@ public class LocalGame {
                     }
                 }
 
+                // If .gameInfo was parsed but had empty gameFilesUri or null gameFilesUri, fix it!
+                if (item != null && (item.gameFilesUri == null || item.gameFilesUri.isEmpty())) {
+                    var deepLoc = DirUtil.findGameFileDeep(data, 4);
+                    if (deepLoc != null) {
+                        var filesList = new ArrayList<Uri>();
+                        filesList.add(deepLoc.gameFile.getUri());
+                        item.gameFilesUri = filesList;
+                        item.gameDirUri = deepLoc.gameDir.getUri();
+                        if (item.fileSize <= 0) {
+                            item.fileSize = DirUtil.calculateDirSize(data);
+                        }
+                        tryCreateDataIntoFolder(data, item);
+                    } else {
+                        // Folder has no valid QSP file at all -> do not add broken game!
+                        item = null;
+                    }
+                }
+
                 // Fallback: If no valid .gameInfo was parsed, scan executable files directly!
                 if (item == null) {
                     Log.d("QUESTLOGTEST", "No .gameInfo found or parse failed; scanning executable files in " + data.getName());
-                    var files = data.listFiles();
-                    var qspFiles = new ArrayList<Uri>();
-                    long totalSize = 0L;
-                    for (var f : files) {
-                        var name = f.getName() != null ? f.getName().toLowerCase(Locale.ROOT) : "";
-                        if (name.endsWith(".qsp") || name.endsWith(".gam") || name.endsWith(".qsps") || name.endsWith(".aqsp")) {
-                            qspFiles.add(f.getUri());
-                            Log.d("QUESTLOGTEST", "Found game file in folder: " + f.getName());
-                        }
-                        totalSize += f.length();
-                    }
-                    if (!qspFiles.isEmpty()) {
+                    var deepLoc = DirUtil.findGameFileDeep(data, 4);
+                    if (deepLoc != null) {
                         item = new GameData();
                         item.id = (long) data.getUri().hashCode();
                         item.title = data.getName() != null ? data.getName() : "Untitled";
-                        item.gameDirUri = data.getUri();
-                        item.gameFilesUri = qspFiles;
-                        item.fileSize = totalSize > 0 ? totalSize : -1L;
-                        Log.i("QUESTLOGTEST", "Constructed fallback GameData: " + item.title + " with " + qspFiles.size() + " files");
+                        item.gameDirUri = deepLoc.gameDir.getUri();
+                        var filesList = new ArrayList<Uri>();
+                        filesList.add(deepLoc.gameFile.getUri());
+                        item.gameFilesUri = filesList;
+                        item.fileSize = DirUtil.calculateDirSize(data);
+                        Log.i("QUESTLOGTEST", "Constructed fallback GameData: " + item.title + " with QSP: " + deepLoc.gameFile.getName());
                         tryCreateDataIntoFolder(data, item);
                     }
                 }

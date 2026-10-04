@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModelProvider
 import androidx.preference.PreferenceManager
 import com.anggrayudi.storage.SimpleStorageHelper
+import org.qp.android.helpers.utils.DirUtil
 import com.anggrayudi.storage.file.DocumentFileCompat
 import com.anggrayudi.storage.file.MimeType
 import org.qp.android.R
@@ -110,16 +111,7 @@ class GameActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         LocaleHelper.applyAppLanguage(this)
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.auto(
-                android.graphics.Color.TRANSPARENT,
-                android.graphics.Color.TRANSPARENT
-            ),
-            navigationBarStyle = SystemBarStyle.auto(
-                android.graphics.Color.TRANSPARENT,
-                android.graphics.Color.TRANSPARENT
-            )
-        )
+        enableEdgeToEdge()
 
         gameViewModel = ViewModelProvider(this)[GameViewModel::class.java]
         gameViewModel.activityObserver.value = this
@@ -152,10 +144,7 @@ class GameActivity : AppCompatActivity() {
         }
 
         setContent {
-            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-            val themeMode = prefs.getString("themeMode", "system") ?: "system"
-            val themeColor = prefs.getString("themeColor", "monochrome") ?: "monochrome"
-            QuestopiaTheme(themeMode = themeMode, themeColor = themeColor) {
+            QuestopiaTheme {
                 GameMainCompose(
                     activity = this,
                     viewModel = gameViewModel,
@@ -203,14 +192,11 @@ class GameActivity : AppCompatActivity() {
 
         if (gameFileUri == Uri.EMPTY && gameDirUri != Uri.EMPTY) {
             val gameDir = DocumentFileCompat.fromUri(this, gameDirUri)
-            val files = gameDir?.listFiles()
-            if (files != null) {
-                for (file in files) {
-                    val name = file.name?.lowercase(Locale.ROOT) ?: ""
-                    if (name.endsWith(".qsp") || name.endsWith(".gam")) {
-                        gameFileUri = file.uri
-                        break
-                    }
+            val loc = DirUtil.findGameFileDeep(gameDir, 4)
+            if (loc != null) {
+                gameFileUri = loc.gameFile.uri
+                if (loc.gameDir.uri != gameDirUri) {
+                    gameDirUri = loc.gameDir.uri
                 }
             }
         }

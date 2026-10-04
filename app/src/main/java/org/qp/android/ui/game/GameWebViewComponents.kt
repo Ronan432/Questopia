@@ -5,6 +5,8 @@ import android.util.Log
 import android.view.HapticFeedbackConstants
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.widget.LinearLayout
 import androidx.compose.foundation.layout.*
@@ -162,6 +164,12 @@ fun GameHtmlWebView(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
+                webChromeClient = object : WebChromeClient() {
+                    override fun onConsoleMessage(message: android.webkit.ConsoleMessage?): Boolean {
+                        Log.d("GameWebView", "Console [${message?.messageLevel()}]: ${message?.message()} (${message?.sourceId()}:${message?.lineNumber()})")
+                        return true
+                    }
+                }
                 viewModel.getDefaultWebClient(this)
                 settings.apply {
                     setSupportZoom(isPinchZoom)
@@ -169,6 +177,15 @@ fun GameHtmlWebView(
                     displayZoomControls = false
                     useWideViewPort = true
                     loadWithOverviewMode = true
+                    mediaPlaybackRequiresUserGesture = false
+                    allowFileAccess = true
+                    allowContentAccess = true
+                    allowFileAccessFromFileURLs = true
+                    allowUniversalAccessFromFileURLs = true
+                    domStorageEnabled = true
+                    databaseEnabled = true
+                    javaScriptEnabled = true
+                    mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                 }
                 setOnLongClickListener {
                     val hit = hitTestResult
@@ -208,7 +225,7 @@ fun GameHtmlWebView(
                 }, "img")
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 tag = htmlContent
-                loadDataWithBaseURL("file:///", htmlContent, "text/html", "UTF-8", null)
+                loadDataWithBaseURL("https://questopia.local/", htmlContent, "text/html", "UTF-8", null)
             }
         },
         update = { webView ->
@@ -221,7 +238,7 @@ fun GameHtmlWebView(
             }
             if (webView.tag != htmlContent) {
                 webView.tag = htmlContent
-                webView.loadDataWithBaseURL("file:///", htmlContent, "text/html", "UTF-8", null)
+                webView.loadDataWithBaseURL("https://questopia.local/", htmlContent, "text/html", "UTF-8", null)
             }
         },
         modifier = Modifier.fillMaxSize()

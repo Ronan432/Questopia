@@ -12,6 +12,7 @@ import static org.qp.android.helpers.utils.StringUtil.isNotEmptyOrBlank;
 import static org.qp.android.helpers.utils.ThreadUtil.assertNonUiThread;
 import static org.qp.android.helpers.utils.ViewUtil.getFontStyle;
 import static org.qp.android.ui.game.GameActivity.LOAD;
+import org.qp.android.helpers.utils.MediaUtil;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
@@ -22,6 +23,7 @@ import android.content.res.Configuration;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Handler;
+import android.os.ParcelFileDescriptor;
 import android.util.Log;
 import android.view.View;
 import android.webkit.MimeTypeMap;
@@ -56,9 +58,15 @@ import org.qp.android.model.service.HtmlProcessor;
 import org.qp.android.ui.dialogs.GameDialogType;
 import org.qp.android.ui.settings.SettingsController;
 
+import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -90,15 +98,106 @@ public class GameViewModel extends AndroidViewModel implements GameInterface {
                 margin: 8px auto;
                 border-radius: 8px;
               }
-              video {
-                display: block;
-                max-width: 100%;
-                margin: 8px auto;
-                border-radius: 8px;
+              video, ogvjs {
+                display: block !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                height: auto !important;
+                margin: 8px auto !important;
+                border-radius: 8px !important;
+                position: relative !important;
+                background-color: transparent !important;
+                overflow: hidden !important;
+              }
+              ogvjs canvas {
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                object-fit: fill !important;
               }
               a { color: QSPLINKCOLOR; text-decoration: underline; }
               a:link, a:visited, a:active { color: QSPLINKCOLOR; }
             </style>
+            <script src="ogv/ogv.js"></script>
+            <script>
+              if (typeof OGVLoader !== 'undefined') {
+                OGVLoader.base = 'ogv';
+              }
+              function initOgvElements() {
+                if (typeof OGVPlayer === 'undefined') return;
+                if (typeof OGVLoader !== 'undefined' && OGVLoader.base !== 'ogv') {
+                  OGVLoader.base = 'ogv';
+                }
+                var videoElements = document.querySelectorAll('video');
+                for (var i = 0; i < videoElements.length; i++) {
+                  var v = videoElements[i];
+                  if (v.dataset.ogvReady) continue;
+
+                  var src = v.getAttribute('src');
+                  var ogvUrl = null;
+                  if (src && (src.toLowerCase().indexOf('.ogv') !== -1 || src.toLowerCase().indexOf('.ogg') !== -1)) {
+                    ogvUrl = src;
+                  } else {
+                    var sources = v.querySelectorAll('source');
+                    for (var j = 0; j < sources.length; j++) {
+                      var sSrc = sources[j].getAttribute('src');
+                      if (sSrc && (sSrc.toLowerCase().indexOf('.ogv') !== -1 || sSrc.toLowerCase().indexOf('.ogg') !== -1)) {
+                        ogvUrl = sSrc;
+                        break;
+                      }
+                    }
+                  }
+
+                  if (ogvUrl) {
+                    v.dataset.ogvReady = 'true';
+                    console.log('[OGVPlayer] Initializing OGV player for: ' + ogvUrl);
+                    try {
+                      var player = new OGVPlayer({
+                        worker: false
+                      });
+                      function fitPlayer(p) {
+                        if (p.videoWidth && p.videoHeight) {
+                          p.style.setProperty('width', '100%', 'important');
+                          p.style.setProperty('max-width', '100%', 'important');
+                          p.style.setProperty('height', 'auto', 'important');
+                          p.style.setProperty('aspect-ratio', p.videoWidth + ' / ' + p.videoHeight, 'important');
+                        }
+                      }
+                      player.style.width = '100%';
+                      player.style.maxWidth = '100%';
+                      player.style.display = 'block';
+                      player.style.margin = '8px auto';
+                      player.style.borderRadius = '8px';
+                      if (v.hasAttribute('autoplay') || v.autoplay) player.autoplay = true;
+                      if (v.hasAttribute('loop') || v.loop) player.loop = true;
+                      if (v.hasAttribute('muted') || v.muted) player.muted = true;
+                      player.addEventListener('loadedmetadata', function() {
+                        fitPlayer(player);
+                        console.log('[OGVPlayer] metadata loaded: ' + player.videoWidth + 'x' + player.videoHeight);
+                      });
+                      player.addEventListener('resize', function() { fitPlayer(player); });
+                      player.addEventListener('play', function() { fitPlayer(player); });
+                      player.addEventListener('playing', function() { fitPlayer(player); });
+                      player.onframecallback = function() { fitPlayer(player); };
+                      player.addEventListener('error', function(err) {
+                        console.error('[OGVPlayer] error event: ' + err);
+                      });
+                      if (v.parentNode) {
+                        v.parentNode.replaceChild(player, v);
+                      }
+                      player.src = ogvUrl;
+                      player.play();
+                    } catch (e) {
+                      console.error('[OGVPlayer] Error initializing player: ' + e);
+                    }
+                  }
+                }
+              }
+              document.addEventListener('DOMContentLoaded', initOgvElements);
+              setInterval(initOgvElements, 300);
+            </script>
             </head>
             """;
     private static final String PAGE_BODY_TEMPLATE = "<body>REPLACETEXT</body>";
@@ -266,9 +365,15 @@ public class GameViewModel extends AndroidViewModel implements GameInterface {
     public Uri getImageUriFromPath(String src) {
         var relPath = Uri.parse(src).getPath();
         if (relPath == null) return Uri.EMPTY;
+        while (relPath.startsWith("/")) {
+            relPath = relPath.substring(1);
+        }
         if (getCurGameDir().isPresent()) {
             var imageFile = fromRelPath(getApplication(), relPath, getCurGameDir().get());
-            return imageFile.getUri();
+            if (imageFile != null && imageFile.exists()) {
+                return imageFile.getUri();
+            }
+            return Uri.EMPTY;
         } else {
             return Uri.EMPTY;
         }
@@ -336,6 +441,7 @@ public class GameViewModel extends AndroidViewModel implements GameInterface {
         }
         updatePageTemplate();
         var fullHtml = pageTemplate.replace("REPLACETEXT", cleanBody != null ? cleanBody : "");
+        Log.i(TAG, "refreshMainDesc: rawLen=" + (rawDesc != null ? rawDesc.length() : 0) + ", cleanBody=" + cleanBody);
         if (!cleanBody.isBlank()) {
             getGameActivity().warnUser(GameActivity.TAB_MAIN_DESC_AND_ACTIONS);
         }
@@ -352,6 +458,7 @@ public class GameViewModel extends AndroidViewModel implements GameInterface {
         }
         updatePageTemplate();
         var fullHtml = pageTemplate.replace("REPLACETEXT", cleanBody != null ? cleanBody : "");
+        Log.i(TAG, "refreshVarsDesc: rawLen=" + (rawVarsDesc != null ? rawVarsDesc.length() : 0) + ", cleanBody=" + cleanBody);
         if (!cleanBody.isBlank()) {
             getGameActivity().warnUser(GameActivity.TAB_VARS_DESC);
         }
@@ -612,6 +719,10 @@ public class GameViewModel extends AndroidViewModel implements GameInterface {
                     getLibProxy().execute(tempUriDecode);
                 }
                 case "https", "http" -> {
+                    var host = uri.getHost();
+                    if ("questopia.local".equalsIgnoreCase(host) || "appassets.androidplatform.net".equalsIgnoreCase(host)) {
+                        return false;
+                    }
                     var viewLink = new Intent(Intent.ACTION_VIEW, Uri.parse(uriDecode));
                     viewLink.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     getApplication().startActivity(viewLink);
@@ -635,53 +746,94 @@ public class GameViewModel extends AndroidViewModel implements GameInterface {
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view,
                                                           @NonNull WebResourceRequest request) {
-            if (getCurGameDir().isEmpty()) return null;
             final var uri = request.getUrl();
             if (uri.getScheme() == null) return null;
+
+            var rawPath = uri.getPath();
+            if (rawPath == null || rawPath.isEmpty()) return null;
+            while (rawPath.startsWith("/")) {
+                rawPath = rawPath.substring(1);
+            }
+            var path = Uri.decode(rawPath).replace("\\", "/");
+            if (path.startsWith("./")) {
+                path = path.substring(2);
+            }
+
+            if (path.equalsIgnoreCase("favicon.ico")) {
+                return new WebResourceResponse("image/x-icon", null, new ByteArrayInputStream(new byte[0]));
+            }
+
+            if (path.startsWith("ogv") || path.contains("ogv/") || path.contains("ogv//")) {
+                int idx = path.indexOf("ogv");
+                String assetPath = path.substring(idx).replaceAll("/+", "/");
+                if (assetPath.contains("?")) {
+                    assetPath = assetPath.substring(0, assetPath.indexOf("?"));
+                }
+                if (assetPath.contains("#")) {
+                    assetPath = assetPath.substring(0, assetPath.indexOf("#"));
+                }
+                try {
+                    var assetIn = getApplication().getAssets().open(assetPath);
+                    var mime = "application/javascript";
+                    if (assetPath.endsWith(".wasm")) {
+                        mime = "application/wasm";
+                    } else if (assetPath.endsWith(".css")) {
+                        mime = "text/css";
+                    }
+                    var resp = new WebResourceResponse(mime, null, assetIn);
+                    Map<String, String> headers = new HashMap<>();
+                    headers.put("Access-Control-Allow-Origin", "*");
+                    headers.put("Access-Control-Expose-Headers", "Content-Range, Content-Length, Accept-Ranges");
+                    headers.put("Accept-Ranges", "bytes");
+                    resp.setResponseHeaders(headers);
+                    Log.d(TAG, "Served ogv asset: " + assetPath + " (" + mime + ")");
+                    return resp;
+                } catch (IOException e) {
+                    Log.e(TAG, "Failed to load ogv asset: " + assetPath, e);
+                }
+            }
+
+            if (getCurGameDir().isEmpty()) return null;
             final var rootDir = getCurGameDir().get();
 
             if (!uri.getScheme().startsWith("file") && !uri.getScheme().startsWith("http") && !uri.getScheme().startsWith("content"))
                 return null;
 
             try {
-                var path = uri.getPath();
-                if (path == null || path.isEmpty()) return null;
-                while (path.startsWith("/")) {
-                    path = path.substring(1);
-                }
-                var imageFile = fromRelPath(getApplication(), path, rootDir);
+                Log.d(TAG, "shouldInterceptRequest path: " + path);
+
+                var imageFile = MediaUtil.findFileCaseInsensitive(rootDir, path);
                 if (imageFile == null || !imageFile.exists()) {
-                    var pathElements = path.split("/");
-                    var files = rootDir.listFiles();
-                    DocumentFile currentTarget = null;
-                    for (var part : pathElements) {
-                        if (part.isEmpty()) continue;
-                        currentTarget = null;
-                        for (var file : files) {
-                            var name = file.getName();
-                            if (name != null && name.equalsIgnoreCase(part)) {
-                                currentTarget = file;
-                                if (file.isDirectory()) {
-                                    files = file.listFiles();
-                                }
-                                break;
-                            }
+                    imageFile = fromRelPath(getApplication(), path, rootDir);
+                }
+                if (imageFile == null || !imageFile.exists()) {
+                    Log.w(TAG, "shouldInterceptRequest file not found: " + path);
+                    throw new FileNotFoundException("Image/Media not found: " + path);
+                }
+                var mime = MediaUtil.getMimeType(imageFile.getName());
+                long totalSize = imageFile.length();
+                if (totalSize <= 0) {
+                    try (var pfd = getApplication().getContentResolver().openFileDescriptor(imageFile.getUri(), "r")) {
+                        if (pfd != null) {
+                            totalSize = pfd.getStatSize();
                         }
-                        if (currentTarget == null) break;
-                    }
-                    if (currentTarget != null && currentTarget.isFile()) {
-                        imageFile = currentTarget;
-                    }
+                    } catch (Exception ignored) {}
                 }
-                if (imageFile == null || !imageFile.exists()) {
-                    throw new FileNotFoundException("Image not found: " + path);
-                }
-                var extension = MimeTypeMap.getSingleton().getMimeTypeFromExtension(getExtension(imageFile));
-                if (extension == null) {
-                    extension = "image/*";
-                }
+
                 var in = getApplication().getContentResolver().openInputStream(imageFile.getUri());
-                return new WebResourceResponse(extension, null, in);
+                if (in == null) return null;
+                var response = new WebResourceResponse(mime, null, in);
+                response.setStatusCodeAndReasonPhrase(200, "OK");
+                Map<String, String> headers = new HashMap<>();
+                if (totalSize > 0) {
+                    headers.put("Content-Length", String.valueOf(totalSize));
+                }
+                headers.put("Content-Type", mime);
+                headers.put("Access-Control-Allow-Origin", "*");
+                headers.put("Access-Control-Expose-Headers", "Content-Range, Content-Length, Accept-Ranges");
+                response.setResponseHeaders(headers);
+                Log.d(TAG, "shouldInterceptRequest served: " + path + " (" + mime + ", size=" + totalSize + ")");
+                return response;
             } catch (Exception ex) {
                 if (getSettingsController().isUseImageDebug) {
                     showErrorDialog(uri.getPath(), ErrorType.IMAGE_ERROR);

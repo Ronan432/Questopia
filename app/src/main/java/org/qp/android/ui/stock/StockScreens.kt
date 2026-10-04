@@ -40,7 +40,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -48,6 +50,8 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -84,48 +88,42 @@ enum class HomeFilter {
     FAVORITES
 }
 
+enum class HomeSortOrder {
+    NAME_ASC,
+    SIZE_DESC,
+    DATE_DESC
+}
+
 @Composable
 private fun StatMetric(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
     value: String,
-    label: String
+    label: String,
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = modifier
     ) {
-        Surface(
-            shape = androidx.compose.foundation.shape.CircleShape,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-            modifier = Modifier.size(28.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(15.dp)
-                )
-            }
-        }
-        Column {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.labelLarge.copy(
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    fontSize = 13.sp
-                ),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 10.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
-                ),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                fontSize = 15.sp
+            ),
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 1
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontSize = 11.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+            ),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
     }
 }
 
@@ -242,16 +240,24 @@ fun StockMainScreen(
                                 localGames.count { it.isFavorite }
                             }
 
-                            val filteredLocalGames = remember(localGames, searchQuery, selectedHomeFilter) {
+                            var selectedSortOrder by remember { mutableStateOf(HomeSortOrder.NAME_ASC) }
+                            var showSortMenu by remember { mutableStateOf(false) }
+
+                            val filteredLocalGames = remember(localGames, searchQuery, selectedHomeFilter, selectedSortOrder) {
                                 val base = if (selectedHomeFilter == HomeFilter.FAVORITES) {
                                     localGames.filter { it.isFavorite }
                                 } else {
                                     localGames
                                 }
-                                if (searchQuery.isBlank()) base
+                                val searched = if (searchQuery.isBlank()) base
                                 else base.filter {
                                     (it.title ?: "").contains(searchQuery, ignoreCase = true) ||
                                             (it.author ?: "").contains(searchQuery, ignoreCase = true)
+                                }
+                                when (selectedSortOrder) {
+                                    HomeSortOrder.NAME_ASC -> searched.sortedBy { (it.title ?: "").lowercase(java.util.Locale.ROOT) }
+                                    HomeSortOrder.SIZE_DESC -> searched.sortedByDescending { it.fileSize }
+                                    HomeSortOrder.DATE_DESC -> searched.sortedByDescending { it.id }
                                 }
                             }
 
@@ -362,67 +368,63 @@ fun StockMainScreen(
                                                 }
                                             }
 
-                                            // Mini Stats Bar (No emojis, typographic and sleek)
+                                            // Mini Stats Bar (Clean, typographic and sleek)
                                             if (localGames.isNotEmpty() && !isSearchFocused && searchQuery.isEmpty()) {
                                                 Surface(
                                                     shape = RoundedCornerShape(16.dp),
-                                                    color = MaterialTheme.colorScheme.surfaceContainer,
-                                                    border = androidx.compose.foundation.BorderStroke(
-                                                        1.dp,
-                                                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
-                                                    ),
+                                                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                                                     modifier = Modifier.fillMaxWidth()
                                                 ) {
                                                     Row(
                                                         modifier = Modifier
                                                             .fillMaxWidth()
-                                                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                                                        horizontalArrangement = Arrangement.SpaceEvenly,
                                                         verticalAlignment = Alignment.CenterVertically
                                                     ) {
                                                         StatMetric(
-                                                            icon = androidx.compose.material.icons.Icons.Outlined.Folder,
                                                             value = "${localGames.size}",
-                                                            label = stringResource(R.string.statLibrary)
+                                                            label = stringResource(R.string.statLibrary),
+                                                            modifier = Modifier.weight(1f)
                                                         )
                                                         Box(
                                                             modifier = Modifier
                                                                 .width(1.dp)
-                                                                .height(24.dp)
-                                                                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                                                                .height(26.dp)
+                                                                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
                                                         )
                                                         StatMetric(
-                                                            icon = androidx.compose.material.icons.Icons.Outlined.Storage,
                                                             value = totalFormattedSize,
-                                                            label = stringResource(R.string.statSize)
+                                                            label = stringResource(R.string.statSize),
+                                                            modifier = Modifier.weight(1f)
                                                         )
                                                         Box(
                                                             modifier = Modifier
                                                                 .width(1.dp)
-                                                                .height(24.dp)
-                                                                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                                                                .height(26.dp)
+                                                                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
                                                         )
                                                         StatMetric(
-                                                            icon = androidx.compose.material.icons.Icons.Outlined.FavoriteBorder,
                                                             value = "$favCount",
-                                                            label = stringResource(R.string.statFavorites)
+                                                            label = stringResource(R.string.statFavorites),
+                                                            modifier = Modifier.weight(1f)
                                                         )
                                                     }
                                                 }
                                             }
 
-                                            // Filter Chips (Hepsi / Favoriler)
+                                            // Filter Chips (All / Favorites) & Sort Control
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
                                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                // "All" chip
+                                                // 1. "All" button
                                                 val isAllSelected = selectedHomeFilter == HomeFilter.ALL
                                                 val allInteractionSource = remember { MutableInteractionSource() }
                                                 val isAllPressed by allInteractionSource.collectIsPressedAsState()
                                                 val allRadius by animateDpAsState(
-                                                    targetValue = if (isAllPressed) 10.dp else 18.dp,
+                                                    targetValue = if (isAllPressed) 10.dp else 16.dp,
                                                     animationSpec = spring(
                                                         dampingRatio = Spring.DampingRatioNoBouncy,
                                                         stiffness = Spring.StiffnessMediumLow
@@ -432,9 +434,9 @@ fun StockMainScreen(
                                                 Surface(
                                                     shape = RoundedCornerShape(allRadius),
                                                     color = if (isAllSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
-                                                    border = if (!isAllSelected) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)) else null,
                                                     modifier = Modifier
-                                                        .height(34.dp)
+                                                        .weight(1f)
+                                                        .height(38.dp)
                                                         .clip(RoundedCornerShape(allRadius))
                                                         .clickable(
                                                             interactionSource = allInteractionSource,
@@ -444,42 +446,28 @@ fun StockMainScreen(
                                                             selectedHomeFilter = HomeFilter.ALL
                                                         }
                                                 ) {
-                                                    Row(
-                                                        modifier = Modifier.padding(horizontal = 14.dp),
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                    Box(
+                                                        modifier = Modifier.fillMaxSize(),
+                                                        contentAlignment = Alignment.Center
                                                     ) {
                                                         Text(
-                                                            text = stringResource(R.string.filterHomeAll),
+                                                            text = "${stringResource(R.string.filterHomeAll)} (${localGames.size})",
                                                             style = MaterialTheme.typography.labelMedium.copy(
-                                                                fontWeight = if (isAllSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium
+                                                                fontWeight = if (isAllSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                                                fontSize = 12.sp
                                                             ),
-                                                            color = if (isAllSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                                            color = if (isAllSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                                            maxLines = 1
                                                         )
-                                                        Surface(
-                                                            shape = androidx.compose.foundation.shape.CircleShape,
-                                                            color = if (isAllSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceContainerHighest,
-                                                            modifier = Modifier.padding(vertical = 4.dp)
-                                                        ) {
-                                                            Text(
-                                                                text = "${localGames.size}",
-                                                                style = MaterialTheme.typography.labelSmall.copy(
-                                                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                                                    fontSize = 11.sp
-                                                                ),
-                                                                color = if (isAllSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                            )
-                                                        }
                                                     }
                                                 }
 
-                                                // "Favorites" chip
+                                                // 2. "Favorites" button
                                                 val isFavSelected = selectedHomeFilter == HomeFilter.FAVORITES
                                                 val favInteractionSource = remember { MutableInteractionSource() }
                                                 val isFavPressed by favInteractionSource.collectIsPressedAsState()
                                                 val favRadius by animateDpAsState(
-                                                    targetValue = if (isFavPressed) 10.dp else 18.dp,
+                                                    targetValue = if (isFavPressed) 10.dp else 16.dp,
                                                     animationSpec = spring(
                                                         dampingRatio = Spring.DampingRatioNoBouncy,
                                                         stiffness = Spring.StiffnessMediumLow
@@ -489,9 +477,9 @@ fun StockMainScreen(
                                                 Surface(
                                                     shape = RoundedCornerShape(favRadius),
                                                     color = if (isFavSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
-                                                    border = if (!isFavSelected) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)) else null,
                                                     modifier = Modifier
-                                                        .height(34.dp)
+                                                        .weight(1f)
+                                                        .height(38.dp)
                                                         .clip(RoundedCornerShape(favRadius))
                                                         .clickable(
                                                             interactionSource = favInteractionSource,
@@ -502,38 +490,150 @@ fun StockMainScreen(
                                                         }
                                                 ) {
                                                     Row(
-                                                        modifier = Modifier.padding(horizontal = 14.dp),
+                                                        modifier = Modifier
+                                                            .fillMaxSize()
+                                                            .padding(horizontal = 4.dp),
                                                         verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                        horizontalArrangement = Arrangement.Center
                                                     ) {
                                                         Icon(
                                                             imageVector = if (isFavSelected) androidx.compose.material.icons.Icons.Filled.Favorite else androidx.compose.material.icons.Icons.Outlined.FavoriteBorder,
                                                             contentDescription = null,
                                                             tint = if (isFavSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.error,
-                                                            modifier = Modifier.size(14.dp)
+                                                            modifier = Modifier.size(13.dp)
                                                         )
+                                                        Spacer(modifier = Modifier.width(4.dp))
                                                         Text(
-                                                            text = stringResource(R.string.filterFavorites),
+                                                            text = "${stringResource(R.string.filterFavorites)} ($favCount)",
                                                             style = MaterialTheme.typography.labelMedium.copy(
-                                                                fontWeight = if (isFavSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium
+                                                                fontWeight = if (isFavSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.SemiBold,
+                                                                fontSize = 12.sp
                                                             ),
-                                                            color = if (isFavSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                                            color = if (isFavSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                                            maxLines = 1
                                                         )
-                                                        Surface(
-                                                            shape = androidx.compose.foundation.shape.CircleShape,
-                                                            color = if (isFavSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceContainerHighest,
-                                                            modifier = Modifier.padding(vertical = 4.dp)
+                                                    }
+                                                }
+
+                                                // 3. "Sort" button
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .height(38.dp)
+                                                ) {
+                                                    val sortInteractionSource = remember { MutableInteractionSource() }
+                                                    val isSortPressed by sortInteractionSource.collectIsPressedAsState()
+                                                    val sortRadius by animateDpAsState(
+                                                        targetValue = if (isSortPressed) 10.dp else 16.dp,
+                                                        animationSpec = spring(
+                                                            dampingRatio = Spring.DampingRatioNoBouncy,
+                                                            stiffness = Spring.StiffnessMediumLow
+                                                        ),
+                                                        label = "sortRadius"
+                                                    )
+                                                    Surface(
+                                                        shape = RoundedCornerShape(sortRadius),
+                                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                                        modifier = Modifier
+                                                            .fillMaxSize()
+                                                            .clip(RoundedCornerShape(sortRadius))
+                                                            .clickable(
+                                                                interactionSource = sortInteractionSource,
+                                                                indication = null
+                                                            ) {
+                                                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                                                showSortMenu = true
+                                                            }
+                                                    ) {
+                                                        Row(
+                                                            modifier = Modifier
+                                                                .fillMaxSize()
+                                                                .padding(horizontal = 4.dp),
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.Center
                                                         ) {
+                                                            Icon(
+                                                                imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Outlined.Sort,
+                                                                contentDescription = stringResource(R.string.sortTitle),
+                                                                tint = MaterialTheme.colorScheme.primary,
+                                                                modifier = Modifier.size(15.dp)
+                                                            )
+                                                            Spacer(modifier = Modifier.width(4.dp))
                                                             Text(
-                                                                text = "$favCount",
-                                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                                text = when (selectedSortOrder) {
+                                                                    HomeSortOrder.NAME_ASC -> stringResource(R.string.sortName)
+                                                                    HomeSortOrder.SIZE_DESC -> stringResource(R.string.sortSize)
+                                                                    HomeSortOrder.DATE_DESC -> stringResource(R.string.sortDate)
+                                                                },
+                                                                style = MaterialTheme.typography.labelMedium.copy(
                                                                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                                                                    fontSize = 11.sp
+                                                                    fontSize = 12.sp
                                                                 ),
-                                                                color = if (isFavSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                                color = MaterialTheme.colorScheme.onSurface,
+                                                                maxLines = 1
                                                             )
                                                         }
+                                                    }
+
+                                                    DropdownMenu(
+                                                        expanded = showSortMenu,
+                                                        onDismissRequest = { showSortMenu = false },
+                                                        modifier = Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                                    ) {
+                                                        DropdownMenuItem(
+                                                            text = {
+                                                                Text(
+                                                                    stringResource(R.string.sortName),
+                                                                    fontWeight = if (selectedSortOrder == HomeSortOrder.NAME_ASC) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+                                                                )
+                                                            },
+                                                            leadingIcon = {
+                                                                if (selectedSortOrder == HomeSortOrder.NAME_ASC) {
+                                                                    Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                                                }
+                                                            },
+                                                            onClick = {
+                                                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                                                selectedSortOrder = HomeSortOrder.NAME_ASC
+                                                                showSortMenu = false
+                                                            }
+                                                        )
+                                                        DropdownMenuItem(
+                                                            text = {
+                                                                Text(
+                                                                    stringResource(R.string.sortSize),
+                                                                    fontWeight = if (selectedSortOrder == HomeSortOrder.SIZE_DESC) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+                                                                )
+                                                            },
+                                                            leadingIcon = {
+                                                                if (selectedSortOrder == HomeSortOrder.SIZE_DESC) {
+                                                                    Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                                                }
+                                                            },
+                                                            onClick = {
+                                                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                                                selectedSortOrder = HomeSortOrder.SIZE_DESC
+                                                                showSortMenu = false
+                                                            }
+                                                        )
+                                                        DropdownMenuItem(
+                                                            text = {
+                                                                Text(
+                                                                    stringResource(R.string.sortDate),
+                                                                    fontWeight = if (selectedSortOrder == HomeSortOrder.DATE_DESC) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+                                                                )
+                                                            },
+                                                            leadingIcon = {
+                                                                if (selectedSortOrder == HomeSortOrder.DATE_DESC) {
+                                                                    Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                                                }
+                                                            },
+                                                            onClick = {
+                                                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                                                selectedSortOrder = HomeSortOrder.DATE_DESC
+                                                                showSortMenu = false
+                                                            }
+                                                        )
                                                     }
                                                 }
                                             }

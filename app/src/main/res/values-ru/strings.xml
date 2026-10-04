@@ -10,7 +10,7 @@
     <string name="tabOneName">Репозиторий</string>
     <string name="search">Поиск</string>
     <string name="settingsTitle">Настройки</string>
-    <string name="gameStockTitle">Полка игр</string>
+    <string name="gameStockTitle">Игры</string>
 
     <!-- Common Actions & Buttons -->
     <string name="btnAddGame">Добавить игру</string>
@@ -28,7 +28,7 @@
     <string name="inputSubtitle">Отправить команду или текст</string>
     <string name="cheatModesSubtitle">Редактор переменных, блокировки, телепорт и консоль</string>
     <string name="settingsSubtitle">Внешний вид, звук и общие настройки</string>
-    <string name="exitGameSubtitle">Закрыть игру и вернуться в библиотеку</string>
+    <string name="exitGameSubtitle">Закрыть игру и вернуться к играм</string>
     <string name="cancel">Отмена</string>
     <string name="ok">ОК</string>
     <string name="yes">Да</string>
@@ -59,9 +59,13 @@
     <string name="refreshRepositoryPrompt">Обновите, чтобы загрузить игры из репозитория</string>
     <string name="filterHomeAll">Все</string>
     <string name="filterFavorites">Избранное</string>
-    <string name="statLibrary">Библиотека</string>
+    <string name="statLibrary">Игры</string>
     <string name="statSize">Размер</string>
     <string name="statFavorites">Избранное</string>
+    <string name="sortTitle">Сортировка</string>
+    <string name="sortName">Имя</string>
+    <string name="sortSize">Размер</string>
+    <string name="sortDate">Новые</string>
 
     <!-- Notifications -->
     <string name="channelInstallGame">Распаковка игры</string>
@@ -71,6 +75,7 @@
 
     <!-- Errors -->
     <string name="error">Ошибка</string>
+    <string name="errorNoQspFound">В выбранной папке не найден исполняемый файл игры QSP</string>
     <string name="interFolderError">Ошибка чтения внутренней папки приложения</string>
     <string name="gamesFolderError">Ошибка чтения папки с игрой</string>
     <string name="gameFolderEmpty">Я не нашла в папке с игрой файла в формате .qsp или .gam!</string>
@@ -131,6 +136,7 @@
     <string name="themeColorGreen">Зеленый</string>
     <string name="themeColorOrange">Оранжевый</string>
     <string name="themeColorPurple">Фиолетовый</string>
+    <string name="themeColorRed">Красный</string>
     <string name="themeColorPink">Розовый</string>
     <string name="themeColorTeal">Бирюзовый</string>
     <string name="themeColorAmber">Желтый</string>

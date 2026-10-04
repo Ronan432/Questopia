@@ -21,6 +21,7 @@ import static org.qp.android.helpers.utils.PathUtil.removeExtension;
 import static org.qp.android.helpers.utils.StringUtil.isNotEmptyOrBlank;
 import static org.qp.android.helpers.utils.ThreadUtil.runOnUiThread;
 import static org.qp.android.helpers.utils.XmlUtil.xmlToObject;
+import java.util.Arrays;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
@@ -802,42 +803,92 @@ public class StockViewModel extends AndroidViewModel {
     // endregion Game list dir
 
     public void startFileDownload(GameData gameData) {
+        if (gameData == null || gameData.fileUrl == null || gameData.fileUrl.isBlank()) {
+            Log.w("StockViewModel", "startFileDownload aborted: invalid gameData or fileUrl");
+            return;
+        }
+        currGameData = gameData;
         CompletableFuture
                 .supplyAsync(() -> {
+                    String fileName = null;
                     try {
                         var convUrl = new URL(gameData.fileUrl);
-
                         var cookie = android.webkit.CookieManager.getInstance().getCookie(gameData.fileUrl);
                         var con = (HttpURLConnection) convUrl.openConnection();
-                        con.setRequestProperty("Cookie", cookie);
+                        if (cookie != null && !cookie.isBlank()) {
+                            con.setRequestProperty("Cookie", cookie);
+                        }
                         con.setRequestMethod("HEAD");
-                        con.setInstanceFollowRedirects(false);
+                        con.setInstanceFollowRedirects(true);
+                        con.setConnectTimeout(8000);
+                        con.setReadTimeout(8000);
                         con.connect();
 
                         var content = con.getHeaderField("Content-Disposition");
-                        var contentSplit = content.split("filename=");
-                        return contentSplit[1].replace("filename=", "").replace("\"", "").trim();
-                    } catch (IOException exception) {
-                        Log.e("QUESTLOGTEST", "startFileDownload HEAD request failed: ", exception);
-                        return "";
+                        if (content != null && !content.isBlank()) {
+                            for (String part : content.split(";")) {
+                                String trimmed = part.trim();
+                                if (trimmed.toLowerCase().startsWith("filename*=")) {
+                                    String raw = trimmed.substring("filename*=".length()).trim();
+                                    if (raw.toLowerCase().startsWith("utf-8''")) {
+                                        raw = raw.substring("utf-8''".length());
+                                    }
+                                    try {
+                                        fileName = java.net.URLDecoder.decode(raw.replace("\"", ""), java.nio.charset.StandardCharsets.UTF_8.name());
+                                    } catch (Exception ignored) {}
+                                    break;
+                                } else if (trimmed.toLowerCase().startsWith("filename=")) {
+                                    fileName = trimmed.substring("filename=".length()).replace("\"", "").trim();
+                                }
+                            }
+                        }
+                    } catch (Exception exception) {
+                        Log.w("StockViewModel", "startFileDownload HEAD request failed: " + exception.getMessage());
                     }
-                })
-                .thenAccept(s -> {
-                    if (s.isEmpty() || s.isBlank()) return;
 
-                    Environment
-                            .getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                            .mkdirs();
+                    if (fileName == null || fileName.isBlank() || fileName.equals("downloadfile")) {
+                        fileName = android.webkit.URLUtil.guessFileName(gameData.fileUrl, null, null);
+                    }
+
+                    if (fileName == null || fileName.isBlank() || fileName.equals("downloadfile")) {
+                        if (gameData.id > 0) {
+                            fileName = gameData.id + ".zip";
+                        } else {
+                            fileName = "game_" + System.currentTimeMillis() + ".zip";
+                        }
+                    }
+                    return fileName;
+                }, executor)
+                .thenAccept(s -> {
+                    if (s == null || s.isBlank()) {
+                        s = "game_" + System.currentTimeMillis() + ".zip";
+                    }
+
+                    var downloadsDir = getApplication().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                    if (downloadsDir != null) {
+                        downloadsDir.mkdirs();
+                    }
 
                     var downloadUri = Uri.parse(gameData.fileUrl);
                     var request = new DownloadManager.Request(downloadUri)
                             .setVisibleInDownloadsUi(true)
+                            .setTitle(gameData.title != null ? gameData.title : s)
+                            .setDescription("Questopia Game Download")
                             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                             .setDestinationInExternalFilesDir(getApplication(), Environment.DIRECTORY_DOWNLOADS, s);
+
+                    var cookie = android.webkit.CookieManager.getInstance().getCookie(gameData.fileUrl);
+                    if (cookie != null && !cookie.isBlank()) {
+                        request.addRequestHeader("Cookie", cookie);
+                    }
+                    request.addRequestHeader("User-Agent", "Mozilla/5.0 (Linux; Android 10; Mobile) Questopia");
+
                     downloadId = downloadManager.enqueue(request);
+                    currGameData = gameData;
+                    Log.i("StockViewModel", "Enqueued download ID: " + downloadId + " for file: " + s);
                 })
                 .exceptionally(throwable -> {
-                    Log.e("QUESTLOGTEST", "startFileDownload error: ", throwable);
+                    Log.e("StockViewModel", "startFileDownload error: ", throwable);
                     return null;
                 });
     }
@@ -852,41 +903,71 @@ public class StockViewModel extends AndroidViewModel {
                 if (DownloadManager.STATUS_SUCCESSFUL == c.getInt(colStatusIndex)) {
                     var colUriIndex = c.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
                     if (colUriIndex == -1) return;
-                    var path = c.getString(colUriIndex).replace("file:///", "");
-                    var file = DocumentFileCompat.fromUri(getApplication(), Uri.parse(c.getString(colUriIndex)));
-                    if (file == null || !isWritableFile(getApplication(), file)) return;
+                    var localUriStr = c.getString(colUriIndex);
+                    if (localUriStr == null) return;
 
-                    var archive = new File(path);
+                    File archive = null;
+                    if (localUriStr.startsWith("file://")) {
+                        archive = new File(Uri.parse(localUriStr).getPath());
+                    } else if (localUriStr.startsWith("/")) {
+                        archive = new File(localUriStr);
+                    }
+
+                    if (archive == null || !archive.exists()) {
+                        var dlFolder = getApplication().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                        if (dlFolder != null && dlFolder.exists()) {
+                            var list = dlFolder.listFiles();
+                            if (list != null && list.length > 0) {
+                                Arrays.sort(list, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+                                archive = list[0];
+                            }
+                        }
+                    }
+
+                    if (archive == null || !archive.exists()) {
+                        Log.e("StockViewModel", "postProcessingDownload: downloaded archive not found for uri: " + localUriStr);
+                        return;
+                    }
+
+                    var finalArchive = archive;
                     var archiveUnpack = new ArchiveUnpack(
                             getApplication(),
-                            archive,
+                            finalArchive,
                             rootInDir
                     );
 
                     CompletableFuture
                             .runAsync(archiveUnpack::extractArchiveEntries, executor)
                             .thenRun(() -> {
-                                archive.delete();
+                                finalArchive.delete();
 
                                 var gameFolder = archiveUnpack.unpackFolder;
-                                localGame.searchAndWriteData(gameFolder, currGameData);
+                                if (gameFolder != null) {
+                                    localGame.searchAndWriteData(gameFolder, currGameData);
+                                }
                             })
                             .thenRun(() -> {
+                                refreshGamesDirs(null);
                                 var notificationBuild = new NotifyBuilder(getApplication(), UNPACK_GAME_CHANNEL_ID);
                                 var unpackBody = ActivityCompat.getString(getApplication(), R.string.bodyUnpackDoneNotify);
+                                var titleStr = (currGameData != null && currGameData.title != null) ? currGameData.title : "Game";
                                 var notification = notificationBuild.buildStandardNotification(
                                         ActivityCompat.getString(getApplication(), R.string.titleUnpackDoneNotify),
-                                        unpackBody.replace("-GAMENAME-", currGameData.title)
+                                        unpackBody.replace("-GAMENAME-", titleStr)
                                 );
                                 var notificationManager = getApplication().getSystemService(NotificationManager.class);
-                                notificationManager.notify(UNPACK_GAME_NOTIFICATION_ID, notification);
+                                if (notificationManager != null) {
+                                    notificationManager.notify(UNPACK_GAME_NOTIFICATION_ID, notification);
+                                }
                             })
                             .exceptionally(throwable -> {
-                                Log.e("QUESTLOGTEST", "postProcessingDownload extract error: ", throwable);
+                                Log.e("StockViewModel", "postProcessingDownload extract error: ", throwable);
                                 return null;
                             });
                 }
             }
+        } catch (Exception e) {
+            Log.e("StockViewModel", "postProcessingDownload error: ", e);
         }
     }
 

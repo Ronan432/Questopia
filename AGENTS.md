@@ -110,27 +110,31 @@ To maintain high context efficiency and prevent giant monolithic files, in-game 
   - Always use `MorphingSurface` with `getGroupedItemShape(index, total)` for grouped list items.
   - Buttons must use `MorphingButton` or `MorphingOutlinedButton` with spring tactile haptic feedback.
 - **Custom Drawer Handles**: Every `ModalBottomSheet` must use `dragHandle = { CustomDrawerHandle() }`.
-- **Theme Consistency**:
-  - Pure Black AMOLED (`#000000`) for high-contrast OLED panels.
-  - Pure Neutral Monochrome (zero blue tint) in dark mode.
-- **No Redundant Subtitles**: Never duplicate the title text as a placeholder subtitle in menu items.
+### 4. Material You (Dynamic Colors) & Reactive Edge-to-Edge System
+- **Dynamic Theming Default**: Questopia defaults to Material You Dynamic Colors (`dynamic`) on Android 12+ (API 31+), powered by `dynamicLightColorScheme(context)` and `dynamicDarkColorScheme(context)`.
+- **Reactive Prefs Recomposition**:
+  - `QuestopiaTheme` registers an `OnSharedPreferenceChangeListener` on `SharedPreferences` to dynamically track `themeMode` (System, Light, Dark, AMOLED) and `themeColor` (Dynamic, Blue, Green, Orange, Purple, Pink, Teal, Amber, Monochrome).
+  - Never pass static non-reactive arguments to `QuestopiaTheme()` in Activities; let `QuestopiaTheme()` internally manage the reactive theme state.
+- **Programmatic Edge-to-Edge & System Bars**:
+  - Always use `enableEdgeToEdge()` in Activity `onCreate()`.
+  - Never override status or navigation bar colors via static XML themes.
+  - `QuestopiaTheme` updates `WindowCompat.getInsetsController(window, view)` inside a `SideEffect` to automatically switch between light and dark icons (`isAppearanceLightStatusBars`, `isAppearanceLightNavigationBars`) based on the active dark/light/AMOLED mode.
 
-### 3. Responsive Action Button Layout (1-Col vs 2-Col)
-- For in-game action buttons in `GameMainCompose`:
-  ```kotlin
-  val columnCount = if (actionsList.size == 1) 1 else 2
-  LazyVerticalGrid(
-      columns = GridCells.Fixed(columnCount),
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
-      verticalArrangement = Arrangement.spacedBy(8.dp)
-  ) {
-      gridItemsIndexed(actionsList) { index, item ->
-          GameListItemCard(item = item, shape = RoundedCornerShape(16.dp), onClick = { ... })
-      }
-  }
-  ```
-  - When 1 action exists: full-width card.
-  - When 2+ actions exist: clean 2-column balanced grid.
+### 5. Media Resolution & OGV Video Decoding Architecture
+- **Centralized `MediaUtil.java`**:
+  - All MIME type resolution (`getMimeType`), video/audio/game format checks (`isVideoExtension`, `isAudioExtension`, `isGameExtension`), and case-insensitive file lookups (`findFileCaseInsensitive`) MUST go through `org.qp.android.helpers.utils.MediaUtil`.
+- **OGV.js Software Video Playback**:
+  - Embedded OGV.js WASM decoders located in `app/src/main/assets/ogv/`.
+  - HTML content served with base URL `https://questopia.local/` to allow Fetch API / WASM streaming in WebView without cross-origin blocks.
+  - `GameViewModel.java` intercepts `https://questopia.local/` and local video paths via `shouldInterceptRequest`, serving full HTTP 200 responses with exact MIME headers and content lengths.
+  - Video tags style with `background-color: transparent !important`, `height: auto !important`, and `canvas { object-fit: fill !important }`.
+
+### 6. Repository Download & Archive Unpack Pipeline
+- **Safe Content-Disposition Parsing**:
+  - `StockViewModel.java:startFileDownload` supports standard and RFC 5987 UTF-8 (`filename*=`) header formats with fallbacks to `URLUtil.guessFileName()` and `<game_id>.zip`.
+- **Download Lifecycle**:
+  - `StockActivity.kt` registers `DownloadManager.ACTION_DOWNLOAD_COMPLETE` broadcast receiver.
+  - Upon completion, `StockViewModel.java:postProcessingDownload()` automatically unpacks the archive via `ArchiveUnpack.kt` into the internal games directory, writes `.gameInfo`, and refreshes the library screen.
 
 ---
 
@@ -188,3 +192,4 @@ Never hardcode string literals inside Composable functions or Activities.
   1. Apply code changes.
   2. Run `python build.py android`.
   3. Verify clean exit code 0 and successful device streaming install.
+

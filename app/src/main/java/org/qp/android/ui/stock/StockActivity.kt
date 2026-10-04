@@ -35,6 +35,7 @@ import com.xayah.libpickyou.ui.model.PermissionType
 import com.xayah.libpickyou.ui.model.PickerType
 import org.qp.android.R
 import org.qp.android.dto.stock.GameData
+import org.qp.android.helpers.utils.DirUtil
 import org.qp.android.helpers.utils.FileUtil
 import org.qp.android.helpers.utils.LocaleHelper
 import org.qp.android.model.repository.LocalGame
@@ -51,6 +52,14 @@ class StockActivity : ComponentActivity() {
     private var showAddDialogState by mutableStateOf(false)
     private var isLoadingState by mutableStateOf(false)
     private var crashReport by mutableStateOf<String?>(null)
+    private val downloadReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == android.app.DownloadManager.ACTION_DOWNLOAD_COMPLETE) {
+                Log.i(TAG, "Received ACTION_DOWNLOAD_COMPLETE broadcast")
+                stockViewModel.postProcessingDownload()
+            }
+        }
+    }
 
     private fun openFolderPicker() {
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
@@ -96,16 +105,13 @@ class StockActivity : ComponentActivity() {
             crashReport = runCatching { crashFile.readText() }.getOrNull()
             crashFile.delete()
         }
-        LocaleHelper.applyAppLanguage(this)
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.auto(
-                Color.TRANSPARENT,
-                Color.TRANSPARENT
-            ),
-            navigationBarStyle = SystemBarStyle.auto(
-                Color.TRANSPARENT,
-                Color.TRANSPARENT
-            )
+        enableEdgeToEdge()
+
+        androidx.core.content.ContextCompat.registerReceiver(
+            this,
+            downloadReceiver,
+            android.content.IntentFilter(android.app.DownloadManager.ACTION_DOWNLOAD_COMPLETE),
+            androidx.core.content.ContextCompat.RECEIVER_EXPORTED
         )
 
         stockViewModel = ViewModelProvider(this)[StockViewModel::class.java]
@@ -134,12 +140,8 @@ class StockActivity : ComponentActivity() {
                                     chosenUri = gameData.gameFilesUri[0]
                                 } else if (gameData.gameDirUri != Uri.EMPTY) {
                                     val docDir = DocumentFileCompat.fromUri(this, gameData.gameDirUri)
-                                    val files = docDir?.listFiles()
-                                    val qspFile = files?.firstOrNull { f ->
-                                        val name = f.name?.lowercase(Locale.ROOT) ?: ""
-                                        name.endsWith(".qsp") || name.endsWith(".gam")
-                                    }
-                                    chosenUri = qspFile?.uri
+                                    val loc = DirUtil.findGameFileDeep(docDir, 4)
+                                    chosenUri = loc?.gameFile?.uri
                                 }
                                 if (chosenUri != null) {
                                     intent.putExtra("gameFileUri", chosenUri.toString())
@@ -277,18 +279,42 @@ class StockActivity : ComponentActivity() {
             Log.i(TAG, "==> Starting in-place game registration for: '$title' at URI: ${folder.uri}")
 
             try {
-                val files = folder.listFiles()
                 val gameFiles = mutableListOf<Uri>()
-                var computedSize = 0L
+                var effectiveGameDir: DocumentFile = folder
 
-                files.forEach { file ->
-                    val ext = FileUtil.documentWrap(file).extension.lowercase(Locale.ROOT)
-                    if (ext.endsWith("qsp") || ext.endsWith("gam") || ext.endsWith("qsps") || ext.endsWith("aqsp")) {
-                        gameFiles.add(file.uri)
-                        Log.d(TAG, "Found executable game file: ${file.name} -> ${file.uri}")
+                val files = folder.listFiles()
+                if (files != null) {
+                    files.forEach { file ->
+                        val ext = FileUtil.documentWrap(file).extension.lowercase(Locale.ROOT)
+                        if (ext.endsWith("qsp") || ext.endsWith("gam") || ext.endsWith("qsps") || ext.endsWith("aqsp")) {
+                            gameFiles.add(file.uri)
+                            Log.d(TAG, "Found executable game file: ${file.name} -> ${file.uri}")
+                        }
                     }
-                    computedSize += file.length()
                 }
+
+                // If not found in root, deep search up to 4 directory levels
+                if (gameFiles.isEmpty()) {
+                    val deepLoc = DirUtil.findGameFileDeep(folder, 4)
+                    if (deepLoc != null) {
+                        gameFiles.add(deepLoc.gameFile.uri)
+                        effectiveGameDir = deepLoc.gameDir
+                        Log.i(TAG, "Deep search found executable QSP: ${deepLoc.gameFile.name} in directory: ${deepLoc.gameDir.uri}")
+                    }
+                }
+
+                // STRICT VALIDATION: If no playable QSP file found, abort and do not add to home screen!
+                if (gameFiles.isEmpty()) {
+                    Log.w(TAG, "No executable QSP file found in folder: ${folder.uri}")
+                    withContext(Dispatchers.Main) {
+                        isLoadingState = false
+                        Toast.makeText(this@StockActivity, getString(R.string.errorNoQspFound), Toast.LENGTH_LONG).show()
+                    }
+                    return@launch
+                }
+
+                // Accurate full recursive size calculation (calculated once and saved)
+                val accurateSize = DirUtil.calculateDirSize(folder)
 
                 val finalTitle = title.ifBlank { folder.name ?: "Untitled" }
                 val newGame = GameData().apply {
@@ -296,13 +322,16 @@ class StockActivity : ComponentActivity() {
                     this.title = finalTitle
                     this.author = author
                     this.version = version
-                    this.gameDirUri = folder.uri
+                    this.gameDirUri = effectiveGameDir.uri
                     this.gameFilesUri = gameFiles
-                    this.fileSize = if (computedSize > 0) computedSize else -1L
+                    this.fileSize = if (accurateSize > 0) accurateSize else -1L
                 }
 
                 val localGame = LocalGame(this@StockActivity)
                 val wroteInfo = localGame.tryCreateDataIntoFolder(folder, newGame)
+                if (effectiveGameDir.uri != folder.uri) {
+                    localGame.tryCreateDataIntoFolder(effectiveGameDir, newGame)
+                }
                 Log.d(TAG, "Wrote .gameInfo into folder result: $wroteInfo")
 
                 stockViewModel.saveDirToFile(folder).join()
@@ -323,6 +352,13 @@ class StockActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        try {
+            unregisterReceiver(downloadReceiver)
+        } catch (_: Exception) {}
+        super.onDestroy()
     }
 }
 

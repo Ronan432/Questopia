@@ -109,13 +109,13 @@ fun rememberNavThemeColors(): NavThemeColors {
     val context = LocalContext.current
     val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
     var themeMode by remember { mutableStateOf(prefs.getString("themeMode", "system") ?: "system") }
-    var themeColor by remember { mutableStateOf(prefs.getString("themeColor", "monochrome") ?: "monochrome") }
+    var themeColor by remember { mutableStateOf(prefs.getString("themeColor", "dynamic") ?: "dynamic") }
 
     DisposableEffect(prefs) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { sp, key ->
             when (key) {
                 "themeMode" -> themeMode = sp.getString("themeMode", "system") ?: "system"
-                "themeColor" -> themeColor = sp.getString("themeColor", "monochrome") ?: "monochrome"
+                "themeColor" -> themeColor = sp.getString("themeColor", "dynamic") ?: "dynamic"
             }
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
@@ -323,7 +323,7 @@ fun StockSegmentedControl(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 6.dp,
         shadowElevation = 4.dp,
-        border = BorderStroke(1.2.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        border = null,
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)

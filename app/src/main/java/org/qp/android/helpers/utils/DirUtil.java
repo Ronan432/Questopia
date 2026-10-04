@@ -7,6 +7,7 @@ import static org.qp.android.helpers.utils.FileUtil.isWritableDir;
 import android.content.Context;
 import android.net.Uri;
 
+import androidx.annotation.Nullable;
 import androidx.annotation.NonNull;
 import androidx.annotation.WorkerThread;
 import androidx.documentfile.provider.DocumentFile;
@@ -24,33 +25,48 @@ public final class DirUtil {
 
     public static final String MOD_DIR_NAME = "mods";
 
+    public static class GameFileLocation {
+        public final DocumentFile gameFile;
+        public final DocumentFile gameDir;
+
+        public GameFileLocation(DocumentFile gameFile, DocumentFile gameDir) {
+            this.gameFile = gameFile;
+            this.gameDir = gameDir;
+        }
+    }
+
+    @Nullable
+    @WorkerThread
+    public static GameFileLocation findGameFileDeep(@Nullable DocumentFile rootDir, int maxDepth) {
+        if (rootDir == null || !rootDir.exists()) return null;
+        var directFiles = rootDir.listFiles();
+        if (directFiles != null) {
+            for (var file : directFiles) {
+                if (file.isFile()) {
+                    var ext = documentWrap(file).getExtension().toLowerCase(Locale.ROOT);
+                    if (ext.endsWith("qsp") || ext.endsWith("gam") || ext.endsWith("qsps") || ext.endsWith("aqsp")) {
+                        return new GameFileLocation(file, rootDir);
+                    }
+                }
+            }
+            if (maxDepth > 0) {
+                for (var file : directFiles) {
+                    if (file.isDirectory()) {
+                        var found = findGameFileDeep(file, maxDepth - 1);
+                        if (found != null) return found;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     @WorkerThread
     public static boolean isDirContainsGameFile(@NonNull Context context,
                                                 @NonNull Uri dirUri) {
         var targetDir = DocumentFileCompat.fromUri(context, dirUri);
         if (!isWritableDir(context, targetDir)) return false;
-        var files = targetDir.listFiles();
-        if (files == null || files.length == 0) return false;
-
-        for (var file : files) {
-            var dirExtension = documentWrap(file).getExtension();
-            var lcName = dirExtension.toLowerCase(Locale.ROOT);
-            if (lcName.contains("qsp") || lcName.contains("gam")) return true;
-        }
-
-        var allFiles = DocumentFileUtils.search(
-                targetDir,
-                true,
-                DocumentFileType.FILE,
-                new String[]{MimeType.BINARY_FILE}
-        );
-        for (var file : allFiles) {
-            var dirExtension = documentWrap(file).getExtension();
-            var lcName = dirExtension.toLowerCase(Locale.ROOT);
-            if (lcName.contains("qsp") || lcName.contains("gam")) return true;
-        }
-
-        return false;
+        return findGameFileDeep(targetDir, 4) != null;
     }
 
     public static boolean isModDirExist(@NonNull Context context,

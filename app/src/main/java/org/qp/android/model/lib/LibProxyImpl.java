@@ -548,16 +548,48 @@ public class LibProxyImpl extends QSPLib implements LibIProxy {
 
     @Override
     public void onShowImage(String file) {
+        Log.d(TAG, "onShowImage received file: " + file);
         var gameDir = getCurGameDir();
-        if (!isWritableDir(context, gameDir)) return;
+        if (gameDir == null || !gameDir.exists()) return;
 
         var inter = gameInterface;
         if (inter == null) return;
 
         if (isNotEmptyOrBlank(file)) {
             var picFile = fromRelPath(context, file, gameDir);
-            if (!isWritableFile(context, picFile)) return;
-            inter.showPicture(String.valueOf(picFile.getUri()));
+            if (picFile == null || !picFile.exists()) {
+                var cleanFile = file.replace("\\", "/");
+                while (cleanFile.startsWith("/")) {
+                    cleanFile = cleanFile.substring(1);
+                }
+                var pathElements = cleanFile.split("/");
+                var files = gameDir.listFiles();
+                DocumentFile currentTarget = null;
+                for (var part : pathElements) {
+                    if (part.isEmpty()) continue;
+                    currentTarget = null;
+                    for (var f : files) {
+                        var name = f.getName();
+                        if (name != null && name.equalsIgnoreCase(part)) {
+                            currentTarget = f;
+                            if (f.isDirectory()) {
+                                files = f.listFiles();
+                            }
+                            break;
+                        }
+                    }
+                    if (currentTarget == null) break;
+                }
+                if (currentTarget != null && currentTarget.isFile()) {
+                    picFile = currentTarget;
+                }
+            }
+            if (picFile != null && picFile.exists()) {
+                Log.i(TAG, "onShowImage: showing " + picFile.getUri());
+                inter.showPicture(String.valueOf(picFile.getUri()));
+            } else {
+                Log.w(TAG, "onShowImage: file not found on disk: " + file);
+            }
         }
     }
 

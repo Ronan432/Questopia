@@ -13,6 +13,7 @@ import androidx.documentfile.provider.DocumentFile;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.safety.Safelist;
+import org.qp.android.helpers.utils.MediaUtil;
 import org.qp.android.ui.settings.SettingsController;
 
 import java.util.ArrayList;
@@ -55,6 +56,7 @@ public class HtmlProcessor {
         var document = Jsoup.parseBodyFragment(webHtml);
         document.outputSettings().prettyPrint(false);
         var body = document.body();
+        convertVideoImagesToVideoTags(body);
         handleImagesInHtml(context , body);
         handleVideosInHtml(body);
 
@@ -234,15 +236,49 @@ public class HtmlProcessor {
         });
     }
 
+    private void convertVideoImagesToVideoTags(Element documentBody) {
+        documentBody.select("[src]").forEach(el -> {
+            var src = el.attr("src");
+            if (src.contains("\\")) {
+                el.attr("src", src.replace("\\", "/"));
+            }
+        });
+
+        var images = documentBody.select("img");
+        for (var img : images) {
+            var src = img.attr("src");
+            if (src == null || src.isEmpty()) continue;
+            if (MediaUtil.isVideoExtension(src)) {
+                var video = new Element("video");
+                video.attr("src", src);
+                video.attr("autoplay", "autoplay");
+                video.attr("loop", "loop");
+                video.attr("playsinline", "true");
+                video.attr("webkit-playsinline", "true");
+                video.attr("preload", "auto");
+                video.attr("style", "max-width:100%; height:auto;");
+                if (controller != null && controller.isVideoMute) {
+                    video.attr("muted", "true");
+                }
+                img.replaceWith(video);
+                android.util.Log.i(TAG, "convertVideoImagesToVideoTags: converted <img src=\"" + src + "\"> to <video>");
+            }
+        }
+    }
+
     private void handleVideosInHtml(Element documentBody) {
-        var videoElement = documentBody.select("video");
-        videoElement.attr("style", "max-width:100%;");
-        if (controller.isVideoMute) {
-            videoElement.attr("muted", "true");
-            videoElement.removeAttr("controls");
-        } else {
-            videoElement.attr("controls", "true");
-            videoElement.removeAttr("muted");
+        var videoElements = documentBody.select("video");
+        for (var videoElement : videoElements) {
+            videoElement.attr("style", "max-width:100%; height:auto;");
+            videoElement.attr("playsinline", "true");
+            videoElement.attr("webkit-playsinline", "true");
+            videoElement.attr("preload", "auto");
+            videoElement.attr("autoplay", "autoplay");
+            videoElement.attr("loop", "loop");
+            if (controller != null && controller.isVideoMute) {
+                videoElement.attr("muted", "true");
+            }
+            android.util.Log.i(TAG, "handleVideosInHtml: configured <video src=\"" + videoElement.attr("src") + "\">");
         }
     }
 }

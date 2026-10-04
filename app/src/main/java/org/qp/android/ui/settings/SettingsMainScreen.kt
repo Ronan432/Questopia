@@ -105,7 +105,7 @@ fun SettingsMainScreen(
 
     // Preferences
     var themeMode by remember { mutableStateOf(prefs.getString("themeMode", "system") ?: "system") }
-    var themeColor by remember { mutableStateOf(prefs.getString("themeColor", "monochrome") ?: "monochrome") }
+    var themeColor by remember { mutableStateOf(prefs.getString("themeColor", "dynamic") ?: "dynamic") }
     var lang by remember { mutableStateOf(LocaleHelper.getEffectiveLanguage(context)) }
     var separator by remember { mutableStateOf(prefs.getBoolean("separator", false)) }
     var immersiveMode by remember { mutableStateOf(prefs.getBoolean("immersiveMode", true)) }
@@ -320,10 +320,8 @@ fun SettingsMainScreen(
             val appearanceItems = buildList<@Composable (Shape) -> Unit> {
                 if (showThemeMode) {
                     add { shape ->
-                        ExpressiveListPreferenceItem(
+                        ExpressiveThemeModePreferenceItem(
                             title = appThemeTitle,
-                            entries = themeModeEntries,
-                            entryValues = themeModeValues,
                             currentValue = themeMode,
                             shape = shape,
                             onValueSelected = { newTheme ->
@@ -336,10 +334,8 @@ fun SettingsMainScreen(
                 }
                 if (showThemeColor) {
                     add { shape ->
-                        ExpressiveListPreferenceItem(
+                        ExpressiveThemeColorPreferenceItem(
                             title = themeColorTitle,
-                            entries = themeColorEntries,
-                            entryValues = themeColorValues,
                             currentValue = themeColor,
                             shape = shape,
                             onValueSelected = { newColor ->

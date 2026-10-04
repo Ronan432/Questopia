@@ -10,7 +10,7 @@
     <string name="tabOneName">Repository</string>
     <string name="search">Search</string>
     <string name="settingsTitle">Settings</string>
-    <string name="gameStockTitle">Game Library</string>
+    <string name="gameStockTitle">Games</string>
 
     <!-- Common Actions & Buttons -->
     <string name="btnAddGame">Add Game</string>
@@ -28,7 +28,7 @@
     <string name="inputSubtitle">Send command or text input</string>
     <string name="cheatModesSubtitle">Variable editor, locks, teleport and console</string>
     <string name="settingsSubtitle">Appearance, audio and general settings</string>
-    <string name="exitGameSubtitle">Close the game and return to library</string>
+    <string name="exitGameSubtitle">Close the game and return to games</string>
     <string name="cancel">Cancel</string>
     <string name="ok">OK</string>
     <string name="yes">Yes</string>
@@ -59,9 +59,13 @@
     <string name="refreshRepositoryPrompt">Pull down or refresh to load games from repository</string>
     <string name="filterHomeAll">All</string>
     <string name="filterFavorites">Favorites</string>
-    <string name="statLibrary">Library</string>
+    <string name="statLibrary">Games</string>
     <string name="statSize">Size</string>
     <string name="statFavorites">Favorites</string>
+    <string name="sortTitle">Sort</string>
+    <string name="sortName">Name</string>
+    <string name="sortSize">Size</string>
+    <string name="sortDate">Recent</string>
 
     <!-- Notifications -->
     <string name="channelInstallGame">Unpack game</string>
@@ -71,6 +75,7 @@
 
     <!-- Errors -->
     <string name="error">Error</string>
+    <string name="errorNoQspFound">No playable QSP game file found in selected folder</string>
     <string name="interFolderError">Error reading internal app directory</string>
     <string name="gamesFolderError">Error reading game folder</string>
     <string name="gameFolderEmpty">Could not find .qsp or .gam file in the game folder!</string>
@@ -131,6 +136,7 @@
     <string name="themeColorGreen">Green</string>
     <string name="themeColorOrange">Orange</string>
     <string name="themeColorPurple">Purple</string>
+    <string name="themeColorRed">Red</string>
     <string name="themeColorPink">Pink</string>
     <string name="themeColorTeal">Teal</string>
     <string name="themeColorAmber">Yellow</string>

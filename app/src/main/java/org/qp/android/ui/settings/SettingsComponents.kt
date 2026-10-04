@@ -46,6 +46,10 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Brightness4
+import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -342,26 +346,28 @@ fun ExpressiveListPreferenceItem(
                         Surface(
                             shape = CircleShape,
                             color = iconBgColor,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(36.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = icon,
                                     contentDescription = null,
                                     tint = iconTint,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                     }
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp),
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
+
+                Spacer(modifier = Modifier.height(6.dp))
 
                 // Options List
                 Column(
@@ -393,13 +399,13 @@ fun ExpressiveListPreferenceItem(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 11.dp),
+                                    .padding(horizontal = 16.dp, vertical = 13.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
                                     text = entry,
                                     style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontSize = 14.5.sp,
+                                        fontSize = 15.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                     ),
                                     color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
@@ -411,7 +417,7 @@ fun ExpressiveListPreferenceItem(
                                         imageVector = Icons.Filled.Check,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
                             }
@@ -422,6 +428,446 @@ fun ExpressiveListPreferenceItem(
         }
     }
 }
+
+/**
+ * Modern Material You Theme Mode Picker Sheet with visual tone cards (System, Light, Dark, AMOLED).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExpressiveThemeModePreferenceItem(
+    title: String,
+    currentValue: String,
+    onValueSelected: (String) -> Unit,
+    icon: ImageVector? = null,
+    iconBgColor: Color = MaterialTheme.colorScheme.primaryContainer,
+    iconTint: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+    shape: Shape = RoundedCornerShape(16.dp)
+) {
+    var showSheet by remember { mutableStateOf(false) }
+    val view = LocalView.current
+    val context = LocalContext.current
+
+    val modes = listOf(
+        Triple("system", stringResource(R.string.themeModeSystem), "Auto"),
+        Triple("light", stringResource(R.string.themeModeLight), "Bright"),
+        Triple("dark", stringResource(R.string.themeModeDark), "Muted"),
+        Triple("amoled", stringResource(R.string.themeModeAmoled), "Pure 0% Black")
+    )
+
+    val currentLabel = when (currentValue.lowercase()) {
+        "0", "system" -> stringResource(R.string.themeModeSystem)
+        "1", "light" -> stringResource(R.string.themeModeLight)
+        "2", "dark" -> stringResource(R.string.themeModeDark)
+        "3", "amoled" -> stringResource(R.string.themeModeAmoled)
+        else -> currentValue
+    }
+
+    ExpressivePreferenceItem(
+        title = title,
+        icon = icon,
+        iconBgColor = iconBgColor,
+        iconTint = iconTint,
+        shape = shape,
+        onClick = { showSheet = true },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = currentLabel,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    )
+
+    if (showSheet) {
+        val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+        val isAmoled = prefs.getString("themeMode", "system") == "3" || prefs.getString("themeMode", "system") == "amoled"
+        val sheetBg = if (isAmoled) Color(0xFF000000) else MaterialTheme.colorScheme.surfaceContainerLow
+
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            containerColor = sheetBg,
+            dragHandle = { CustomDrawerHandle() },
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .padding(bottom = 24.dp)
+                    .navigationBarsPadding()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+                ) {
+                    if (icon != null) {
+                        Surface(
+                            shape = CircleShape,
+                            color = iconBgColor,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = iconTint,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                    }
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp),
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    modes.forEachIndexed { index, (modeKey, modeTitle, subtitle) ->
+                        val isSelected = currentValue.equals(modeKey, ignoreCase = true) ||
+                                (modeKey == "system" && (currentValue == "0" || currentValue.isBlank())) ||
+                                (modeKey == "light" && currentValue == "1") ||
+                                (modeKey == "dark" && currentValue == "2") ||
+                                (modeKey == "amoled" && currentValue == "3")
+
+                        val itemShape = getGroupedItemShape(
+                            index = index,
+                            total = modes.size,
+                            outerRadius = 24.dp,
+                            innerRadius = 4.dp
+                        )
+
+                        MorphingSurface(
+                            shape = itemShape,
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+                            onClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                onValueSelected(modeKey)
+                                showSheet = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Visual Mode Preview Badge
+                                val previewBg = when (modeKey) {
+                                    "light" -> Color(0xFFF8F9FA)
+                                    "dark" -> Color(0xFF1E1E1E)
+                                    "amoled" -> Color(0xFF000000)
+                                    else -> MaterialTheme.colorScheme.surfaceVariant
+                                }
+                                val previewBorder = when (modeKey) {
+                                    "amoled" -> BorderStroke(1.dp, Color(0xFF333333))
+                                    "light" -> BorderStroke(1.dp, Color(0xFFE0E0E0))
+                                    else -> null
+                                }
+
+                                Surface(
+                                    shape = CircleShape,
+                                    color = previewBg,
+                                    border = previewBorder,
+                                    modifier = Modifier.size(34.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = when (modeKey) {
+                                                "light" -> Icons.Outlined.Brightness4
+                                                "dark" -> Icons.Outlined.Brightness4
+                                                "amoled" -> Icons.Outlined.Brightness4
+                                                else -> Icons.Outlined.Brightness4
+                                            },
+                                            contentDescription = null,
+                                            tint = when (modeKey) {
+                                                "light" -> Color(0xFF202124)
+                                                "dark" -> Color(0xFFE8EAED)
+                                                "amoled" -> Color(0xFFFFFFFF)
+                                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                            },
+                                            modifier = Modifier.size(17.dp)
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.width(14.dp))
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = modeTitle,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontSize = 15.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                        ),
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = subtitle,
+                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Modern Material You Dynamic Color Accent Palette Picker with interactive tonal swatches.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExpressiveThemeColorPreferenceItem(
+    title: String,
+    currentValue: String,
+    onValueSelected: (String) -> Unit,
+    icon: ImageVector? = null,
+    iconBgColor: Color = MaterialTheme.colorScheme.primaryContainer,
+    iconTint: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+    shape: Shape = RoundedCornerShape(16.dp)
+) {
+    var showSheet by remember { mutableStateOf(false) }
+    val view = LocalView.current
+    val context = LocalContext.current
+
+    data class AccentOption(
+        val key: String,
+        val label: String,
+        val primaryColor: Color,
+        val containerColor: Color,
+        val isDynamic: Boolean = false
+    )
+
+    val colorOptions = listOf(
+        AccentOption("dynamic", stringResource(R.string.themeColorDynamic), MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primaryContainer, isDynamic = true),
+        AccentOption("blue", stringResource(R.string.themeColorBlue), Color(0xFF0061A4), Color(0xFFD1E4FF)),
+        AccentOption("green", stringResource(R.string.themeColorGreen), Color(0xFF2E6A3E), Color(0xFFB0F2BA)),
+        AccentOption("purple", stringResource(R.string.themeColorPurple), Color(0xFF7043A6), Color(0xFFEBDCFF)),
+        AccentOption("orange", stringResource(R.string.themeColorOrange), Color(0xFF904A1D), Color(0xFFFFDCC5)),
+        AccentOption("red", stringResource(R.string.themeColorRed), Color(0xFFBA1A1A), Color(0xFFFFDAD6)),
+        AccentOption("pink", stringResource(R.string.themeColorPink), Color(0xFF8B4168), Color(0xFFFFD8E7)),
+        AccentOption("teal", stringResource(R.string.themeColorTeal), Color(0xFF006A68), Color(0xFF70F7F3)),
+        AccentOption("amber", stringResource(R.string.themeColorAmber), Color(0xFF745B00), Color(0xFFFFE08B)),
+        AccentOption("monochrome", stringResource(R.string.themeColorMonochrome), Color(0xFF000000), Color(0xFFE2E2E2))
+    )
+
+    val currentAccent = colorOptions.firstOrNull { it.key.equals(currentValue, ignoreCase = true) } ?: colorOptions[0]
+
+    ExpressivePreferenceItem(
+        title = title,
+        icon = icon,
+        iconBgColor = iconBgColor,
+        iconTint = iconTint,
+        shape = shape,
+        onClick = { showSheet = true },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Current color accent dot
+                Surface(
+                    shape = CircleShape,
+                    color = currentAccent.primaryColor,
+                    border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.size(20.dp)
+                ) {}
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = currentAccent.label,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    )
+
+    if (showSheet) {
+        val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
+        val isAmoled = prefs.getString("themeMode", "system") == "3" || prefs.getString("themeMode", "system") == "amoled"
+        val sheetBg = if (isAmoled) Color(0xFF000000) else MaterialTheme.colorScheme.surfaceContainerLow
+
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            containerColor = sheetBg,
+            dragHandle = { CustomDrawerHandle() },
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .padding(bottom = 24.dp)
+                    .navigationBarsPadding()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
+                ) {
+                    if (icon != null) {
+                        Surface(
+                            shape = CircleShape,
+                            color = iconBgColor,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = iconTint,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                    }
+                    Column {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.themeColorTitle),
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    colorOptions.forEachIndexed { index, option ->
+                        val isSelected = option.key.equals(currentValue, ignoreCase = true)
+                        val itemShape = getGroupedItemShape(
+                            index = index,
+                            total = colorOptions.size,
+                            outerRadius = 24.dp,
+                            innerRadius = 4.dp
+                        )
+
+                        MorphingSurface(
+                            shape = itemShape,
+                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+                            onClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                onValueSelected(option.key)
+                                showSheet = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Dual-tone Material You Color Palette Swatch
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(option.containerColor),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(option.primaryColor)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(14.dp))
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = option.label,
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontSize = 15.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                        ),
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    if (option.isDynamic) {
+                                        Text(
+                                            text = "Material You Wallpaper Tones",
+                                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp),
+                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 @Composable
 fun ExpressiveColorPreferenceItem(

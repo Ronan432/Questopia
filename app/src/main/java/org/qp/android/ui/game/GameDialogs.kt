@@ -1,10 +1,14 @@
 package org.qp.android.ui.game
 
 import android.content.Context
+import android.net.Uri
 import android.view.HapticFeedbackConstants
+import android.view.ViewGroup
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -309,8 +313,15 @@ fun GameDialogsHost(activity: GameActivity, viewModel: GameViewModel) {
         )
     }
 
-    // 6. Image Preview Dialog with long-press drawer menu
+    // 6. Image / Video Preview Dialog
     if (!imageDialogUri.isNullOrBlank()) {
+        val uri = imageDialogUri!!
+        val isVideo = uri.endsWith(".webm", ignoreCase = true) ||
+                uri.endsWith(".mp4", ignoreCase = true) ||
+                uri.endsWith(".m4v", ignoreCase = true) ||
+                uri.endsWith(".ogv", ignoreCase = true) ||
+                uri.endsWith(".mkv", ignoreCase = true) ||
+                uri.endsWith(".avi", ignoreCase = true)
         val view = LocalView.current
         Dialog(
             onDismissRequest = { activity.imageDialogState.value = null },
@@ -319,29 +330,60 @@ fun GameDialogsHost(activity: GameActivity, viewModel: GameViewModel) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.9f))
-                    .combinedClickable(
-                        onClick = { activity.imageDialogState.value = null },
-                        onLongClick = {
-                            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                            val uri = imageDialogUri
-                            activity.imageDialogState.value = null
-                            openYandexImageSearch(activity, uri)
-                        }
-                    ),
+                    .background(Color.Black.copy(alpha = 0.95f))
+                    .clickable { activity.imageDialogState.value = null },
                 contentAlignment = Alignment.Center
             ) {
-                SubcomposeAsyncImage(
-                    model = imageDialogUri,
-                    contentDescription = null,
-                    loading = {
-                        CircularProgressIndicator(color = Color.White)
-                    },
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                )
+                if (isVideo) {
+                    AndroidView(
+                        factory = { ctx ->
+                            android.widget.VideoView(ctx).apply {
+                                layoutParams = ViewGroup.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.WRAP_CONTENT
+                                )
+                                setVideoURI(Uri.parse(uri))
+                                setOnPreparedListener { mp ->
+                                    mp.isLooping = true
+                                    start()
+                                }
+                                setOnErrorListener { _, _, _ ->
+                                    false
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .combinedClickable(
+                                onClick = { activity.imageDialogState.value = null },
+                                onLongClick = {
+                                    view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                    val u = imageDialogUri
+                                    activity.imageDialogState.value = null
+                                    if (u != null) openYandexImageSearch(activity, u)
+                                }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        SubcomposeAsyncImage(
+                            model = imageDialogUri,
+                            contentDescription = null,
+                            loading = {
+                                CircularProgressIndicator(color = Color.White)
+                            },
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp)
+                        )
+                    }
+                }
             }
         }
     }

@@ -269,7 +269,7 @@ fun InstalledGamesList(
                                 shape = RoundedCornerShape(24.dp),
                                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                                 tonalElevation = 4.dp,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                                border = null,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp)
@@ -426,7 +426,7 @@ fun GameCard(
     MorphingSurface(
         shape = cardShape,
         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surfaceContainer,
-        border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+        border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
         tonalElevation = if (isSelected) 4.dp else 1.dp,
         modifier = Modifier.fillMaxWidth(),
         onClick = {
@@ -522,7 +522,7 @@ fun GameCard(
                     Surface(
                         shape = CircleShape,
                         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                        border = null,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(6.dp)
@@ -913,7 +913,7 @@ fun RemoteGameCard(
     MorphingSurface(
         shape = cardShape,
         color = MaterialTheme.colorScheme.surfaceContainer,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+        border = null,
         tonalElevation = 1.dp,
         modifier = Modifier.fillMaxWidth(),
         onClick = onDownload

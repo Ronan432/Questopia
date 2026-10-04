@@ -1,16 +1,27 @@
 package org.qp.android.ui.game
 
+import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.util.Log
-import androidx.compose.foundation.layout.*
+import android.widget.Toast
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -19,11 +30,24 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.preference.PreferenceManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import org.qp.android.R
 import org.qp.android.ui.common.CustomDrawerHandle
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.net.URL
+import java.net.URLEncoder
+import java.time.Duration
+import java.util.Locale
 
 fun copyImageToClipboard(context: Context, imageUriStr: String) {
     try {
@@ -31,18 +55,18 @@ fun copyImageToClipboard(context: Context, imageUriStr: String) {
         val uri = Uri.parse(imageUriStr)
         val clip = android.content.ClipData.newUri(context.contentResolver, "Image", uri)
         clipboard.setPrimaryClip(clip)
-        android.widget.Toast.makeText(context, R.string.imageCopied, android.widget.Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, R.string.imageCopied, Toast.LENGTH_SHORT).show()
     } catch (e: Exception) {
         Log.e("GameActivity", "Failed to copy image", e)
     }
 }
 
 fun saveImageToGallery(context: Context, imageUriStr: String) {
-    kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+    CoroutineScope(Dispatchers.IO).launch {
         try {
             val uri = Uri.parse(imageUriStr)
             val inputStream = if (imageUriStr.startsWith("http://") || imageUriStr.startsWith("https://")) {
-                java.net.URL(imageUriStr).openStream()
+                URL(imageUriStr).openStream()
             } else {
                 context.contentResolver.openInputStream(uri)
             }
@@ -72,7 +96,7 @@ fun saveImageToGallery(context: Context, imageUriStr: String) {
                         context.contentResolver.update(itemUri, values, null, null)
                     }
                     withContext(Dispatchers.Main) {
-                        android.widget.Toast.makeText(context, R.string.imageSaved, android.widget.Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, R.string.imageSaved, Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -82,96 +106,143 @@ fun saveImageToGallery(context: Context, imageUriStr: String) {
     }
 }
 
-fun performYandexImageSearch(context: Context, imageUriStr: String) {
-    kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+private val okHttpClient: OkHttpClient by lazy {
+    OkHttpClient.Builder()
+        .connectTimeout(Duration.ofSeconds(6))
+        .readTimeout(Duration.ofSeconds(6))
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .build()
+}
+
+private fun launchBrowser(context: Context, url: String) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            if (context !is Activity) {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        }
+        context.startActivity(intent)
+    } catch (e: ActivityNotFoundException) {
+        Log.d("GameActivity", "Activity not found: ${e.message}")
+    } catch (e: Exception) {
+        Log.d("GameActivity", "Error: ${e.message}")
+    }
+}
+
+private fun prepareImageBytes(rawBytes: ByteArray): ByteArray {
+    return try {
+        if (rawBytes.size <= 80 * 1024) return rawBytes
+        val options = BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        BitmapFactory.decodeByteArray(rawBytes, 0, rawBytes.size, options)
+        val maxDim = maxOf(options.outWidth, options.outHeight)
+        var sampleSize = 1
+        while (maxDim / sampleSize > 600) {
+            sampleSize *= 2
+        }
+        val decodeOptions = BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+        }
+        val bitmap = BitmapFactory.decodeByteArray(rawBytes, 0, rawBytes.size, decodeOptions)
+            ?: return rawBytes
+        val out = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 75, out)
+        bitmap.recycle()
+        out.toByteArray()
+    } catch (e: Exception) {
+        rawBytes
+    }
+}
+
+fun openYandexImageSearch(context: Context, imageUrl: String?) {
+    if (imageUrl.isNullOrBlank()) return
+    if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+        val encodedUrl = URLEncoder.encode(imageUrl, "UTF-8")
+        launchBrowser(context, "https://yandex.com/images/search?rpt=imageview&url=$encodedUrl")
+        return
+    }
+
+    try {
+        Toast.makeText(context, R.string.yandexImageSearch, Toast.LENGTH_SHORT).show()
+    } catch (ignored: Exception) {}
+
+    CoroutineScope(Dispatchers.IO).launch {
         try {
-            if (imageUriStr.startsWith("http://") || imageUriStr.startsWith("https://")) {
-                val searchUrl = "https://yandex.com/images/search?rpt=imageview&url=" + java.net.URLEncoder.encode(imageUriStr, "UTF-8")
-                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(searchUrl)).apply {
-                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-                context.startActivity(intent)
+            val uri = Uri.parse(imageUrl)
+            val rawBytes = if (imageUrl.startsWith("file://")) {
+                File(uri.path ?: "").readBytes()
             } else {
-                val uri = Uri.parse(imageUriStr)
-                val bytes = if (imageUriStr.startsWith("file://")) {
-                    java.io.File(uri.path ?: "").readBytes()
-                } else {
-                    context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            }
+
+            if (rawBytes == null || rawBytes.isEmpty()) {
+                withContext(Dispatchers.Main) {
+                    launchBrowser(context, "https://yandex.com/images/")
                 }
+                return@launch
+            }
 
-                if (bytes != null && bytes.isNotEmpty()) {
-                    val boundary = "Boundary" + System.currentTimeMillis()
-                    val uploadUrl = "https://yandex.com/images/search?rpt=imageview&format=json&request=%7B%22blocks%22%3A%5B%7B%22block%22%3A%22b-page_type_search-by-image__link%22%7D%5D%7D"
-                    val conn = (java.net.URL(uploadUrl).openConnection() as java.net.HttpURLConnection).apply {
-                        requestMethod = "POST"
-                        doOutput = true
-                        doInput = true
-                        connectTimeout = 15000
-                        readTimeout = 15000
-                        setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
-                        setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                        setRequestProperty("Accept", "application/json, text/javascript, */*; q=0.01")
-                        setRequestProperty("X-Requested-With", "XMLHttpRequest")
-                    }
-                    val out = conn.outputStream
-                    val writer = java.io.PrintWriter(java.io.OutputStreamWriter(out, "UTF-8"), true)
-                    writer.append("--").append(boundary).append("\r\n")
-                    writer.append("Content-Disposition: form-data; name=\"upfile\"; filename=\"image.jpg\"\r\n")
-                    writer.append("Content-Type: image/jpeg\r\n\r\n").flush()
-                    out.write(bytes)
-                    out.flush()
-                    writer.append("\r\n--").append(boundary).append("--\r\n").flush()
-                    writer.close()
-                    out.close()
+            val bytes = prepareImageBytes(rawBytes)
+            val mediaType = "image/jpeg".toMediaTypeOrNull()
+            val requestBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("upfile", "image.jpg", bytes.toRequestBody(mediaType))
+                .build()
 
-                    val responseCode = conn.responseCode
-                    if (responseCode == 200) {
-                        val responseText = conn.inputStream.bufferedReader().use { it.readText() }
-                        val json = org.json.JSONObject(responseText)
-                        val blocks = json.optJSONArray("blocks")
-                        if (blocks != null && blocks.length() > 0) {
-                            val block = blocks.getJSONObject(0)
-                            val params = block.optJSONObject("params")
-                            val queryUrl = params?.optString("url")
-                            if (!queryUrl.isNullOrBlank()) {
-                                val finalUrl = if (queryUrl.startsWith("http")) queryUrl else "https://yandex.com/images/search?$queryUrl"
-                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(finalUrl)).apply {
-                                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                                }
-                                context.startActivity(intent)
-                                return@launch
-                            }
+            val lang = Locale.getDefault().language.lowercase()
+            val base = when (lang) {
+                "tr" -> "https://yandex.com.tr/gorsel/search"
+                "ru", "be", "kk" -> "https://yandex.ru/images/search"
+                else -> "https://yandex.com/images/search"
+            }
+            val uploadUrl = "$base?rpt=imageview&format=json&request=%7B%22blocks%22%3A%5B%7B%22block%22%3A%22b-page_type_search-by-image__link%22%7D%5D%7D"
+
+            val request = Request.Builder()
+                .url(uploadUrl)
+                .post(requestBody)
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+                .header("Accept", "application/json, text/javascript, */*; q=0.01")
+                .header("X-Requested-With", "XMLHttpRequest")
+                .build()
+
+            val response = okHttpClient.newCall(request).execute()
+            var finalSearchUrl: String? = null
+
+            if (response.isSuccessful) {
+                val responseText = response.body?.string()
+                if (!responseText.isNullOrBlank()) {
+                    val json = JSONObject(responseText)
+                    val blocks = json.optJSONArray("blocks")
+                    if (blocks != null && blocks.length() > 0) {
+                        val params = blocks.getJSONObject(0).optJSONObject("params")
+                        val cbirId = params?.optString("cbirId")
+                        val origImgUrl = params?.optString("originalImageUrl")
+                        val queryUrl = params?.optString("url")
+
+                        finalSearchUrl = when {
+                            !cbirId.isNullOrBlank() -> "https://yandex.com/images/search?rpt=imageview&cbir_id=" + URLEncoder.encode(cbirId, "UTF-8")
+                            !origImgUrl.isNullOrBlank() -> "https://yandex.com/images/search?rpt=imageview&url=" + URLEncoder.encode(origImgUrl, "UTF-8")
+                            !queryUrl.isNullOrBlank() -> if (queryUrl.startsWith("http")) queryUrl else "https://yandex.com/images/search?$queryUrl"
+                            else -> null
                         }
                     }
-
-                    var redirectUrl = conn.getHeaderField("Location")
-                    if (redirectUrl.isNullOrBlank()) {
-                        redirectUrl = conn.url.toString()
-                    }
-                    if (redirectUrl.startsWith("/")) {
-                        redirectUrl = "https://yandex.com$redirectUrl"
-                    }
-                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(redirectUrl)).apply {
-                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                    }
-                    context.startActivity(intent)
-                } else {
-                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse("https://yandex.com/images/")).apply {
-                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                    }
-                    context.startActivity(intent)
                 }
             }
+
+            val targetUrl = finalSearchUrl ?: "https://yandex.com/images/"
+            withContext(Dispatchers.Main) {
+                launchBrowser(context, targetUrl)
+            }
         } catch (e: Exception) {
-            Log.e("GameActivity", "Failed to search image on Yandex", e)
-            try {
-                val fallbackIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse("https://yandex.com/images/")).apply {
-                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                }
-                context.startActivity(fallbackIntent)
-            } catch (ignored: Exception) {}
+            Log.d("GameActivity", "Error: ${e.message}")
         }
     }
+}
+
+fun performYandexImageSearch(context: Context, imageUriStr: String) {
+    openYandexImageSearch(context, imageUriStr)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

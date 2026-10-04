@@ -326,7 +326,7 @@ fun GameDialogsHost(activity: GameActivity, viewModel: GameViewModel) {
                             view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                             val uri = imageDialogUri
                             activity.imageDialogState.value = null
-                            activity.posterMenuState.value = uri
+                            openYandexImageSearch(activity, uri)
                         }
                     ),
                 contentAlignment = Alignment.Center

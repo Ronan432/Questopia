@@ -1,4 +1,6 @@
 package org.qp.android.ui.stock
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.sp
 
@@ -398,7 +400,7 @@ fun InstalledGamesList(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun GameCard(
     game: GameData,
@@ -453,7 +455,25 @@ fun GameCard(
                 Surface(
                     shape = coverShape,
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .combinedClickable(
+                            onClick = {
+                                if (isSelectionMode) {
+                                    onCardClick()
+                                } else {
+                                    showActionSheet = true
+                                }
+                            },
+                            onLongClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                if (hasIcon) {
+                                    org.qp.android.ui.game.openYandexImageSearch(context, game.iconUrl.toString())
+                                } else {
+                                    onLongClick()
+                                }
+                            }
+                        )
                 ) {
                     if (hasIcon) {
                         SubcomposeAsyncImage(
@@ -875,6 +895,7 @@ fun RemoteGamesList(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RemoteGameCard(
     game: GameData,
@@ -909,6 +930,15 @@ fun RemoteGameCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(130.dp)
+                    .combinedClickable(
+                        onClick = onDownload,
+                        onLongClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                            if (hasIcon) {
+                                org.qp.android.ui.game.openYandexImageSearch(context, game.iconUrl.toString())
+                            }
+                        }
+                    )
             ) {
                 if (hasIcon) {
                     SubcomposeAsyncImage(

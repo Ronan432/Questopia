@@ -9,7 +9,13 @@ import 'remote_game.dart';
 import '../../../core/native/rust_runtime.dart';
 
 class GameRepository {
-  Future<Directory> getGamesDirectory() async {
+  Future<Directory> getGamesDirectory([String? customDir]) async {
+    if (customDir != null && customDir.trim().isNotEmpty) {
+      final custom = Directory(customDir.trim());
+      if (await custom.exists()) {
+        return custom;
+      }
+    }
     final docsDir = await getApplicationDocumentsDirectory();
     final gamesDir = Directory(p.join(docsDir.path, 'Questopia', 'games'));
     if (!await gamesDir.exists()) {
@@ -19,8 +25,8 @@ class GameRepository {
   }
 
   /// Scans the local games directory for game folders and loose QSP files.
-  Future<List<LocalGame>> scanLocalGames() async {
-    final dir = await getGamesDirectory();
+  Future<List<LocalGame>> scanLocalGames([String? customDir]) async {
+    final dir = await getGamesDirectory(customDir);
     final games = <LocalGame>[];
 
     if (!await dir.exists()) return games;
@@ -78,8 +84,8 @@ class GameRepository {
   }
 
   /// Downloads and extracts a remote game ZIP into local games folder.
-  Future<LocalGame?> downloadAndExtractGame(RemoteGame remoteGame) async {
-    final rootDir = await getGamesDirectory();
+  Future<LocalGame?> downloadAndExtractGame(RemoteGame remoteGame, [String? customDir]) async {
+    final rootDir = await getGamesDirectory(customDir);
     final targetFolder = Directory(p.join(rootDir.path, remoteGame.id.isNotEmpty ? remoteGame.id : remoteGame.title));
 
     if (!await targetFolder.exists()) {
@@ -126,7 +132,7 @@ class GameRepository {
     }
 
     // Rescan local games
-    final localGames = await scanLocalGames();
+    final localGames = await scanLocalGames(customDir);
     return localGames.firstWhere(
       (g) => g.folderPath == targetFolder.path || g.title == remoteGame.title,
       orElse: () => LocalGame(

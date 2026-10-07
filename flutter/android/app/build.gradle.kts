@@ -7,7 +7,7 @@ plugins {
 android {
     namespace = "com.questopia.re"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.2.12479018"
+    ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

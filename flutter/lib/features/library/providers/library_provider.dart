@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/settings_provider.dart';
 import '../data/game_repository.dart';
 import '../data/local_game.dart';
 import '../data/remote_game.dart';
@@ -36,16 +37,17 @@ class LibraryState {
 }
 
 class LibraryNotifier extends StateNotifier<LibraryState> {
-  LibraryNotifier(this._repository) : super(const LibraryState()) {
+  LibraryNotifier(this._repository, this._customDir) : super(const LibraryState()) {
     refreshLocalGames();
     refreshRemoteCatalog();
   }
 
   final GameRepository _repository;
+  final String _customDir;
 
   Future<void> refreshLocalGames() async {
     state = state.copyWith(isLoadingLocal: true);
-    final games = await _repository.scanLocalGames();
+    final games = await _repository.scanLocalGames(_customDir);
     state = state.copyWith(localGames: games, isLoadingLocal: false);
   }
 
@@ -57,7 +59,7 @@ class LibraryNotifier extends StateNotifier<LibraryState> {
 
   Future<LocalGame?> downloadGame(RemoteGame remoteGame) async {
     state = state.copyWith(downloadingGameId: remoteGame.id);
-    final game = await _repository.downloadAndExtractGame(remoteGame);
+    final game = await _repository.downloadAndExtractGame(remoteGame, _customDir);
     await refreshLocalGames();
     state = state.copyWith(downloadingGameId: null);
     return game;
@@ -69,5 +71,6 @@ final gameRepositoryProvider = Provider((ref) => GameRepository());
 final libraryProvider =
     StateNotifierProvider<LibraryNotifier, LibraryState>((ref) {
   final repo = ref.watch(gameRepositoryProvider);
-  return LibraryNotifier(repo);
+  final settings = ref.watch(settingsProvider);
+  return LibraryNotifier(repo, settings.gamesDirectory);
 });

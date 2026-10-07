@@ -1,18 +1,26 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class SaveSlotsSheet extends StatefulWidget {
+import '../../providers/game_engine_provider.dart';
+
+class SaveSlotsSheet extends ConsumerStatefulWidget {
   const SaveSlotsSheet({super.key});
 
   @override
-  State<SaveSlotsSheet> createState() => _SaveSlotsSheetState();
+  ConsumerState<SaveSlotsSheet> createState() => _SaveSlotsSheetState();
 }
 
-class _SaveSlotsSheetState extends State<SaveSlotsSheet> {
+class _SaveSlotsSheetState extends ConsumerState<SaveSlotsSheet> {
   int _page = 0;
 
   @override
   Widget build(BuildContext context) {
-    final start = _page * 6;
+    final engineState = ref.watch(gameEngineProvider);
+    final engineNotifier = ref.read(gameEngineProvider.notifier);
+
+    final startSlot = _page * 6;
+
     return SafeArea(
       child: SizedBox(
         height: MediaQuery.sizeOf(context).height * .78,
@@ -22,56 +30,87 @@ class _SaveSlotsSheetState extends State<SaveSlotsSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Kayıtlar',
+                'Saves & Slots',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 8),
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.autorenew_rounded),
-                  title: const Text('Otomatik kayıt'),
-                  subtitle: const Text('Son oyun durumu'),
-                  trailing: FilledButton.tonal(
-                    onPressed: () {},
-                    child: const Text('Yükle'),
+                  title: const Text('Auto-Save'),
+                  subtitle: Text(
+                    engineState.autoSaveData != null
+                        ? 'Last saved session available'
+                        : 'No auto-save available',
                   ),
+                  trailing: engineState.autoSaveData != null
+                      ? FilledButton.tonal(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            engineNotifier.loadFromSlot(-1);
+                          },
+                          child: const Text('Load'),
+                        )
+                      : null,
                 ),
               ),
               const SizedBox(height: 8),
               Expanded(
                 child: ListView.builder(
                   itemCount: 6,
-                  itemBuilder: (context, index) => Card(
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        child: Text('${start + index + 1}'),
+                  itemBuilder: (context, index) {
+                    final slotIndex = startSlot + index;
+                    final hasData = engineState.saveSlots.containsKey(slotIndex);
+
+                    return Card(
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          child: Text('${slotIndex + 1}'),
+                        ),
+                        title: Text('Slot ${slotIndex + 1}'),
+                        subtitle: Text(hasData ? 'Saved Game State' : 'Empty Slot'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (hasData)
+                              IconButton(
+                                icon: const Icon(Icons.play_arrow_rounded),
+                                tooltip: 'Load Slot',
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  engineNotifier.loadFromSlot(slotIndex);
+                                },
+                              ),
+                            IconButton(
+                              icon: const Icon(Icons.save_outlined),
+                              tooltip: 'Save Slot',
+                              onPressed: () {
+                                engineNotifier.saveToSlot(slotIndex);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Saved to Slot ${slotIndex + 1}'),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                      title: Text('Kayıt yuvası ${start + index + 1}'),
-                      subtitle: const Text('Boş'),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.save_outlined),
-                        tooltip: 'Kaydet',
-                        onPressed: () {},
-                      ),
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ),
               Row(
                 children: [
                   IconButton(
-                    onPressed: _page == 0
-                        ? null
-                        : () => setState(() => _page--),
+                    onPressed: _page == 0 ? null : () => setState(() => _page--),
                     icon: const Icon(Icons.chevron_left_rounded),
                   ),
                   Expanded(
-                    child: Center(child: Text('Sayfa ${_page + 1} / 10')),
+                    child: Center(child: Text('Page ${_page + 1} / 10')),
                   ),
                   IconButton(
-                    onPressed: _page == 9
-                        ? null
-                        : () => setState(() => _page++),
+                    onPressed: _page == 9 ? null : () => setState(() => _page++),
                     icon: const Icon(Icons.chevron_right_rounded),
                   ),
                 ],
@@ -81,17 +120,27 @@ class _SaveSlotsSheetState extends State<SaveSlotsSheet> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () {},
+                      onPressed: () async {
+                        final result = await FilePicker.platform.pickFiles(
+                          type: FileType.custom,
+                          allowedExtensions: ['sav'],
+                        );
+                        if (result != null && result.files.isNotEmpty) {
+                          // Import save file
+                        }
+                      },
                       icon: const Icon(Icons.file_upload_outlined),
-                      label: const Text('İçe aktar'),
+                      label: const Text('Import .sav'),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () {},
+                      onPressed: () async {
+                        // Export save file
+                      },
                       icon: const Icon(Icons.file_download_outlined),
-                      label: const Text('Dışa aktar'),
+                      label: const Text('Export .sav'),
                     ),
                   ),
                 ],

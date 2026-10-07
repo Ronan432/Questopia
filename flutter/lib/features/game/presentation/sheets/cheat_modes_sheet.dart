@@ -1,7 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class CheatModesSheet extends StatelessWidget {
+import '../../providers/game_engine_provider.dart';
+
+class CheatModesSheet extends ConsumerStatefulWidget {
   const CheatModesSheet({super.key});
+
+  @override
+  ConsumerState<CheatModesSheet> createState() => _CheatModesSheetState();
+}
+
+class _CheatModesSheetState extends ConsumerState<CheatModesSheet> {
+  final TextEditingController _commandController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _commandController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +35,7 @@ class CheatModesSheet extends StatelessWidget {
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'Hile modları',
+                    'Cheat Engine & Editor',
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                 ),
@@ -25,23 +43,23 @@ class CheatModesSheet extends StatelessWidget {
               const TabBar(
                 isScrollable: true,
                 tabs: [
-                  Tab(text: 'Değişkenler'),
-                  Tab(text: 'Kilitler'),
-                  Tab(text: 'Işınlan'),
-                  Tab(text: 'Envanter'),
-                  Tab(text: 'Konsol'),
-                  Tab(text: 'Fark'),
+                  Tab(text: 'Variables'),
+                  Tab(text: 'Locks'),
+                  Tab(text: 'Teleport'),
+                  Tab(text: 'Inventory'),
+                  Tab(text: 'Console'),
+                  Tab(text: 'Diff'),
                 ],
               ),
               Expanded(
                 child: TabBarView(
                   children: [
-                    _variables(),
-                    _message('Dondurulmuş değişken yok'),
-                    _message('Konum seçin'),
-                    _message('Envanter boş'),
-                    _console(),
-                    _message('Başlangıç anlık görüntüsü hazır'),
+                    _variablesTab(),
+                    _message('No frozen variables active'),
+                    _message('Select target QSP location'),
+                    _message('Inventory items list'),
+                    _consoleTab(),
+                    _message('Initial state snapshot taken'),
                   ],
                 ),
               ),
@@ -52,49 +70,128 @@ class CheatModesSheet extends StatelessWidget {
     );
   }
 
-  Widget _variables() => ListView(
-    padding: const EdgeInsets.all(20),
-    children: const [
-      TextField(
-        decoration: InputDecoration(
-          hintText: 'Değişken ara',
-          prefixIcon: Icon(Icons.search),
-        ),
+  Widget _variablesTab() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchController,
+            decoration: const InputDecoration(
+              hintText: 'Search variable name...',
+              prefixIcon: Icon(Icons.search),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: ListView(
+              children: [
+                ListTile(
+                  title: const Text('money'),
+                  subtitle: const Text('1000'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => _showEditVarDialog('money', '1000'),
+                  ),
+                ),
+                ListTile(
+                  title: const Text('health'),
+                  subtitle: const Text('100'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => _showEditVarDialog('health', '100'),
+                  ),
+                ),
+                ListTile(
+                  title: const Text(r'$location'),
+                  subtitle: const Text('StartLocation'),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => _showEditVarDialog(r'$location', "'StartLocation'"),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
-      SizedBox(height: 12),
-      ListTile(
-        title: Text('health'),
-        subtitle: Text('100'),
-        trailing: Icon(Icons.edit_outlined),
-      ),
-      ListTile(
-        title: Text(r'$location'),
-        subtitle: Text('Başlangıç'),
-        trailing: Icon(Icons.edit_outlined),
-      ),
-    ],
-  );
+    );
+  }
 
-  Widget _console() => Padding(
-    padding: const EdgeInsets.all(20),
-    child: Column(
-      children: [
-        const Expanded(
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: Text('QSP konsolu'),
-          ),
+  void _showEditVarDialog(String varName, String currentValue) {
+    final controller = TextEditingController(text: currentValue);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Edit $varName'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'New Value'),
         ),
-        TextField(
-          maxLines: 3,
-          decoration: const InputDecoration(
-            hintText: 'QSP komutu',
-            suffixIcon: Icon(Icons.play_arrow_rounded),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
           ),
-        ),
-      ],
-    ),
-  );
+          FilledButton(
+            onPressed: () {
+              ref
+                  .read(gameEngineProvider.notifier)
+                  .overrideVariable(varName, controller.text);
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _consoleTab() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const SingleChildScrollView(
+                child: Text(
+                  'QSP Console ready.\nEnter statements like: money += 500 or goto "loc2"',
+                  style: TextStyle(fontFamily: 'monospace'),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _commandController,
+            maxLines: 2,
+            decoration: InputDecoration(
+              hintText: 'QSP statement',
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.play_arrow_rounded),
+                onPressed: () {
+                  if (_commandController.text.trim().isNotEmpty) {
+                    ref
+                        .read(gameEngineProvider.notifier)
+                        .execCode(_commandController.text.trim());
+                    _commandController.clear();
+                  }
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _message(String value) => Center(child: Text(value));
 }

@@ -1,40 +1,63 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/providers/settings_provider.dart';
 import 'core/theme/questopia_theme.dart';
 import 'features/library/presentation/library_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const QuestopiaApp());
+  runApp(
+    const ProviderScope(
+      child: QuestopiaApp(),
+    ),
+  );
 }
 
-class QuestopiaApp extends StatefulWidget {
+class QuestopiaApp extends ConsumerWidget {
   const QuestopiaApp({super.key});
 
   @override
-  State<QuestopiaApp> createState() => _QuestopiaAppState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
 
-class _QuestopiaAppState extends State<QuestopiaApp> {
-  ThemeMode _themeMode = ThemeMode.system;
-  bool _amoled = false;
+    ThemeMode mode;
+    bool isAmoled = false;
 
-  void _setTheme(ThemeMode mode, bool amoled) {
-    setState(() {
-      _themeMode = mode;
-      _amoled = amoled;
-    });
-  }
+    switch (settings.themeMode) {
+      case ThemeModeOption.light:
+        mode = ThemeMode.light;
+        break;
+      case ThemeModeOption.dark:
+        mode = ThemeMode.dark;
+        break;
+      case ThemeModeOption.amoled:
+        mode = ThemeMode.dark;
+        isAmoled = true;
+        break;
+      case ThemeModeOption.system:
+        mode = ThemeMode.system;
+        break;
+    }
 
-  @override
-  Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Questopia',
       debugShowCheckedModeBanner: false,
       theme: QuestopiaTheme.light(),
-      darkTheme: QuestopiaTheme.dark(amoled: _amoled),
-      themeMode: _themeMode,
-      home: LibraryScreen(onThemeChanged: _setTheme),
+      darkTheme: QuestopiaTheme.dark(amoled: isAmoled),
+      themeMode: mode,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en', ''),
+        Locale('ru', ''),
+        Locale('tr', ''),
+      ],
+      home: const LibraryScreen(),
     );
   }
 }

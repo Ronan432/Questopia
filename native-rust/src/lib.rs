@@ -7,6 +7,8 @@ pub mod xml_parser;
 use jni::objects::{JByteArray, JClass, JString};
 use jni::sys::{jbyteArray, jint, jstring};
 use jni::JNIEnv;
+use std::ffi::{CStr, CString};
+use std::os::raw::c_char;
 
 // ============================================================================
 // Android JNI Exports: org.qp.android.helpers.native_core.RustEngineCore
@@ -166,4 +168,78 @@ pub extern "system" fn Java_org_qp_desktop_engine_RustEngineCore_readArchiveFile
     entry_path: JString,
 ) -> jbyteArray {
     Java_org_qp_android_helpers_native_1core_RustEngineCore_readArchiveFile(env, _class, archive_path, entry_path)
+}
+
+// ============================================================================
+// C FFI Exports for Dart / Flutter
+// ============================================================================
+
+#[no_mangle]
+pub extern "C" fn rust_parse_html(input: *const c_char) -> *mut c_char {
+    if input.is_null() {
+        return std::ptr::null_mut();
+    }
+    let c_str = unsafe { CStr::from_ptr(input) };
+    let input_str = match c_str.to_str() {
+        Ok(s) => s,
+        Err(_) => return std::ptr::null_mut(),
+    };
+    let result = html_parser::parse_qsp_html(input_str);
+    let json = serde_json::to_string(&result).unwrap_or_default();
+    match CString::new(json) {
+        Ok(cs) => cs.into_raw(),
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn rust_parse_repository_xml(xml_input: *const c_char) -> *mut c_char {
+    if xml_input.is_null() {
+        return std::ptr::null_mut();
+    }
+    let c_str = unsafe { CStr::from_ptr(xml_input) };
+    let xml_str = match c_str.to_str() {
+        Ok(s) => s,
+        Err(_) => return std::ptr::null_mut(),
+    };
+    match xml_parser::parse_stock_xml_fast(xml_str) {
+        Ok(list) => {
+            let json = serde_json::to_string(&list).unwrap_or_default();
+            match CString::new(json) {
+                Ok(cs) => cs.into_raw(),
+                Err(_) => std::ptr::null_mut(),
+            }
+        }
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn rust_extract_archive(archive_path: *const c_char, target_dir: *const c_char) -> i32 {
+    if archive_path.is_null() || target_dir.is_null() {
+        return -1;
+    }
+    let a_cstr = unsafe { CStr::from_ptr(archive_path) };
+    let t_cstr = unsafe { CStr::from_ptr(target_dir) };
+    let a_str = match a_cstr.to_str() {
+        Ok(s) => s,
+        Err(_) => return -1,
+    };
+    let t_str = match t_cstr.to_str() {
+        Ok(s) => s,
+        Err(_) => return -1,
+    };
+    match archive::extract_archive_to_dir(a_str, t_str) {
+        Ok(count) => count as i32,
+        Err(_) => -1,
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn rust_free_string(s: *mut c_char) {
+    if !s.is_null() {
+        unsafe {
+            let _ = CString::from_raw(s);
+        }
+    }
 }

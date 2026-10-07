@@ -1,68 +1,80 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/settings_provider.dart';
 
-class SettingsSheet extends StatefulWidget {
-  const SettingsSheet({required this.onThemeChanged, super.key});
-
-  final void Function(ThemeMode mode, bool amoled) onThemeChanged;
-
-  @override
-  State<SettingsSheet> createState() => _SettingsSheetState();
-}
-
-class _SettingsSheetState extends State<SettingsSheet> {
-  ThemeMode _mode = ThemeMode.system;
-  bool _amoled = false;
-  double _fontScale = 1;
+class SettingsSheet extends ConsumerWidget {
+  const SettingsSheet({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
+    final notifier = ref.read(settingsProvider.notifier);
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
         child: ListView(
           shrinkWrap: true,
           children: [
-            Text('Ayarlar', style: Theme.of(context).textTheme.headlineSmall),
+            Center(
+              child: Container(
+                width: 32,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Settings', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 18),
-            SegmentedButton<ThemeMode>(
+            SegmentedButton<ThemeModeOption>(
               segments: const [
-                ButtonSegment(value: ThemeMode.system, label: Text('Sistem')),
-                ButtonSegment(value: ThemeMode.light, label: Text('Açık')),
-                ButtonSegment(value: ThemeMode.dark, label: Text('Koyu')),
+                ButtonSegment(
+                    value: ThemeModeOption.system, label: Text('System')),
+                ButtonSegment(
+                    value: ThemeModeOption.light, label: Text('Light')),
+                ButtonSegment(
+                    value: ThemeModeOption.dark, label: Text('Dark')),
+                ButtonSegment(
+                    value: ThemeModeOption.amoled, label: Text('AMOLED')),
               ],
-              selected: {_mode},
+              selected: {settings.themeMode},
               onSelectionChanged: (value) {
-                setState(() => _mode = value.first);
-                widget.onThemeChanged(_mode, _amoled);
+                notifier.setThemeMode(value.first);
               },
             ),
-            SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('AMOLED siyahı'),
-              value: _amoled,
-              onChanged: (value) {
-                setState(() => _amoled = value);
-                widget.onThemeChanged(_mode, _amoled);
-              },
-            ),
-            const SizedBox(height: 8),
-            Text('Yazı boyutu  ${_fontScale.toStringAsFixed(1)}x'),
+            const SizedBox(height: 16),
+            Text('Font Size: ${settings.fontSize.toStringAsFixed(0)} pt'),
             Slider(
-              value: _fontScale,
-              min: .8,
-              max: 1.4,
+              value: settings.fontSize,
+              min: 12.0,
+              max: 24.0,
               divisions: 6,
-              onChanged: (value) => setState(() => _fontScale = value),
+              onChanged: (value) {
+                notifier.setFontSize(value);
+              },
             ),
-            const ListTile(
-              leading: Icon(Icons.folder_outlined),
-              title: Text('Oyun klasörü'),
-              subtitle: Text('Cihazınızdaki oyun dizinini seçin'),
-            ),
-            const ListTile(
-              leading: Icon(Icons.volume_up_outlined),
-              title: Text('Ses ve medya'),
-              subtitle: Text('Ses seviyesi, OGV ve yakınlaştırma'),
+            ListTile(
+              leading: const Icon(Icons.folder_outlined),
+              title: const Text('Game Directory'),
+              subtitle: Text(
+                settings.gamesDirectory.isNotEmpty
+                    ? settings.gamesDirectory
+                    : 'Default internal directory',
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.drive_file_move_outlined),
+                onPressed: () async {
+                  final selectedDir =
+                      await FilePicker.platform.getDirectoryPath();
+                  if (selectedDir != null) {
+                    await notifier.setGamesDirectory(selectedDir);
+                  }
+                },
+              ),
             ),
           ],
         ),

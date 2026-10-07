@@ -1,6 +1,7 @@
 import 'dart:io';
-import 'package:file_picker/file_picker.dart';
+import 'package:filesystem_picker/filesystem_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class PathPickerHelper {
@@ -13,7 +14,6 @@ class PathPickerHelper {
       final status = await Permission.manageExternalStorage.request();
       if (status.isGranted) return true;
 
-      // Fallback for standard storage permissions
       if (await Permission.storage.isGranted) return true;
       final storageStatus = await Permission.storage.request();
       return storageStatus.isGranted;
@@ -22,67 +22,70 @@ class PathPickerHelper {
     }
   }
 
-  /// Picks a directory path safely with permission check, getDirectoryPath(),
-  /// file selection fallback, and preset/manual path dialog.
+  /// Picks a directory using 3rd party in-app FilesystemPicker directory browser.
   static Future<String?> pickDirectory(BuildContext context, {String currentPath = ''}) async {
+    final folderColor = Theme.of(context).colorScheme.primary;
+
     await ensureStoragePermissions();
+    if (!context.mounted) return null;
 
-    // Strategy 1: Native getDirectoryPath()
-    try {
-      final selectedDir = await FilePicker.platform.getDirectoryPath();
-      if (selectedDir != null && selectedDir.trim().isNotEmpty) {
-        return selectedDir.trim();
+    // Determine root directory to start browsing from
+    Directory rootDir;
+    if (Platform.isAndroid) {
+      rootDir = Directory('/storage/emulated/0');
+      if (!await rootDir.exists()) {
+        rootDir = await getApplicationDocumentsDirectory();
       }
-    } catch (_) {
-      // Fall through to file pick fallback
+    } else {
+      rootDir = await getApplicationDocumentsDirectory();
     }
 
-    // Strategy 2: Pick a game file inside the target folder
     try {
-      final fileResult = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['qsp', 'gam', 'zip', 'txt', 'png', 'jpg'],
-        allowMultiple: false,
+      if (!context.mounted) return null;
+      final selectedPath = await FilesystemPicker.open(
+        title: 'Select Game Folder',
+        context: context,
+        rootDirectory: rootDir,
+        fsType: FilesystemType.folder,
+        pickText: 'Select This Folder',
+        folderIconColor: folderColor,
       );
-      if (fileResult != null && fileResult.files.isNotEmpty) {
-        final filePath = fileResult.files.single.path;
-        if (filePath != null) {
-          final parentDir = File(filePath).parent.path;
-          return parentDir;
-        }
+
+      if (selectedPath != null && selectedPath.trim().isNotEmpty) {
+        return selectedPath.trim();
       }
     } catch (_) {
-      // Fall through to dialog
+      // Fall through to manual path entry dialog if picker is dismissed
     }
 
-    // Strategy 3: Preset & Manual Path Entry Dialog
+    // Direct path entry dialog fallback
     if (context.mounted) {
-      return _showPathSelectionDialog(context, currentPath);
+      return _showManualPathDialog(context, currentPath);
     }
 
     return null;
   }
 
-  static Future<String?> _showPathSelectionDialog(BuildContext context, String currentPath) async {
+  static Future<String?> _showManualPathDialog(BuildContext context, String currentPath) async {
     final controller = TextEditingController(text: currentPath);
 
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Select Game Folder Path'),
+        title: const Text('Enter Game Folder Path'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Enter path or pick a preset folder:',
+              'Enter path or tap preset folder:',
               style: TextStyle(fontSize: 13),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
               decoration: const InputDecoration(
-                hintText: '/sdcard/Questopia/games',
+                hintText: '/storage/emulated/0/Questopia/games',
                 prefixIcon: Icon(Icons.folder_outlined),
                 border: OutlineInputBorder(),
               ),
@@ -95,12 +98,12 @@ class PathPickerHelper {
                 ActionChip(
                   avatar: const Icon(Icons.folder_special, size: 16),
                   label: const Text('Questopia Games'),
-                  onPressed: () => controller.text = '/sdcard/Questopia/games',
+                  onPressed: () => controller.text = '/storage/emulated/0/Questopia/games',
                 ),
                 ActionChip(
                   avatar: const Icon(Icons.download, size: 16),
                   label: const Text('Download Folder'),
-                  onPressed: () => controller.text = '/sdcard/Download',
+                  onPressed: () => controller.text = '/storage/emulated/0/Download',
                 ),
               ],
             ),

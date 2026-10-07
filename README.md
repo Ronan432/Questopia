@@ -8,4 +8,4 @@ Android application for launching text format games [QSP](https://qsp.su/)
 
 ## Thanks
 
-* **[Nikolai Reznik](https://github.com/shirrumon)** for creating a PrettyFilePicker.
+* **[Questopia](https://github.com/Pixel-Narrative-Punks/Questopia)** for the original project.

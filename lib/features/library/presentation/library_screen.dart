@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:bottom_shell_nav/bottom_shell_nav.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -109,51 +110,60 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             defaultTargetPlatform == TargetPlatform.macOS ||
             defaultTargetPlatform == TargetPlatform.linux);
 
-    final mainContent = Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-          child: SearchBar(
-            elevation: WidgetStateProperty.all(0),
-            backgroundColor: WidgetStateProperty.all(
-              colors.surfaceContainerHigh,
-            ),
-            padding: WidgetStateProperty.all(
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-            ),
-            shape: WidgetStateProperty.all(
-              RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
+    final isAndroid = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+    // Builds the library/catalog page content for the given tab index.
+    // Android shell branches call this with their own index so each branch
+    // keeps its own content while sharing the screen level search state.
+    Widget mainContentFor(int tabIndex) {
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+            child: SearchBar(
+              elevation: WidgetStateProperty.all(0),
+              backgroundColor: WidgetStateProperty.all(
+                colors.surfaceContainerHigh,
               ),
-            ),
-            hintText: _selectedTab == 0
-                ? l10n.search
-                : 'Search online catalog...',
-            hintStyle: WidgetStateProperty.all(
-              TextStyle(
-                color: colors.onSurfaceVariant.withValues(alpha: 0.7),
+              padding: WidgetStateProperty.all(
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
               ),
-            ),
-            leading: Icon(Icons.search_rounded, color: colors.primary),
-            trailing: [
-              if (_searchQuery.isNotEmpty)
-                IconButton(
-                  icon: const Icon(Icons.close_rounded, size: 20),
-                  onPressed: () {
-                    setState(() => _searchQuery = '');
-                  },
+              shape: WidgetStateProperty.all(
+                RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
                 ),
-            ],
-            onChanged: (value) => setState(() => _searchQuery = value),
+              ),
+              hintText: tabIndex == 0
+                  ? l10n.search
+                  : 'Search online catalog...',
+              hintStyle: WidgetStateProperty.all(
+                TextStyle(
+                  color: colors.onSurfaceVariant.withValues(alpha: 0.7),
+                ),
+              ),
+              leading: Icon(Icons.search_rounded, color: colors.primary),
+              trailing: [
+                if (_searchQuery.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    onPressed: () {
+                      setState(() => _searchQuery = '');
+                    },
+                  ),
+              ],
+              onChanged: (value) => setState(() => _searchQuery = value),
+            ),
           ),
-        ),
-        Expanded(
-          child: _selectedTab == 0
-              ? _buildLocalTab(filteredLocal, libraryState)
-              : _buildRemoteTab(filteredRemote, libraryState),
-        ),
-      ],
-    );
+          Expanded(
+            child: tabIndex == 0
+                ? _buildLocalTab(filteredLocal, libraryState)
+                : _buildRemoteTab(filteredRemote, libraryState),
+          ),
+        ],
+      );
+    }
+
+    final mainContent = mainContentFor(_selectedTab);
 
     return M3ETheme(
       data: M3EThemeData(
@@ -185,9 +195,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 ),
                 const SizedBox(width: 12),
               ],
-        body: SafeArea(
-          child: isDesktop
-              ? Row(
+        body: isDesktop
+            ? SafeArea(
+                child: Row(
                   children: [
                     NavigationRail(
                       selectedIndex: _selectedTab <= 2 ? _selectedTab : 0,
@@ -262,10 +272,34 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                           : mainContent,
                     ),
                   ],
-                )
-              : mainContent,
-        ),
-        bottomNavigationBar: isDesktop
+                ),
+              )
+            : isAndroid
+                  ? BottomShell(
+                      appearance: BottomShellAppearance.gNav(),
+                      branches: [
+                        BottomBranch(
+                          id: 'library',
+                          destination: BottomDestination(
+                            icon: Icons.library_books_outlined,
+                            selectedIcon: Icons.library_books,
+                            label: l10n.library,
+                          ),
+                          builder: (_) => SafeArea(child: mainContentFor(0)),
+                        ),
+                        BottomBranch(
+                          id: 'catalog',
+                          destination: BottomDestination(
+                            icon: Icons.explore_outlined,
+                            selectedIcon: Icons.explore,
+                            label: l10n.catalog,
+                          ),
+                          builder: (_) => SafeArea(child: mainContentFor(1)),
+                        ),
+                      ],
+                    )
+                  : SafeArea(child: mainContent),
+        bottomNavigationBar: isDesktop || isAndroid
             ? null
             : Padding(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
@@ -490,7 +524,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           game: game,
           onPlay: () {
             ref.read(gameEngineProvider.notifier).loadGame(game);
-            Navigator.of(context).push(
+            // The game player owns the full screen (it has its own in-game
+            // tabs), so it always pushes on the root navigator instead of the
+            // active Android shell branch navigator.
+            Navigator.of(context, rootNavigator: true).push(
               MaterialPageRoute<void>(
                 builder: (_) => GameScreen(title: game.title),
               ),
@@ -860,101 +897,102 @@ class _RemoteGameCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          game.displayName,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (game.lang.isNotEmpty) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: colors.primaryContainer,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            game.lang.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: colors.onPrimaryContainer,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      if (game.author.isNotEmpty)
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Expanded(
                           child: Text(
-                            'Author: ${game.author}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: colors.onSurfaceVariant,
+                            game.displayName,
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
                                 ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      if (game.version.isNotEmpty) ...[
-                        const SizedBox(width: 4),
-                        Text(
-                          'v${game.version}',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: colors.outline,
+                        if (game.lang.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: colors.primaryContainer,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              game.lang.toUpperCase(),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: colors.onPrimaryContainer,
                               ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  if (_sizeLabel.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      'Size: $_sizeLabel',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: colors.outline,
+                            ),
                           ),
-                    ),
-                  ],
-                  const SizedBox(height: 6),
-                  if (isDownloading)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        LinearProgressIndicator(value: progress),
-                        const SizedBox(height: 4),
-                        Text(
-                          progress == null
-                              ? l10n.downloading
-                              : '${(progress! * 100).toStringAsFixed(0)}%',
-                          style: Theme.of(context).textTheme.labelSmall,
-                        ),
+                        ],
                       ],
-                    )
-                  else
-                    SizedBox(
-                      width: double.infinity,
-                      child: M3EButton.icon(
-                        onPressed: onDownload,
-                        icon: const Icon(Icons.download_rounded, size: 18),
-                        label: Text(l10n.download),
-                        style: M3EButtonStyle.tonal,
-                        size: M3EButtonSize.sm,
-                        shape: M3EButtonShape.round,
-                      ),
                     ),
-                ],
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        if (game.author.isNotEmpty)
+                          Expanded(
+                            child: Text(
+                              'Author: ${game.author}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: colors.onSurfaceVariant,
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        if (game.version.isNotEmpty) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            'v${game.version}',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: colors.outline,
+                                ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (_sizeLabel.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'Size: $_sizeLabel',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: colors.outline,
+                            ),
+                      ),
+                    ],
+                    const SizedBox(height: 6),
+                    if (isDownloading)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          LinearProgressIndicator(value: progress),
+                          const SizedBox(height: 4),
+                          Text(
+                            progress == null
+                                ? l10n.downloading
+                                : '${(progress! * 100).toStringAsFixed(0)}%',
+                            style: Theme.of(context).textTheme.labelSmall,
+                          ),
+                        ],
+                      )
+                    else
+                      SizedBox(
+                        width: double.infinity,
+                        child: M3EButton.icon(
+                          onPressed: onDownload,
+                          icon: const Icon(Icons.download_rounded, size: 18),
+                          label: Text(l10n.download),
+                          style: M3EButtonStyle.tonal,
+                          size: M3EButtonSize.sm,
+                          shape: M3EButtonShape.round,
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),

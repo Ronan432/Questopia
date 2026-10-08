@@ -37,6 +37,7 @@ dependencies:
   split_pane: ^0.2.0
   material_3_expressive: ^1.0.9
   window_manager: ^0.5.2
+  bottom_shell_nav: ^0.4.4
 
 dev_dependencies:
   flutter_test:

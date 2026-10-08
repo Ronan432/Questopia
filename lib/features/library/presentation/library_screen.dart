@@ -12,7 +12,6 @@ import '../../../core/media/poster_menu_sheet.dart';
 import '../../../core/theme/questopia_theme.dart';
 import '../../../core/utils/path_picker_helper.dart';
 import '../../../core/widgets/questopia_scaffold.dart';
-import '../../../core/widgets/window_title_bar.dart';
 import '../../game/presentation/game_screen.dart';
 import '../../game/providers/game_engine_provider.dart';
 import '../../settings/presentation/settings_screen.dart';
@@ -45,19 +44,24 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         report.length > 800 ? '${report.substring(0, 800)}...' : report;
     await showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Crash report'),
-        content: SingleChildScrollView(child: Text(preview)),
-        actions: [
-          M3EButton.icon(
-            onPressed: () => Navigator.pop(ctx),
-            icon: const Icon(Icons.close_rounded, size: 16),
-            label: const Text('Close'),
-            style: M3EButtonStyle.filled,
-            size: M3EButtonSize.sm,
-            shape: M3EButtonShape.round,
-          ),
-        ],
+      builder: (ctx) => M3ETheme(
+        data: M3EThemeData(
+          colorScheme: QuestopiaTheme.m3eColorSchemeFrom(Theme.of(context).colorScheme),
+        ),
+        child: AlertDialog(
+          title: const Text('Crash report'),
+          content: SingleChildScrollView(child: Text(preview)),
+          actions: [
+            M3EButton.icon(
+              onPressed: () => Navigator.pop(ctx),
+              icon: const Icon(Icons.close_rounded, size: 16),
+              label: const Text('Close'),
+              style: M3EButtonStyle.filled,
+              size: M3EButtonSize.sm,
+              shape: M3EButtonShape.round,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -191,29 +195,34 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         if (value == 3) {
                           final confirmed = await showDialog<bool>(
                             context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text('Add Game'),
-                              content: const Text(
-                                  'Would you like to select and import a game folder from your device?'),
-                              actions: [
-                                M3EButton.icon(
-                                  onPressed: () => Navigator.pop(ctx, false),
-                                  icon: const Icon(Icons.close_rounded, size: 16),
-                                  label: const Text('Cancel'),
-                                  style: M3EButtonStyle.outlined,
-                                  size: M3EButtonSize.sm,
-                                  shape: M3EButtonShape.round,
-                                ),
-                                const SizedBox(width: 8),
-                                M3EButton.icon(
-                                  onPressed: () => Navigator.pop(ctx, true),
-                                  icon: const Icon(Icons.check_rounded, size: 16),
-                                  label: const Text('Import'),
-                                  style: M3EButtonStyle.filled,
-                                  size: M3EButtonSize.sm,
-                                  shape: M3EButtonShape.round,
-                                ),
-                              ],
+                            builder: (ctx) => M3ETheme(
+                              data: M3EThemeData(
+                                colorScheme: QuestopiaTheme.m3eColorSchemeFrom(colors),
+                              ),
+                              child: AlertDialog(
+                                title: const Text('Add Game'),
+                                content: const Text(
+                                    'Would you like to select and import a game folder from your device?'),
+                                actions: [
+                                  M3EButton.icon(
+                                    onPressed: () => Navigator.pop(ctx, false),
+                                    icon: const Icon(Icons.close_rounded, size: 16),
+                                    label: const Text('Cancel'),
+                                    style: M3EButtonStyle.outlined,
+                                    size: M3EButtonSize.sm,
+                                    shape: M3EButtonShape.round,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  M3EButton.icon(
+                                    onPressed: () => Navigator.pop(ctx, true),
+                                    icon: const Icon(Icons.check_rounded, size: 16),
+                                    label: const Text('Import'),
+                                    style: M3EButtonStyle.filled,
+                                    size: M3EButtonSize.sm,
+                                    shape: M3EButtonShape.round,
+                                  ),
+                                ],
+                              ),
                             ),
                           );
                           if (confirmed == true) {
@@ -613,28 +622,33 @@ class _LocalGameCard extends StatelessWidget {
       onLongPress: () async {
         final confirmed = await showDialog<bool>(
           context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Remove from library'),
-            content: Text('Remove "${game.title}" from your library?\n\nNote: Game files on your device will NOT be deleted.'),
-            actions: [
-              M3EButton.icon(
-                onPressed: () => Navigator.pop(ctx, false),
-                icon: const Icon(Icons.close_rounded, size: 16),
-                label: const Text('Cancel'),
-                style: M3EButtonStyle.outlined,
-                size: M3EButtonSize.sm,
-                shape: M3EButtonShape.round,
-              ),
-              const SizedBox(width: 8),
-              M3EButton.icon(
-                onPressed: () => Navigator.pop(ctx, true),
-                icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                label: const Text('Remove'),
-                style: M3EButtonStyle.filled,
-                size: M3EButtonSize.sm,
-                shape: M3EButtonShape.round,
-              ),
-            ],
+          builder: (ctx) => M3ETheme(
+            data: M3EThemeData(
+              colorScheme: QuestopiaTheme.m3eColorSchemeFrom(colors),
+            ),
+            child: AlertDialog(
+              title: const Text('Remove from library'),
+              content: Text('Remove "${game.title}" from your library?\n\nNote: Game files on your device will NOT be deleted.'),
+              actions: [
+                M3EButton.icon(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  icon: const Icon(Icons.close_rounded, size: 16),
+                  label: const Text('Cancel'),
+                  style: M3EButtonStyle.outlined,
+                  size: M3EButtonSize.sm,
+                  shape: M3EButtonShape.round,
+                ),
+                const SizedBox(width: 8),
+                M3EButton.icon(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                  label: const Text('Remove'),
+                  style: M3EButtonStyle.filled,
+                  size: M3EButtonSize.sm,
+                  shape: M3EButtonShape.round,
+                ),
+              ],
+            ),
           ),
         );
         if (confirmed == true) {

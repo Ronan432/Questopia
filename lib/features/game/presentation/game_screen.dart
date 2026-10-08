@@ -148,6 +148,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     <html>
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+      <base href="https://questopia.local/">
       ${HtmlProcessor.ogvBootstrapScript()}
       <style>
         body {

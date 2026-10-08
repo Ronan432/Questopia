@@ -1,6 +1,6 @@
 # FLUTTER.md — Questopia Flutter Handover & Development Log
 
-> **Last Update:** October 8, 2026 (Custom Windows TitleBar, Material You Logo & Window TitleBar Integration)  
+> **Last Update:** October 8, 2026 (Windows QSP Engine Repair: JNI qsp.dll replaced with C-API qsp.dll, FFI BOOL/BIGINT fixes)  
 > **Branch:** `flutter`  
 > **`flutter analyze`:** CLEAN (0 issues)  
 
@@ -129,6 +129,18 @@ Questopia-RE is an interpreter + library application for QSP (Quest Soft Player)
 
 ### 2.30. Floating Pill Style Bottom Navigation (`LibraryScreen`)
 - **Profile Pill Bottom Navigation:** Configured mobile/Android bottom navigation bar (`NavigationBar`) with a modern floating pill / capsule style (rounded container with side margins, soft shadow, and fully rounded pill corners matching Material 3 Expressive guidelines).
+
+### 2.31. Windows QSP Engine Repair: Wrong `qsp.dll` (JNI) Replaced With a Compiled C-API `qsp.dll` (`libs/native/windows-x64/qsp.dll`)
+- **Root Cause (Error Code 127 / `Failed to lookup symbol 'QSPInit'`):** The packaged Windows `qsp.dll` (identical MD5 in every copy: `63E6C16482C070056183E5AF91C407EE`) was actually a **JNI wrapper** exporting only the 38 `Java_com_libqsp_jni_QSPLib_*` symbols. None of the C API symbols expected by `qsp_ffi.dart` (`QSPInit`, `QSPLoadGameWorldFromData`, `QSPGetMainDesc`, ...) existed. Because `DynamicLibrary.open('qsp.dll')` succeeded, the DLL loaded but the symbol lookup failed with 127, `tryLoad()` returned `null`, the engine silently fell back to the **Mock State**, and the WebView therefore never showed real game content ("game UI never appears").
+- **Solution — Build the DLL with the Correct Binding:** The official QSP C sources from this branch (`app/src/main/cpp/qsp`, identical to `master`/`upstream`) were built without `_JAVA`, so `bindings_config.h` automatically selects **`_DEFAULT_BINDING`** — the binding that exports `QSPInit` and friends. `_UNICODE` was defined so `QSP_CHAR = wchar_t` (UTF-16), making `QSPStringStruct {str, end}` match the Dart UTF-16 expectations byte-for-byte. Oniguruma (the regex engine) was linked statically from the sources cached under `android/app/.cxx/.../oniguruma-src`, and `QSP_EXTERN` was defined as `__declspec(dllexport)` to produce the Release/x64 `qsp.dll` (50 exports: `QSPInit`, `QSPTerminate`, `QSPGetVersion`, `QSPGetMainDesc`, `QSPGetActions`, `QSPExecString`, `QSPLoadGameWorldFromData`, `QSPRestartGame`, `QSPSetCallback`, `QSPGetNumVarValue`, ...).
+- **DLL Placement:** The new DLL overwrote `libs/native/windows-x64/qsp.dll`; the `file(COPY ...)` rule in `windows/CMakeLists.txt` propagates it into `build/windows/x64/runner/{Debug,Profile,Release}` on the next `flutter build windows` / `flutter run -d windows`. The old JNI DLL is preserved only in git history (the `master` KMP desktop player used JNI). Note: while the app is running, the `Debug` copy is file-locked, so the process must be fully stopped and restarted before the new DLL takes effect.
+- **Verification (engine exercised through Python ctypes):** `QSPInit` → `QSPLoadGameWorldFromData(koboldia.qsp, 308330 bytes, isNew=1)` → `QSPRestartGame(1)` → `QSPGetMainDesc()` returned real game HTML and `QSPGetActions` returned 3 actions; corrupted data and invalid commands correctly returned 0 (error). `QSPGetVersion` now returns `5.9.2`.
+
+### 2.32. Dart FFI Signature Fixes: `QSP_BOOL` (char) Returns and `QSP_BIGINT` (int) Out-Buffer Width (`qsp_ffi.dart`)
+- **`QSP_BOOL` Returns Changed from `Int32` to `Int8`:** QSP defines `typedef char QSP_BOOL;`, so on x64 MSVC those functions only return their result in `AL`; reading them as `Int32` picked up garbage in the upper 24 bits (confirmed: `QSPRestartGame` read as `-256`, `QSPExecuteSelActionCode` read as `-1202830335` — i.e. failures were observed as successes). The return types of `QSPSetSelActionIndex`, `QSPExecuteSelActionCode`, `QSPSetSelObjectIndex`, `QSPExecString`, `QSPLoadGameWorldFromData`, `QSPOpenSavedGameFromData`, `QSPSaveGameAsData`, `QSPRestartGame`, `QSPExecCounter`, `QSPGetNumVarValue` and `QSPGetStrVarValue` were corrected to `Int8` (still ABI-compatible on ARM64, where the low byte of `w0` carries the same value).
+- **`QSPGetNumVarValue` Out-Buffer `Int64` → `Int32`:** Without `QSP_USE_BIGINT`, the default binding writes `QSP_BIGINT` as a plain **`int` (4 bytes)**; Dart read `Pointer<Int64>`, so the upper 4 bytes of every numeric variable were garbage. `getVarNum()` now allocates `calloc<Int32>()`.
+- **Struct Layout Verified:** `QSPStringStruct {str, end}`, `QSPListItemStruct {image, name}` and `QSPErrorInfoStruct {errorNum, errorDesc, locName, actIndex, topLineNum, intLineNum, intLine}` were matched against the C `qsp.h` layouts including padding.
+- **WebView Investigation (`game_screen.dart`):** No rendering bug found — `initialData` + `baseUrl: https://questopia.local/` loads (document title switches to the `data:text/html;base64` payload, `onLoadStop` fires, subresource requests such as `ogv/ogv.js` are intercepted and served, and the log is free of `ERR_*` failures apart from the benign `about:blank` abort). The empty game view came from the mock fallback above, not from the WebView. After the DLL fix the real HTML is expected to render without WebView changes.
 
 ---
 

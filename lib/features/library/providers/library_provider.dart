@@ -1,0 +1,257 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/providers/settings_provider.dart';
+import '../data/game_repository.dart';
+import '../data/local_game.dart';
+import '../data/remote_game.dart';
+
+enum CatalogSortOption {
+  comments('comments', 'Comments'),
+  name('name', 'Name'),
+  updated('updated', 'Updated'),
+  created('created', 'Added'),
+  likes('likes', 'Likes'),
+  downloads('downloads', 'Downloads'),
+  plays('plays', 'Plays');
+
+  final String value;
+  final String label;
+  const CatalogSortOption(this.value, this.label);
+}
+
+class LibraryState {
+  final List<LocalGame> localGames;
+  final List<RemoteGame> remoteGames;
+  final bool isLoadingLocal;
+  final bool isLoadingRemote;
+  final String? downloadingGameId;
+  final double? downloadProgress;
+  final String? remoteError;
+  final bool hasLoadedRemote;
+  final CatalogSortOption catalogSort;
+  final String catalogLanguage;
+  final bool catalogFeaturedOnly;
+  final int currentPage;
+  final int totalPages;
+
+  const LibraryState({
+    this.localGames = const [],
+    this.remoteGames = const [],
+    this.isLoadingLocal = false,
+    this.isLoadingRemote = false,
+    this.downloadingGameId,
+    this.downloadProgress,
+    this.remoteError,
+    this.hasLoadedRemote = false,
+    this.catalogSort = CatalogSortOption.comments,
+    this.catalogLanguage = '',
+    this.catalogFeaturedOnly = false,
+    this.currentPage = 1,
+    this.totalPages = 1,
+  });
+
+  LibraryState copyWith({
+    List<LocalGame>? localGames,
+    List<RemoteGame>? remoteGames,
+    bool? isLoadingLocal,
+    bool? isLoadingRemote,
+    String? downloadingGameId,
+    double? downloadProgress,
+    String? remoteError,
+    bool? hasLoadedRemote,
+    CatalogSortOption? catalogSort,
+    String? catalogLanguage,
+    bool? catalogFeaturedOnly,
+    int? currentPage,
+    int? totalPages,
+    bool clearDownloading = false,
+    bool clearProgress = false,
+    bool clearError = false,
+  }) {
+    return LibraryState(
+      localGames: localGames ?? this.localGames,
+      remoteGames: remoteGames ?? this.remoteGames,
+      isLoadingLocal: isLoadingLocal ?? this.isLoadingLocal,
+      isLoadingRemote: isLoadingRemote ?? this.isLoadingRemote,
+      downloadingGameId:
+          clearDownloading ? null : (downloadingGameId ?? this.downloadingGameId),
+      downloadProgress:
+          clearProgress ? null : (downloadProgress ?? this.downloadProgress),
+      remoteError: clearError ? null : (remoteError ?? this.remoteError),
+      hasLoadedRemote: hasLoadedRemote ?? this.hasLoadedRemote,
+      catalogSort: catalogSort ?? this.catalogSort,
+      catalogLanguage: catalogLanguage ?? this.catalogLanguage,
+      catalogFeaturedOnly: catalogFeaturedOnly ?? this.catalogFeaturedOnly,
+      currentPage: currentPage ?? this.currentPage,
+      totalPages: totalPages ?? this.totalPages,
+    );
+  }
+}
+
+class LibraryNotifier extends StateNotifier<LibraryState> {
+  LibraryNotifier(this._repository, this._customDir) : super(const LibraryState()) {
+    refreshLocalGames();
+    refreshRemoteCatalog();
+  }
+
+  final GameRepository _repository;
+  final String _customDir;
+
+  Future<void> refreshLocalGames({bool force = false}) async {
+    if (!mounted) return;
+    if (!force && state.localGames.isNotEmpty) return;
+    state = state.copyWith(isLoadingLocal: true);
+    try {
+      final games = await _repository.scanLocalGames(_customDir);
+      if (!mounted) return;
+      state = state.copyWith(localGames: games, isLoadingLocal: false);
+    } catch (_) {
+      if (!mounted) return;
+      state = state.copyWith(localGames: const [], isLoadingLocal: false);
+    }
+  }
+
+  Future<void> refreshRemoteCatalog({bool force = false}) async {
+    if (!mounted) return;
+    if (state.isLoadingRemote) return;
+    if (force || !state.hasLoadedRemote) {
+      state = state.copyWith(isLoadingRemote: true, clearError: true);
+    }
+    try {
+      final result = await _repository.fetchRemoteCatalog(
+        sort: state.catalogSort.value,
+        language: state.catalogLanguage,
+        featured: state.catalogFeaturedOnly,
+        page: state.currentPage,
+      );
+      if (!mounted) return;
+      state = state.copyWith(
+        remoteGames: result.games,
+        currentPage: result.currentPage,
+        totalPages: result.totalPages,
+        isLoadingRemote: false,
+        hasLoadedRemote: true,
+        clearError: true,
+      );
+    } on RepositoryException catch (error) {
+      if (!mounted) return;
+      state = state.copyWith(
+        isLoadingRemote: false,
+        remoteError: error.message,
+        hasLoadedRemote: true,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      state = state.copyWith(
+        isLoadingRemote: false,
+        remoteError: 'Could not reach the repository.',
+        hasLoadedRemote: true,
+      );
+    }
+  }
+
+  Future<void> setCatalogPage(int page) async {
+    if (!mounted) return;
+    if (page < 1 || page > state.totalPages) return;
+    state = state.copyWith(currentPage: page, hasLoadedRemote: false);
+    await refreshRemoteCatalog(force: true);
+  }
+
+  Future<void> setCatalogFilter({
+    CatalogSortOption? sort,
+    String? language,
+    bool? featuredOnly,
+  }) async {
+    if (!mounted) return;
+    state = state.copyWith(
+      catalogSort: sort,
+      catalogLanguage: language,
+      catalogFeaturedOnly: featuredOnly,
+      currentPage: 1,
+      hasLoadedRemote: false,
+    );
+    await refreshRemoteCatalog(force: true);
+  }
+
+  Future<LocalGame?> downloadGame(RemoteGame remoteGame) async {
+    if (!mounted) return null;
+    state = state.copyWith(
+      downloadingGameId: remoteGame.id,
+      downloadProgress: 0,
+    );
+    try {
+      final game = await _repository.downloadAndExtractGame(
+        remoteGame,
+        customDir: _customDir,
+        onProgress: (value) {
+          if (mounted) state = state.copyWith(downloadProgress: value);
+        },
+      );
+      await refreshLocalGames(force: true);
+      if (mounted) {
+        state = state.copyWith(clearDownloading: true, clearProgress: true);
+      }
+      return game;
+    } catch (_) {
+      if (mounted) {
+        state = state.copyWith(clearDownloading: true, clearProgress: true);
+      }
+      rethrow;
+    }
+  }
+
+  /// Imports a game folder picked by the user into the local library.
+  Future<LocalGame?> importGameFolder(String sourcePath) async {
+    if (!mounted) return null;
+    try {
+      final game = await _repository.importGameFolder(
+        sourcePath,
+        customDir: _customDir,
+        onProgress: (value) {
+          if (mounted) state = state.copyWith(downloadProgress: value);
+        },
+      );
+      await refreshLocalGames(force: true);
+      return game;
+    } finally {
+      if (mounted) {
+        state = state.copyWith(clearProgress: true);
+      }
+    }
+  }
+
+  Future<void> toggleFavorite(LocalGame game) async {
+    if (!mounted) return;
+    final updated = await _repository.toggleFavorite(game);
+    if (!mounted) return;
+    state = state.copyWith(
+      localGames: [
+        for (final entry in state.localGames)
+          if (entry.id == updated.id &&
+              entry.folderPath == updated.folderPath)
+            updated
+          else
+            entry,
+      ],
+    );
+  }
+
+  Future<void> removeGameFromLibrary(LocalGame game) async {
+    if (!mounted) return;
+    await _repository.hideGame(game);
+    state = state.copyWith(
+      localGames: state.localGames
+          .where((entry) => entry.folderPath != game.folderPath)
+          .toList(),
+    );
+  }
+}
+
+final gameRepositoryProvider = Provider((ref) => GameRepository());
+
+final libraryProvider =
+    StateNotifierProvider<LibraryNotifier, LibraryState>((ref) {
+  final repo = ref.watch(gameRepositoryProvider);
+  final settings = ref.watch(settingsProvider);
+  return LibraryNotifier(repo, settings.gamesDirectory);
+});

@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:questopia_re/core/utils/html_processor.dart';
+import 'package:questopia_re/core/helpers/html_processor.dart';
 
 void main() {
   group('wrapOgvVideos', () {

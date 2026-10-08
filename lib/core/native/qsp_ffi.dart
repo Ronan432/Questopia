@@ -148,6 +148,23 @@ class QspFfi {
     } catch (_) {
       debugPrint('[QSP FFI] Var lookup symbols unavailable.');
     }
+
+    try {
+      final verStruct = _getVersion();
+      if (verStruct.str != nullptr &&
+          verStruct.end != nullptr &&
+          verStruct.end.address > verStruct.str.address) {
+        final byteLen = verStruct.end.address - verStruct.str.address;
+        final detectedSize = byteLen >= 20
+            ? 4
+            : (byteLen >= 10 && byteLen < 20 ? 2 : (byteLen % 4 == 0 ? 4 : 2));
+        QspUtf16.setWcharSize(detectedSize);
+        debugPrint(
+            '[QSP FFI] Detected native wchar_t size: ${QspUtf16.nativeWcharSize} bytes (byteLen: $byteLen)');
+      }
+    } catch (e) {
+      debugPrint('[QSP FFI] Calibration warning: $e');
+    }
   }
 
   final DynamicLibrary _library;
@@ -287,11 +304,10 @@ class QspFfi {
 
   bool execString(String code, {bool refresh = true}) {
     debugPrint('[QSP FFI] execString("$code", refresh: $refresh)');
-    final ptr = QspUtf16.stringToUtf16(code);
+    final ptr = QspUtf16.stringToNative(code);
     final strStruct = calloc<QSPStringStruct>();
     try {
-      strStruct.ref.str = ptr;
-      strStruct.ref.end = Pointer.fromAddress(ptr.address + code.length * 2);
+      QspUtf16.populateStruct(strStruct.ref, ptr, code);
       final ok = _execString(strStruct.ref, refresh ? 1 : 0) != 0;
       debugPrint('[QSP FFI] QSPExecString() => $ok');
       return ok;
@@ -387,12 +403,11 @@ class QspFfi {
 
   int getVarNum(String name, [int index = 0]) {
     if (_getNumVarValue == null) return 0;
-    final ptr = QspUtf16.stringToUtf16(name);
+    final ptr = QspUtf16.stringToNative(name);
     final nameStruct = calloc<QSPStringStruct>();
     final resPtr = calloc<Int32>();
     try {
-      nameStruct.ref.str = ptr;
-      nameStruct.ref.end = Pointer.fromAddress(ptr.address + name.length * 2);
+      QspUtf16.populateStruct(nameStruct.ref, ptr, name);
       final ok = _getNumVarValue!(nameStruct.ref, index, resPtr) != 0;
       return ok ? resPtr.value : 0;
     } finally {
@@ -404,12 +419,11 @@ class QspFfi {
 
   String getVarStr(String name, [int index = 0]) {
     if (_getStrVarValue == null) return '';
-    final ptr = QspUtf16.stringToUtf16(name);
+    final ptr = QspUtf16.stringToNative(name);
     final nameStruct = calloc<QSPStringStruct>();
     final resStruct = calloc<QSPStringStruct>();
     try {
-      nameStruct.ref.str = ptr;
-      nameStruct.ref.end = Pointer.fromAddress(ptr.address + name.length * 2);
+      QspUtf16.populateStruct(nameStruct.ref, ptr, name);
       final ok = _getStrVarValue!(nameStruct.ref, index, resStruct) != 0;
       return ok ? QspUtf16.fromStruct(resStruct.ref) : '';
     } finally {

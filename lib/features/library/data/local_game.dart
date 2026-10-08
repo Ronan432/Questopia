@@ -68,4 +68,30 @@ class LocalGame {
         fileSize: json['fileSize'] as int? ?? 0,
         isFavorite: json['isFavorite'] as bool? ?? false,
       );
+
+  factory LocalGame.fromRegistry(Map<String, dynamic> json) => LocalGame(
+        id: json['id'] as String? ?? '',
+        title: json['title'] as String? ?? '',
+        author: json['author'] as String? ?? '',
+        version: json['version'] as String? ?? '',
+        folderPath: (json['path'] ?? json['folderPath']) as String? ?? '',
+        gameFilePath:
+            (json['gameFile'] ?? json['gameFilePath']) as String? ?? '',
+        posterPath: json['posterPath'] as String? ?? '',
+        fileSize: json['fileSize'] as int? ?? 0,
+        isFavorite: json['isFavorite'] as bool? ?? false,
+      );
+
+  Map<String, dynamic> toRegistry() => {
+        'id': id,
+        'title': title,
+        'author': author,
+        'version': version,
+        'path': folderPath,
+        'gameFile': gameFilePath,
+        'posterPath': posterPath,
+        'fileSize': fileSize,
+        'isFavorite': isFavorite,
+        'importedAt': DateTime.now().toIso8601String(),
+      };
 }

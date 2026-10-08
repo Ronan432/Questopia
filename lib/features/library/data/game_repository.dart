@@ -1,8 +1,9 @@
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:archive/archive.dart';
-import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -10,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:xml/xml.dart';
 
 import '../../../core/native/rust_runtime.dart';
+import 'game_registry.dart';
 import 'local_game.dart';
 import 'remote_game.dart';
 
@@ -37,181 +39,123 @@ class WebCatalogResult {
 class GameRepository {
   static const String catalogUrl =
       'https://qsp.org/gamestock/gamestock2.php';
-  static const String gameInfoFilename = '.gameInfo';
-  static const int _maxGameFileDepth = 4;
+  static const int _maxGameFileDepth = 8;
 
   Future<Directory> getGamesDirectory([String? customDir]) async {
     if (customDir != null && customDir.trim().isNotEmpty) {
       final custom = Directory(customDir.trim());
-      if (await custom.exists()) return custom;
+      try {
+        if (await custom.exists()) return custom;
+      } catch (_) {}
     }
 
-    Directory targetDir;
     if (Platform.isAndroid) {
-      targetDir = Directory('/storage/emulated/0/Download/Questopia/games');
       try {
-        if (!await targetDir.exists()) {
-          await targetDir.create(recursive: true);
+        final downloadDir = Directory('/storage/emulated/0/Download/Questopia/games');
+        if (await downloadDir.exists()) {
+          return downloadDir;
+        }
+        await downloadDir.create(recursive: true);
+        if (await downloadDir.exists()) {
+          return downloadDir;
         }
       } catch (_) {
-        final extDir = await getExternalStorageDirectory();
-        final baseDir = extDir ?? await getApplicationDocumentsDirectory();
-        targetDir = Directory(p.join(baseDir.path, 'Questopia', 'games'));
-        if (!await targetDir.exists()) {
-          await targetDir.create(recursive: true);
-        }
+        // Fallback to internal documents directory if external storage is inaccessible
       }
-    } else {
-      final docsDir = await getApplicationDocumentsDirectory();
-      targetDir = Directory(p.join(docsDir.path, 'Questopia', 'games'));
+    }
+
+    try {
+      final baseDir = await getApplicationDocumentsDirectory();
+      final targetDir = Directory(p.join(baseDir.path, 'Questopia', 'games'));
       if (!await targetDir.exists()) {
         await targetDir.create(recursive: true);
       }
+      return targetDir;
+    } catch (_) {
+      final temp = Directory.systemTemp;
+      final fallback = Directory(p.join(temp.path, 'Questopia', 'games'));
+      if (!fallback.existsSync()) {
+        fallback.createSync(recursive: true);
+      }
+      return fallback;
     }
-
-    await _migrateGamesToTarget(targetDir);
-    return targetDir;
   }
 
-  Future<void> _migrateGamesToTarget(Directory targetDir) async {
-    final legacyLocations = <Directory>[];
+  // ---------------------------------------------------------------------------
+  // BFS Game File Finder & Isolate File System Helpers
+  // ---------------------------------------------------------------------------
 
-    try {
-      final docsDir = await getApplicationDocumentsDirectory();
-      legacyLocations.add(Directory(p.join(docsDir.path, 'Questopia', 'games')));
-    } catch (_) {}
-
-    try {
-      final extDir = await getExternalStorageDirectory();
-      if (extDir != null) {
-        legacyLocations.add(Directory(p.join(extDir.path, 'Questopia', 'games')));
-      }
-    } catch (_) {}
-
-    legacyLocations.add(Directory('/storage/emulated/0/Questopia/games'));
-
-    final targetCanonical = p.canonicalize(targetDir.path);
-
-    for (final legacyDir in legacyLocations) {
-      try {
-        if (!await legacyDir.exists()) continue;
-        if (p.canonicalize(legacyDir.path) == targetCanonical) continue;
-
-        final items = legacyDir.listSync(followLinks: false);
-        for (final item in items) {
-          final name = p.basename(item.path);
-          final destPath = p.join(targetDir.path, name);
-
-          if (item is Directory) {
-            final destDir = Directory(destPath);
-            if (!await destDir.exists()) {
-              await _copyDirectory(item, destDir);
-            }
-          } else if (item is File) {
-            final destFile = File(destPath);
-            if (!await destFile.exists()) {
-              await item.copy(destPath);
+  /// Fast BFS search in isolate to find .qsp or .gam files up to maxDepth.
+  static Future<String?> findGameFile(String root, {int maxDepth = 8}) {
+    return Isolate.run(() async {
+      final queue = Queue<MapEntry<Directory, int>>()
+        ..add(MapEntry(Directory(root), 0));
+      while (queue.isNotEmpty) {
+        final current = queue.removeFirst();
+        final subdirs = <Directory>[];
+        try {
+          await for (final entity
+              in current.key.list(followLinks: false)) {
+            if (entity is File) {
+              final ext = p.extension(entity.path).toLowerCase();
+              if (ext == '.qsp' || ext == '.gam') return entity.path;
+            } else if (entity is Directory && current.value < maxDepth) {
+              subdirs.add(entity);
             }
           }
+        } on FileSystemException {
+          continue;
+        } catch (_) {
+          continue;
         }
-      } catch (e) {
-        debugPrint('[GameRepository] Migration from ${legacyDir.path} error: $e');
-      }
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Local library
-  // ---------------------------------------------------------------------------
-
-  /// Scans the local games directory for game folders and loose QSP files.
-  Future<List<LocalGame>> scanLocalGames([String? customDir]) async {
-    final dir = await getGamesDirectory(customDir);
-    if (!await dir.exists()) return const [];
-
-    final games = <LocalGame>[];
-    final entries = dir.listSync(followLinks: false);
-
-    for (final entry in entries) {
-      if (entry is Directory) {
-        final game = await _scanGameFolder(entry);
-        if (game != null) games.add(game);
-      } else if (entry is File) {
-        final ext = p.extension(entry.path).toLowerCase();
-        if (ext == '.qsp' || ext == '.gam') {
-          final fileName = p.basenameWithoutExtension(entry.path);
-          games.add(LocalGame(
-            id: fileName,
-            title: fileName,
-            folderPath: dir.path,
-            gameFilePath: entry.path,
-            fileSize: await entry.length(),
-          ));
+        for (final d in subdirs) {
+          queue.add(MapEntry(d, current.value + 1));
         }
       }
-    }
-
-    games.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
-    return games;
-  }
-
-  Future<LocalGame?> _scanGameFolder(Directory folder) async {
-    final folderName = p.basename(folder.path);
-    final info = await _readGameInfo(folder);
-    final isHidden = (info?['isHidden'] as bool?) ?? false;
-    if (isHidden) return null;
-
-    final gameFile = _findGameFileDeep(folder, _maxGameFileDepth);
-    if (gameFile == null) return null;
-
-    final poster = _findPoster(folder);
-    final folderSize = await _dirSize(folder);
-
-    return LocalGame(
-      id: info?['id'] as String? ?? folderName,
-      title: _nonEmpty(info?['title'] as String?, folderName),
-      author: (info?['author'] as String?) ?? '',
-      version: (info?['version'] as String?) ?? '',
-      folderPath: folder.path,
-      gameFilePath: gameFile.path,
-      posterPath: poster?.path ?? '',
-      fileSize: folderSize > 0 ? folderSize : await gameFile.length(),
-      isFavorite: (info?['isFavorite'] as bool?) ?? false,
-    );
-  }
-
-  static String _nonEmpty(String? value, String fallback) {
-    final trimmed = value?.trim() ?? '';
-    return trimmed.isEmpty ? fallback : trimmed;
-  }
-
-  File? _findGameFileDeep(Directory root, int maxDepth, [int depth = 0]) {
-    if (depth > maxDepth) return null;
-    List<FileSystemEntity> children;
-    try {
-      children = root.listSync(followLinks: false);
-    } catch (_) {
       return null;
-    }
-
-    for (final child in children) {
-      if (child is! File) continue;
-      final ext = p.extension(child.path).toLowerCase();
-      if (ext == '.qsp' || ext == '.gam') return child;
-    }
-    for (final child in children) {
-      if (child is! Directory) continue;
-      final found = _findGameFileDeep(child, maxDepth, depth + 1);
-      if (found != null) return found;
-    }
-    return null;
+    });
   }
 
-  File? _findPoster(Directory root) {
+  /// Tests whether a directory is readable by dart:io on the current platform.
+  static Future<bool> canReadDirectory(String path) async {
+    try {
+      await Directory(path)
+          .list(followLinks: false)
+          .first
+          .timeout(const Duration(seconds: 2));
+      return true;
+    } on StateError {
+      // Empty directory still has read permission
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Copies an entire directory in a background isolate without blocking the UI thread.
+  static Future<void> copyDirectory(String from, String to) {
+    return Isolate.run(() async {
+      final source = Directory(from);
+      await Directory(to).create(recursive: true);
+      await for (final entity
+          in source.list(recursive: true, followLinks: false)) {
+        final relative = p.relative(entity.path, from: from);
+        final target = p.join(to, relative);
+        if (entity is Directory) {
+          await Directory(target).create(recursive: true);
+        } else if (entity is File) {
+          await Directory(p.dirname(target)).create(recursive: true);
+          await entity.copy(target);
+        }
+      }
+    });
+  }
+
+  Future<File?> _findPosterAsync(Directory root) async {
     File? fallback;
     List<FileSystemEntity> children;
     try {
-      children = root.listSync(followLinks: false);
+      children = await root.list(followLinks: false).toList();
     } catch (_) {
       return null;
     }
@@ -226,167 +170,388 @@ class GameRepository {
     return fallback;
   }
 
-  Future<int> _dirSize(Directory dir) async {
-    var total = 0;
+  // ---------------------------------------------------------------------------
+  // Local Library Scan & State Management (Atomic Game Registry)
+  // ---------------------------------------------------------------------------
+
+  /// Scans registered games from the atomic registry and any untracked local game folders.
+  Future<List<LocalGame>> scanLocalGames([String? customDir]) async {
+    final sw = Stopwatch()..start();
+    debugPrint(
+        '[QUESTOPIA_REFRESH] [SCAN] scanLocalGames started (customDir: "$customDir")');
+    final registry = await GameRegistry.open();
+    final entries = await registry.readAll();
+    final ignored = await registry.readIgnored();
+    final games = <LocalGame>[];
+    final seenGameFiles = <String>{};
+    final seenSignatures = <String>{};
+    final deadRegistryIds = <String>[];
+    final toBatchUpsert = <Map<String, dynamic>>[];
+
+    for (final entry in entries) {
+      try {
+        final game = LocalGame.fromRegistry(entry);
+        if (game.gameFilePath.isNotEmpty) {
+          final normFile =
+              p.normalize(p.absolute(game.gameFilePath)).toLowerCase();
+          final normFolder =
+              p.normalize(p.absolute(game.folderPath)).toLowerCase();
+
+          if (ignored.contains(game.id) ||
+              ignored.contains(game.folderPath) ||
+              ignored.contains(normFolder)) {
+            continue;
+          }
+
+          // Verify that game file actually exists on device. Prune dead entries.
+          final file = File(game.gameFilePath);
+          if (!await file.exists()) {
+            deadRegistryIds.add(game.id);
+            continue;
+          }
+
+          // Deduplicate by canonical gameFilePath and title+fileSize signature
+          final signature = '${game.title.toLowerCase()}_${game.fileSize}';
+          if (seenGameFiles.contains(normFile) ||
+              seenSignatures.contains(signature)) {
+            continue;
+          }
+
+          games.add(game);
+          seenGameFiles.add(normFile);
+          seenSignatures.add(signature);
+        }
+      } catch (e) {
+        debugPrint('[QUESTOPIA_SCAN] Error loading registry entry: $e');
+      }
+    }
+
+    // Prune dead entries in background
+    for (final deadId in deadRegistryIds) {
+      await registry.remove(deadId);
+    }
+
+    // Also scan root games directory for newly downloaded/dropped files
     try {
-      await for (final entity
-          in dir.list(recursive: true, followLinks: false)) {
-        if (entity is File) {
-          total += await entity.length();
-          if (total > 2 * 1024 * 1024 * 1024) break;
+      final dir = await getGamesDirectory(customDir);
+      if (await dir.exists()) {
+        List<FileSystemEntity> dirEntries = [];
+        try {
+          dirEntries = await dir.list(followLinks: false).toList();
+        } catch (_) {}
+
+        for (final entity in dirEntries) {
+          try {
+            final norm = p.normalize(entity.path).toLowerCase();
+            final baseName = p.basename(norm);
+            if (ignored.contains(baseName) ||
+                ignored.contains(entity.path) ||
+                baseName.startsWith('.')) {
+              continue;
+            }
+
+            if (entity is Directory) {
+              final gameFile =
+                  await findGameFile(entity.path, maxDepth: _maxGameFileDepth);
+              if (gameFile != null) {
+                final normFile =
+                    p.normalize(p.absolute(gameFile)).toLowerCase();
+                final folderName = p.basename(entity.path);
+                final len = await File(gameFile).length();
+                final signature = '${folderName.toLowerCase()}_$len';
+
+                if (seenGameFiles.contains(normFile) ||
+                    seenSignatures.contains(signature)) {
+                  continue;
+                }
+
+                final poster = await _findPosterAsync(entity);
+                final g = LocalGame(
+                  id: folderName,
+                  title: folderName,
+                  folderPath: entity.path,
+                  gameFilePath: gameFile,
+                  posterPath: poster?.path ?? '',
+                  fileSize: len,
+                );
+                games.add(g);
+                seenGameFiles.add(normFile);
+                seenSignatures.add(signature);
+                toBatchUpsert.add(g.toRegistry());
+                debugPrint(
+                    '[QUESTOPIA_SCAN] Auto-discovered local folder game: "${g.title}"');
+              }
+            } else if (entity is File) {
+              final ext = p.extension(entity.path).toLowerCase();
+              if (ext == '.qsp' || ext == '.gam') {
+                final normFile =
+                    p.normalize(p.absolute(entity.path)).toLowerCase();
+                final title = p.basenameWithoutExtension(entity.path);
+                final len = await entity.length();
+                final signature = '${title.toLowerCase()}_$len';
+
+                if (seenGameFiles.contains(normFile) ||
+                    seenSignatures.contains(signature)) {
+                  continue;
+                }
+
+                final g = LocalGame(
+                  id: title,
+                  title: title,
+                  folderPath: dir.path,
+                  gameFilePath: entity.path,
+                  fileSize: len,
+                );
+                games.add(g);
+                seenGameFiles.add(normFile);
+                seenSignatures.add(signature);
+                toBatchUpsert.add(g.toRegistry());
+                debugPrint(
+                    '[QUESTOPIA_SCAN] Auto-discovered loose game file: "${g.title}"');
+              }
+            }
+          } catch (e) {
+            debugPrint(
+                '[QUESTOPIA_SCAN] Error scanning root entity ${entity.path}: $e');
+          }
         }
       }
-    } catch (_) {
-      return total;
+    } catch (e) {
+      debugPrint('[QUESTOPIA_SCAN] Root games directory scan error: $e');
     }
-    return total;
+
+    if (toBatchUpsert.isNotEmpty) {
+      await registry.batchUpsert(toBatchUpsert);
+    }
+
+    games.sort(
+        (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+    sw.stop();
+    debugPrint(
+        '[QUESTOPIA_REFRESH] [SCAN] scanLocalGames finished: ${games.length} total games loaded (took ${sw.elapsedMilliseconds}ms)');
+    return games;
   }
 
-  Future<Map<String, dynamic>?> _readGameInfo(Directory folder) async {
-    final infoFile = File(p.join(folder.path, gameInfoFilename));
-    if (!await infoFile.exists()) return null;
-    try {
-      final content = await infoFile.readAsString();
-      if (content.trim().isEmpty) return null;
-      final decoded = jsonDecode(content);
-      if (decoded is Map<String, dynamic>) return decoded;
-    } catch (_) {
-      return null;
-    }
-    return null;
-  }
-
-  /// Flips the favorite flag of [game], preserving the rest of its
-  /// `.gameInfo`, and returns the updated entry.
+  /// Flips the favorite flag of [game] and updates the internal registry.
   Future<LocalGame> toggleFavorite(LocalGame game) async {
-    final folder = Directory(game.folderPath);
-    final info = await _readGameInfo(folder) ?? <String, dynamic>{};
-    final next = !(info['isFavorite'] as bool? ?? game.isFavorite);
-    info['isFavorite'] = next;
-    final infoFile = File(p.join(folder.path, gameInfoFilename));
-    const encoder = JsonEncoder.withIndent('  ');
-    try {
-      await infoFile.writeAsString(encoder.convert(info));
-    } catch (_) {
-      await writeGameInfo(
-        folder,
-        id: game.id,
-        title: game.title,
-        author: game.author,
-        version: game.version,
-        isFavorite: next,
-      );
-    }
-    return game.copyWith(isFavorite: next);
+    final updated = game.copyWith(isFavorite: !game.isFavorite);
+    final registry = await GameRegistry.open();
+    await registry.upsert(updated.toRegistry());
+    return updated;
   }
 
+  /// Hides/removes [game] from the internal registry and adds it to the ignored set.
   Future<void> hideGame(LocalGame game) async {
-    final folder = Directory(game.folderPath);
-    final info = await _readGameInfo(folder) ?? <String, dynamic>{};
-    info['isHidden'] = true;
-    final infoFile = File(p.join(folder.path, gameInfoFilename));
-    const encoder = JsonEncoder.withIndent('  ');
-    try {
-      await infoFile.writeAsString(encoder.convert(info));
-    } catch (_) {
-      await writeGameInfo(
-        folder,
-        id: game.id,
-        title: game.title,
-        author: game.author,
-        version: game.version,
-        isFavorite: game.isFavorite,
-        isHidden: true,
-      );
-    }
-  }
-
-  /// Writes a legacy-compatible `.gameInfo` JSON file into [folder].
-  Future<void> writeGameInfo(
-    Directory folder, {
-    required String id,
-    required String title,
-    String author = '',
-    String version = '',
-    String fileUrl = '',
-    int fileSize = 0,
-    String fileExt = '',
-    String descUrl = '',
-    bool isFavorite = false,
-    bool isHidden = false,
-  }) async {
-    final infoFile = File(p.join(folder.path, gameInfoFilename));
-    const encoder = JsonEncoder.withIndent('  ');
-    await infoFile.writeAsString(encoder.convert({
-      'id': id,
-      'listId': 0,
-      'author': author,
-      'portedBy': '',
-      'version': version,
-      'title': title,
-      'lang': '',
-      'player': '',
-      'iconUrl': '',
-      'fileUrl': fileUrl,
-      'fileSize': fileSize,
-      'fileExt': fileExt,
-      'descUrl': descUrl,
-      'pubDate': '',
-      'modDate': '',
-      'isFavorite': isFavorite,
-      'isHidden': isHidden,
-    }));
+    final registry = await GameRegistry.open();
+    await registry.remove(game.id);
+    await registry.remove(game.folderPath);
   }
 
   // ---------------------------------------------------------------------------
-  // Import from a user-picked folder
+  // Tiered Import Pipeline (Tier A: Zero-Copy, Tier B: Isolate Copy, Tier C: Archive)
   // ---------------------------------------------------------------------------
 
-  /// Copies an externally picked game [sourcePath] into the games directory.
-  ///
-  /// A folder containing a `.zip`/`.aqsp` archive is unpacked, any other
-  /// folder is copied as-is.
+  /// Imports a user-picked game folder or archive into the library.
   Future<LocalGame?> importGameFolder(
     String sourcePath, {
     String? customDir,
     void Function(double)? onProgress,
   }) async {
-    final source = Directory(sourcePath.trim());
-    if (!await source.exists()) {
-      throw RepositoryException('Selected folder does not exist.');
+    final sw = Stopwatch()..start();
+    debugPrint(
+        '[QUESTOPIA_IMPORT] [START] importGameFolder called with sourcePath: "$sourcePath"');
+    final cleanPath = sourcePath.trim();
+    final sourceFile = File(cleanPath);
+    final sourceDir = Directory(cleanPath);
+    final isFile = await sourceFile.exists();
+    final isDir = await sourceDir.exists();
+
+    if (!isFile && !isDir) {
+      debugPrint(
+          '[QUESTOPIA_IMPORT] [ERROR] Selected path does not exist: "$cleanPath"');
+      throw RepositoryException('Selected file or folder does not exist.');
     }
 
+    final registry = await GameRegistry.open();
     final root = await getGamesDirectory(customDir);
-    final folderName = p.basename(p.normalize(source.path));
-    var target = Directory(p.join(root.path, folderName));
-    var counter = 1;
-    while (await target.exists()) {
-      target = Directory(p.join(root.path, '$folderName (${counter++})'));
+
+    // 1. Directory Import
+    if (isDir) {
+      debugPrint(
+          '[QUESTOPIA_IMPORT] [DIR] Processing Directory import: "${sourceDir.path}"');
+      final archive = _findFirstArchive(sourceDir);
+      if (archive != null) {
+        // Tier C: Extract Archive within directory
+        var target = Directory(
+            p.join(root.path, p.basename(p.normalize(sourceDir.path))));
+        var counter = 1;
+        while (await target.exists()) {
+          target = Directory(p.join(root.path,
+              '${p.basename(p.normalize(sourceDir.path))} (${counter++})'));
+        }
+        await target.create(recursive: true);
+        final ok = await _extractArchiveFile(archive, target,
+            onProgress: onProgress);
+        if (!ok) {
+          throw RepositoryException('Failed to unpack game archive.');
+        }
+        final gameFile =
+            await findGameFile(target.path, maxDepth: _maxGameFileDepth);
+        if (gameFile == null) {
+          await target.delete(recursive: true);
+          throw RepositoryException(
+              'No .qsp or .gam game file found in archive.');
+        }
+        final poster = await _findPosterAsync(target);
+        final len = await File(gameFile).length();
+        final game = LocalGame(
+          id: p.basename(target.path),
+          title: p.basename(target.path),
+          folderPath: target.path,
+          gameFilePath: gameFile,
+          posterPath: poster?.path ?? '',
+          fileSize: len,
+        );
+        await registry.upsert(game.toRegistry());
+        await _createMarkerFiles(target);
+        onProgress?.call(1);
+        sw.stop();
+        debugPrint(
+            '[QUESTOPIA_IMPORT] [SUCCESS] Archive extracted and registered: "${game.title}" (took ${sw.elapsedMilliseconds}ms)');
+        return game;
+      }
+
+      // Check Tier A vs Tier B
+      final readable = await canReadDirectory(sourceDir.path);
+      String workingDirPath = sourceDir.path;
+      bool isCopied = false;
+
+      if (!readable) {
+        // Tier B: Permission restriction on direct read, copy to app's games directory in isolate
+        debugPrint(
+            '[QUESTOPIA_IMPORT] [DIR] Tier B: Directory not directly readable, copying to internal storage in isolate...');
+        var target = Directory(
+            p.join(root.path, p.basename(p.normalize(sourceDir.path))));
+        var counter = 1;
+        while (await target.exists()) {
+          target = Directory(p.join(root.path,
+              '${p.basename(p.normalize(sourceDir.path))} (${counter++})'));
+        }
+        await copyDirectory(sourceDir.path, target.path);
+        workingDirPath = target.path;
+        isCopied = true;
+      }
+
+      final gameFile =
+          await findGameFile(workingDirPath, maxDepth: _maxGameFileDepth);
+      if (gameFile == null) {
+        debugPrint(
+            '[QUESTOPIA_IMPORT] [ERROR] No .qsp/.gam found in "$workingDirPath"');
+        throw RepositoryException(
+            'No .qsp or .gam game file found in the selected folder.');
+      }
+
+      final poster = await _findPosterAsync(Directory(workingDirPath));
+      final len = await File(gameFile).length();
+      final game = LocalGame(
+        id: p.basename(workingDirPath),
+        title: p.basename(workingDirPath),
+        folderPath: workingDirPath,
+        gameFilePath: gameFile,
+        posterPath: poster?.path ?? '',
+        fileSize: len,
+      );
+
+      await registry.upsert(game.toRegistry());
+      if (isCopied) {
+        await _createMarkerFiles(Directory(workingDirPath));
+      }
+      onProgress?.call(1);
+      sw.stop();
+      debugPrint(
+          '[QUESTOPIA_IMPORT] [SUCCESS] Folder game registered: "${game.title}" (file: ${game.gameFilePath}, zeroCopy: ${!isCopied}, took ${sw.elapsedMilliseconds}ms)');
+      return game;
     }
 
-    final archive = _findFirstArchive(source);
-    if (archive != null) {
-      await target.create(recursive: true);
-      await _extractArchiveFile(archive, target, onProgress: onProgress);
-    } else {
-      await _copyDirectory(source, target);
+    // 2. File Import
+    if (isFile) {
+      final ext = p.extension(sourceFile.path).toLowerCase();
+      debugPrint(
+          '[QUESTOPIA_IMPORT] [FILE] Processing File import: "${sourceFile.path}" (ext: "$ext")');
+      if (ext == '.qsp' || ext == '.gam') {
+        final title = p.basenameWithoutExtension(sourceFile.path);
+        var target = Directory(p.join(root.path, title));
+        var counter = 1;
+        while (await target.exists()) {
+          target = Directory(p.join(root.path, '$title (${counter++})'));
+        }
+        await target.create(recursive: true);
+        final destGameFile =
+            File(p.join(target.path, p.basename(sourceFile.path)));
+        await sourceFile.copy(destGameFile.path);
+        final len = await destGameFile.length();
+        final game = LocalGame(
+          id: p.basename(target.path),
+          title: title,
+          folderPath: target.path,
+          gameFilePath: destGameFile.path,
+          fileSize: len,
+        );
+        await registry.upsert(game.toRegistry());
+        await _createMarkerFiles(target);
+        onProgress?.call(1);
+        sw.stop();
+        debugPrint(
+            '[QUESTOPIA_IMPORT] [SUCCESS] Loose file imported and registered: "${game.title}" (took ${sw.elapsedMilliseconds}ms)');
+        return game;
+      } else if (ext == '.zip' ||
+          ext == '.aqsp' ||
+          ext == '.rar' ||
+          ext == '.7z' ||
+          ext == '.tar' ||
+          ext == '.gz') {
+        final title = p.basenameWithoutExtension(sourceFile.path);
+        var target = Directory(p.join(root.path, title));
+        var counter = 1;
+        while (await target.exists()) {
+          target = Directory(p.join(root.path, '$title (${counter++})'));
+        }
+        await target.create(recursive: true);
+        final ok = await _extractArchiveFile(sourceFile, target,
+            onProgress: onProgress);
+        if (!ok) {
+          throw RepositoryException('Failed to unpack game archive.');
+        }
+        final gameFile =
+            await findGameFile(target.path, maxDepth: _maxGameFileDepth);
+        if (gameFile == null) {
+          await target.delete(recursive: true);
+          throw RepositoryException(
+              'No .qsp or .gam game file found in archive.');
+        }
+        final poster = await _findPosterAsync(target);
+        final len = await File(gameFile).length();
+        final game = LocalGame(
+          id: p.basename(target.path),
+          title: title,
+          folderPath: target.path,
+          gameFilePath: gameFile,
+          posterPath: poster?.path ?? '',
+          fileSize: len,
+        );
+        await registry.upsert(game.toRegistry());
+        await _createMarkerFiles(target);
+        onProgress?.call(1);
+        sw.stop();
+        debugPrint(
+            '[QUESTOPIA_IMPORT] [SUCCESS] Archive unpacked and registered: "${game.title}" (took ${sw.elapsedMilliseconds}ms)');
+        return game;
+      } else {
+        throw RepositoryException('Unsupported file format ($ext).');
+      }
     }
 
-    final gameFile = _findGameFileDeep(target, _maxGameFileDepth);
-    if (gameFile == null) {
-      await target.delete(recursive: true);
-      throw RepositoryException('No .qsp or .gam file found in the folder.');
-    }
-
-    await writeGameInfo(
-      target,
-      id: p.basename(target.path),
-      title: p.basename(target.path),
-    );
-    await _createMarkerFiles(target);
-
-    onProgress?.call(1);
-    return _scanGameFolder(target);
+    return null;
   }
 
   File? _findFirstArchive(Directory dir) {
@@ -402,18 +567,6 @@ class GameRepository {
       if (ext == '.zip' || ext == '.aqsp') return child;
     }
     return null;
-  }
-
-  Future<void> _copyDirectory(Directory source, Directory target) async {
-    await target.create(recursive: true);
-    await for (final entity in source.list(followLinks: false)) {
-      final name = p.basename(entity.path);
-      if (entity is File) {
-        await entity.copy(p.join(target.path, name));
-      } else if (entity is Directory) {
-        await _copyDirectory(entity, Directory(p.join(target.path, name)));
-      }
-    }
   }
 
   Future<void> _createMarkerFiles(Directory dir) async {
@@ -510,10 +663,7 @@ class GameRepository {
       final gameId = linkMatch.group(2)!;
 
       final imgMatch = RegExp(r'<img[^>]+src="([^"]+)"').firstMatch(block);
-      var posterUrl = imgMatch?.group(1)?.trim() ?? '';
-      if (posterUrl.startsWith('/')) {
-        posterUrl = 'https://qsp.org$posterUrl';
-      }
+      final posterUrl = _cleanPosterUrl(imgMatch?.group(1));
 
       final titleMatch = RegExp(
         r'<h3[\s\S]*?<a[^>]*>\s*([\s\S]*?)\s*<span[^>]*>\[(.*?)\]</span>',
@@ -569,6 +719,20 @@ class GameRepository {
       currentPage: currentPage,
       totalPages: totalPages,
     );
+  }
+
+  static String _cleanPosterUrl(String? rawUrl) {
+    if (rawUrl == null) return '';
+    final trimmed = rawUrl.trim();
+    if (trimmed.isEmpty ||
+        trimmed.contains('com_sobi2') ||
+        trimmed.contains('default-game-cover')) {
+      return '';
+    }
+    if (trimmed.startsWith('/')) {
+      return 'https://qsp.org$trimmed';
+    }
+    return trimmed;
   }
 
   Future<List<RemoteGame>> _fetchGamestockXmlCatalog() async {
@@ -643,6 +807,8 @@ class GameRepository {
         final id = int.tryParse(idText)?.toString() ??
             (idText.isNotEmpty ? idText : '${fallbackId++}');
 
+        final rawIcon = tag('icon').isNotEmpty ? tag('icon') : tag('image');
+
         games.add(RemoteGame(
           id: id,
           title: title,
@@ -651,7 +817,7 @@ class GameRepository {
           version: tag('version'),
           lang: tag('lang'),
           player: tag('player'),
-          icon: tag('icon').isNotEmpty ? tag('icon') : tag('image'),
+          icon: _cleanPosterUrl(rawIcon),
           fileUrl: tag('file_url'),
           fileSize: int.tryParse(tag('file_size')) ?? 0,
           fileExt: tag('file_ext'),
@@ -695,11 +861,7 @@ class GameRepository {
   // Download & unpack
   // ---------------------------------------------------------------------------
 
-  /// Downloads a remote game archive into the games directory and unpacks it.
-  ///
-  /// Uses the system download pipeline with a progress notification so
-  /// large game archives keep downloading outside the app, mirroring the
-  /// legacy `DownloadManager` behavior.
+  /// Downloads a remote game archive directly using streaming HTTP and unpacks it.
   Future<LocalGame?> downloadAndExtractGame(
     RemoteGame remoteGame, {
     String? customDir,
@@ -719,64 +881,58 @@ class GameRepository {
       await targetFolder.create(recursive: true);
     }
 
-    final downloadUrl = await resolveDirectDownloadUrl(remoteGame.fileUrl);
+    final directDownloadUrl = await resolveDirectDownloadUrl(remoteGame.fileUrl);
 
     final fileName = resolveDownloadFileName(
-      await _probeContentDisposition(downloadUrl),
-      downloadUrl,
+      await _probeContentDisposition(directDownloadUrl),
+      directDownloadUrl,
       remoteGame.id,
       remoteGame.fileExt,
     );
 
-    await _configureDownloadNotifications(remoteGame.title);
-    final task = DownloadTask(
-      url: downloadUrl,
-      filename: fileName,
-      baseDirectory: BaseDirectory.root,
-      directory: targetFolder.path,
-      updates: Updates.statusAndProgress,
-      retries: 2,
-    );
-    final result = await FileDownloader().download(
-      task,
-      onProgress: (progress) =>
-          onProgress?.call((progress * 0.9).clamp(0.0, 0.9)),
-    );
-    if (result.status != TaskStatus.complete) {
-      throw RepositoryException(
-          'Download failed with status ${result.status.name}.');
-    }
+    final destinationFile = File(p.join(targetFolder.path, fileName));
 
-    final archivePath = p.join(targetFolder.path, fileName);
-    if (!await File(archivePath).exists()) {
-      throw RepositoryException('Download finished but the file is missing.');
+    await _downloadFileDirect(
+      directDownloadUrl,
+      destinationFile,
+      onProgress: (progress) =>
+          onProgress?.call((progress * 0.85).clamp(0.0, 0.85)),
+    );
+
+    if (!await destinationFile.exists() || await destinationFile.length() == 0) {
+      throw RepositoryException('Download finished but the file is empty.');
     }
 
     final extracted = await _extractArchiveFile(
-      File(archivePath),
+      destinationFile,
       targetFolder,
       onProgress: (value) =>
-          onProgress?.call(0.9 + (value.clamp(0.0, 1.0) * 0.1)),
+          onProgress?.call(0.85 + (value.clamp(0.0, 1.0) * 0.15)),
     );
     if (!extracted) {
-      await _deleteQuietly(File(archivePath));
-      throw RepositoryException(
-          'Unsupported archive format: ${p.extension(fileName)}');
+      final ext = p.extension(fileName).toLowerCase();
+      if (ext != '.qsp' && ext != '.gam') {
+        await _deleteQuietly(destinationFile);
+        throw RepositoryException(
+            'Unsupported archive format: ${p.extension(fileName)}');
+      }
     }
 
     // Only delete archive file if it was a compressed archive (.zip, .rar, .aqsp, .7z)
-    final archiveExt = p.extension(archivePath).toLowerCase();
+    final archiveExt = p.extension(destinationFile.path).toLowerCase();
     if (archiveExt != '.qsp' && archiveExt != '.gam') {
-      await _deleteQuietly(File(archivePath));
+      await _deleteQuietly(destinationFile);
     }
 
     // Download and cache remote poster image if local folder doesn't have a poster image
-    if (_findPoster(targetFolder) == null && remoteGame.posterUrl.isNotEmpty) {
+    if (await _findPosterAsync(targetFolder) == null && remoteGame.posterUrl.isNotEmpty) {
       try {
-        debugPrint(
-            '[GameRepository] Caching remote poster locally for game #${remoteGame.id}...');
         final imgRes = await http
-            .get(Uri.parse(remoteGame.posterUrl))
+            .get(Uri.parse(remoteGame.posterUrl), headers: {
+              'User-Agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Referer': 'https://qsp.org/',
+            })
             .timeout(const Duration(seconds: 10));
         if (imgRes.statusCode == 200 && imgRes.bodyBytes.isNotEmpty) {
           final ext = p.extension(remoteGame.posterUrl).toLowerCase();
@@ -784,40 +940,138 @@ class GameRepository {
               (ext == '.png' || ext == '.webp') ? 'poster$ext' : 'poster.jpg';
           final cachedPoster = File(p.join(targetFolder.path, targetPosterName));
           await cachedPoster.writeAsBytes(imgRes.bodyBytes);
-          debugPrint('[GameRepository] Cached poster to ${cachedPoster.path}');
         }
-      } catch (e) {
-        debugPrint('[GameRepository] Failed to cache remote poster: $e');
-      }
+      } catch (_) {}
     }
 
-    await writeGameInfo(
-      targetFolder,
+    final gameFile =
+        await findGameFile(targetFolder.path, maxDepth: _maxGameFileDepth);
+    if (gameFile == null) {
+      throw RepositoryException(
+          'Download finished but no game file was found.');
+    }
+
+    final poster = await _findPosterAsync(targetFolder);
+    final fileSize = await File(gameFile).length();
+
+    final game = LocalGame(
       id: remoteGame.id,
       title: remoteGame.title,
       author: remoteGame.author,
       version: remoteGame.version,
-      fileUrl: remoteGame.fileUrl,
-      fileSize: remoteGame.fileSize,
-      fileExt: remoteGame.fileExt,
-      descUrl: remoteGame.descUrl,
+      folderPath: targetFolder.path,
+      gameFilePath: gameFile,
+      posterPath: poster?.path ?? '',
+      fileSize: fileSize,
     );
+
+    final registry = await GameRegistry.open();
+    await registry.upsert(game.toRegistry());
     await _createMarkerFiles(targetFolder);
 
-    onProgress?.call(1);
-    final imported = await _scanGameFolder(targetFolder);
-    if (imported == null) {
-      throw RepositoryException('Download finished but no game file was found.');
+    onProgress?.call(1.0);
+    return game;
+  }
+
+  /// Legacy compatibility helper for writing metadata.
+  Future<void> writeGameInfo(
+    Directory folder, {
+    required String id,
+    required String title,
+    String author = '',
+    String version = '',
+    String fileUrl = '',
+    int fileSize = 0,
+    String fileExt = '',
+    String descUrl = '',
+    String gameFilePath = '',
+    String posterPath = '',
+    bool isFavorite = false,
+    bool isHidden = false,
+  }) async {
+    try {
+      final infoFile = File(p.join(folder.path, '.gameInfo'));
+      const encoder = JsonEncoder.withIndent('  ');
+      await infoFile.writeAsString(encoder.convert({
+        'id': id,
+        'listId': 0,
+        'author': author,
+        'version': version,
+        'title': title,
+        'fileUrl': fileUrl,
+        'fileSize': fileSize,
+        'fileExt': fileExt,
+        'descUrl': descUrl,
+        'gameFilePath': gameFilePath,
+        'posterPath': posterPath,
+        'isFavorite': isFavorite,
+        'isHidden': isHidden,
+      }));
+    } catch (_) {}
+  }
+
+  Future<void> _downloadFileDirect(
+    String url,
+    File destinationFile, {
+    void Function(double)? onProgress,
+  }) async {
+    final client = http.Client();
+    try {
+      final request = http.Request('GET', Uri.parse(url))
+        ..headers['User-Agent'] =
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        ..headers['Referer'] = 'https://qsp.org/';
+
+      final response =
+          await client.send(request).timeout(const Duration(seconds: 45));
+
+      var finalResponse = response;
+      if (finalResponse.isRedirect &&
+          finalResponse.headers.containsKey('location')) {
+        final redirectUrl = finalResponse.headers['location']!;
+        final redirectRequest = http.Request('GET', Uri.parse(redirectUrl))
+          ..headers['User-Agent'] =
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          ..headers['Referer'] = 'https://qsp.org/';
+        finalResponse = await client
+            .send(redirectRequest)
+            .timeout(const Duration(seconds: 45));
+      }
+
+      if (finalResponse.statusCode != 200) {
+        throw RepositoryException(
+            'Server returned HTTP ${finalResponse.statusCode}');
+      }
+
+      final totalBytes = finalResponse.contentLength ?? 0;
+      var receivedBytes = 0;
+
+      final sink = destinationFile.openWrite();
+      await finalResponse.stream.listen((chunk) {
+        sink.add(chunk);
+        receivedBytes += chunk.length;
+        if (totalBytes > 0 && onProgress != null) {
+          onProgress((receivedBytes / totalBytes).clamp(0.0, 1.0));
+        }
+      }).asFuture();
+
+      await sink.flush();
+      await sink.close();
+    } finally {
+      client.close();
     }
-    return imported;
   }
 
   /// Best-effort `HEAD` probe for the server `Content-Disposition` header
-  /// so RFC 5987 file names survive the background transfer.
+  /// so RFC 5987 file names survive the transfer.
   Future<String?> _probeContentDisposition(String fileUrl) async {
     try {
       final response = await http
-          .head(Uri.parse(fileUrl))
+          .head(Uri.parse(fileUrl), headers: {
+            'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://qsp.org/',
+          })
           .timeout(const Duration(seconds: 8));
       if (response.statusCode >= 200 && response.statusCode < 400) {
         return response.headers['content-disposition'];
@@ -826,24 +1080,6 @@ class GameRepository {
       // Fall back to URL-based naming.
     }
     return null;
-  }
-
-  bool _downloadNotificationsConfigured = false;
-
-  Future<void> _configureDownloadNotifications(String title) async {
-    if (_downloadNotificationsConfigured) return;
-    _downloadNotificationsConfigured = true;
-    try {
-      FileDownloader().configureNotification(
-        running: TaskNotification('Downloading $title', '{filename}'),
-        complete: TaskNotification('Download complete', '{filename}'),
-        error: TaskNotification('Download failed', '{filename}'),
-        progressBar: true,
-        tapOpensFile: false,
-      );
-    } catch (_) {
-      // Notifications are best-effort (e.g. in tests).
-    }
   }
 
   /// Resolves the on-disk file name for a download, honouring the RFC 5987
@@ -1022,35 +1258,37 @@ class GameRepository {
     }
 
     try {
-      final bytes = await archiveFile.readAsBytes();
-      final archive = ZipDecoder().decodeBytes(bytes);
-      final targetRoot = p.normalize(target.path);
-      var index = 0;
-      final total = archive.length;
-      for (final file in archive) {
-        final safePath = _safeArchivePath(targetRoot, file.name);
-        if (safePath == null) continue;
-        if (file.isFile) {
-          final outFile = File(safePath);
-          await outFile.parent.create(recursive: true);
-          await outFile.writeAsBytes(file.content as List<int>);
-        } else {
-          await Directory(safePath).create(recursive: true);
+      final archiveFilePath = archiveFile.path;
+      final targetPath = target.path;
+
+      final success = await Isolate.run(() {
+        final file = File(archiveFilePath);
+        final bytes = file.readAsBytesSync();
+        final archive = ZipDecoder().decodeBytes(bytes);
+        final targetRoot = p.normalize(targetPath);
+        for (final entry in archive) {
+          final safePath = _safeArchivePath(targetRoot, entry.name);
+          if (safePath == null) continue;
+          if (entry.isFile) {
+            final outFile = File(safePath);
+            outFile.parent.createSync(recursive: true);
+            outFile.writeAsBytesSync(entry.content as List<int>);
+          } else {
+            Directory(safePath).createSync(recursive: true);
+          }
         }
-        index++;
-        if (total > 0) {
-          onProgress?.call(0.5 + 0.5 * (index / total));
-        }
-      }
-      return true;
-    } catch (_) {
+        return true;
+      });
+      return success;
+    } catch (e) {
+      debugPrint('[GameRepository] Extraction error: $e');
       return false;
     }
   }
 
   /// Returns a normalized absolute path inside [targetRoot] or `null` when the
   /// entry would escape it (Zip Slip).
-  String? _safeArchivePath(String targetRoot, String entryName) {
+  static String? _safeArchivePath(String targetRoot, String entryName) {
     if (entryName.trim().isEmpty) return null;
     var name = entryName.replaceAll('\\', '/');
     if (name.startsWith('/') || RegExp(r'^[a-zA-Z]:').hasMatch(name)) {

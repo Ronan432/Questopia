@@ -1,17 +1,20 @@
 import 'dart:io';
+import 'dart:ui';
 
-import 'package:bottom_shell_nav/bottom_shell_nav.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_3_expressive/components/buttons/enums/m3e_button_enums.dart';
 import 'package:material_3_expressive/material_3_expressive.dart';
+import 'package:material_segmented_list/material_segmented_list.dart';
 
 import '../../../core/error/crash_reporter.dart';
 import '../../../core/l10n/app_localizations.dart';
-import '../../../core/media/poster_menu_sheet.dart';
+import '../../../core/providers/settings_provider.dart';
 import '../../../core/theme/questopia_theme.dart';
-import '../../../core/utils/path_picker_helper.dart';
+import '../../../core/helpers/path_picker_helper.dart';
+import '../../../core/helpers/sheet_helper.dart';
 import '../../../core/widgets/questopia_scaffold.dart';
 import '../../game/presentation/game_screen.dart';
 import '../../game/providers/game_engine_provider.dart';
@@ -19,7 +22,8 @@ import '../../settings/presentation/settings_screen.dart';
 import '../data/local_game.dart';
 import '../data/remote_game.dart';
 import '../providers/library_provider.dart';
-import 'widgets/game_card_frame.dart';
+import 'widgets/local_game_card.dart';
+import 'widgets/remote_game_card.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
@@ -31,11 +35,48 @@ class LibraryScreen extends ConsumerStatefulWidget {
 class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   int _selectedTab = 0;
   String _searchQuery = '';
+  bool _isSearchOpen = false;
+  bool _showFavoritesOnly = false;
+  final FocusNode _searchFocusNode = FocusNode();
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _offerCrashReport());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _offerCrashReport();
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        await PathPickerHelper.ensureStoragePermissions();
+      }
+      if (mounted) {
+        ref.read(libraryProvider.notifier).refreshLocalGames();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchFocusNode.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _openSearch() {
+    setState(() {
+      _isSearchOpen = true;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _searchFocusNode.requestFocus();
+    });
+  }
+
+  void _closeSearch() {
+    if (!_isSearchOpen) return;
+    setState(() {
+      _isSearchOpen = false;
+    });
+    _searchFocusNode.unfocus();
+    FocusScope.of(context).unfocus();
   }
 
   Future<void> _offerCrashReport() async {
@@ -68,26 +109,74 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   }
 
   Future<void> _importGameFolder() async {
+    debugPrint('[QUESTOPIA_IMPORT] [UI] _importGameFolder invoked from UI');
     final messenger = ScaffoldMessenger.of(context);
     final libraryNotifier = ref.read(libraryProvider.notifier);
 
-    final selected = await PathPickerHelper.pickDirectory(
-      context,
-      title: 'Select game folder',
+    final selected = await PathPickerHelper.pickGame(context);
+    debugPrint('[QUESTOPIA_IMPORT] [UI] PathPickerHelper.pickGame returned: "$selected"');
+    if (selected == null || selected.isEmpty || !mounted) {
+      debugPrint('[QUESTOPIA_IMPORT] [UI] Import aborted: selected path is null/empty or unmounted');
+      return;
+    }
+
+    // Show Progress Dialog while importing
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => M3ETheme(
+        data: M3EThemeData(
+          colorScheme:
+              QuestopiaTheme.m3eColorSchemeFrom(Theme.of(context).colorScheme),
+        ),
+        child: AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          content: const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 20),
+                Expanded(
+                  child: Text(
+                    'Importing game...',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
-    if (selected == null || selected.isEmpty) return;
 
     try {
+      debugPrint('[QUESTOPIA_IMPORT] [UI] Calling libraryNotifier.importGameFolder("$selected")');
       final game = await libraryNotifier.importGameFolder(selected);
-      if (game != null) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        setState(() {
+          _showFavoritesOnly = false;
+          _searchQuery = '';
+        });
+      }
+      if (game != null && mounted) {
+        debugPrint('[QUESTOPIA_IMPORT] [UI] Import successful! Game: "${game.title}" (file: ${game.gameFilePath})');
         messenger.showSnackBar(
           SnackBar(content: Text('Imported ${game.title}')),
         );
+      } else {
+        debugPrint('[QUESTOPIA_IMPORT] [UI] Import returned null');
       }
-    } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+    } catch (error, st) {
+      debugPrint('[QUESTOPIA_IMPORT] [UI] Error importing game: $error\n$st');
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        messenger.showSnackBar(
+          SnackBar(content: Text(error.toString())),
+        );
+      }
     }
   }
 
@@ -98,11 +187,20 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     final filteredLocal = libraryState.localGames.where((game) {
-      return game.title.toLowerCase().contains(_searchQuery.toLowerCase());
+      if (_showFavoritesOnly && !game.isFavorite) return false;
+      if (_searchQuery.isEmpty) return true;
+      final q = _searchQuery.toLowerCase();
+      return game.title.toLowerCase().contains(q) ||
+          game.author.toLowerCase().contains(q);
     }).toList();
 
+    debugPrint('[QUESTOPIA_UI] LibraryScreen build: total localGames=${libraryState.localGames.length}, filteredLocal=${filteredLocal.length}, favoritesOnly=$_showFavoritesOnly, query="$_searchQuery"');
+
     final filteredRemote = libraryState.remoteGames.where((game) {
-      return game.displayName.toLowerCase().contains(_searchQuery.toLowerCase());
+      if (_searchQuery.isEmpty) return true;
+      return game.displayName
+          .toLowerCase()
+          .contains(_searchQuery.toLowerCase());
     }).toList();
 
     final isDesktop = !kIsWeb &&
@@ -110,50 +208,47 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             defaultTargetPlatform == TargetPlatform.macOS ||
             defaultTargetPlatform == TargetPlatform.linux);
 
-    final isAndroid = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-
     // Builds the library/catalog page content for the given tab index.
-    // Android shell branches call this with their own index so each branch
-    // keeps its own content while sharing the screen level search state.
     Widget mainContentFor(int tabIndex) {
       return Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-            child: SearchBar(
-              elevation: WidgetStateProperty.all(0),
-              backgroundColor: WidgetStateProperty.all(
-                colors.surfaceContainerHigh,
-              ),
-              padding: WidgetStateProperty.all(
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-              ),
-              shape: WidgetStateProperty.all(
-                RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
+          if (isDesktop)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: SearchBar(
+                elevation: WidgetStateProperty.all(0),
+                backgroundColor: WidgetStateProperty.all(
+                  colors.surfaceContainerHigh,
                 ),
-              ),
-              hintText: tabIndex == 0
-                  ? l10n.search
-                  : 'Search online catalog...',
-              hintStyle: WidgetStateProperty.all(
-                TextStyle(
-                  color: colors.onSurfaceVariant.withValues(alpha: 0.7),
+                padding: WidgetStateProperty.all(
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                 ),
-              ),
-              leading: Icon(Icons.search_rounded, color: colors.primary),
-              trailing: [
-                if (_searchQuery.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded, size: 20),
-                    onPressed: () {
-                      setState(() => _searchQuery = '');
-                    },
+                shape: WidgetStateProperty.all(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
                   ),
-              ],
-              onChanged: (value) => setState(() => _searchQuery = value),
+                ),
+                hintText: tabIndex == 0
+                    ? l10n.search
+                    : 'Search online catalog...',
+                hintStyle: WidgetStateProperty.all(
+                  TextStyle(
+                    color: colors.onSurfaceVariant.withValues(alpha: 0.7),
+                  ),
+                ),
+                leading: Icon(Icons.search_rounded, color: colors.primary),
+                trailing: [
+                  if (_searchQuery.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                      onPressed: () {
+                        setState(() => _searchQuery = '');
+                      },
+                    ),
+                ],
+                onChanged: (value) => setState(() => _searchQuery = value),
+              ),
             ),
-          ),
           Expanded(
             child: tabIndex == 0
                 ? _buildLocalTab(filteredLocal, libraryState)
@@ -170,31 +265,175 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         colorScheme: QuestopiaTheme.m3eColorSchemeFrom(colors),
       ),
       child: QuestopiaScaffold(
-        title: isDesktop ? '' : 'Questopia',
-        actions: isDesktop
+        title: isDesktop
+            ? ''
+            : (_selectedTab == 0
+                ? 'Questopia'
+                : (_selectedTab == 1 ? l10n.catalog : l10n.settings)),
+        titleWidget: isDesktop
             ? null
-            : [
-                M3EIconButton(
-                  tooltip: 'Import game folder',
-                  icon: const Icon(Icons.folder_open_rounded),
-                  variant: M3EIconButtonVariant.standard,
-                  size: M3EIconButtonSize.sm,
-                  onPressed: _importGameFolder,
-                ),
-                const SizedBox(width: 4),
-                M3EIconButton(
-                  tooltip: 'Settings',
-                  icon: const Icon(Icons.settings_outlined),
-                  variant: M3EIconButtonVariant.tonal,
-                  size: M3EIconButtonSize.sm,
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const SettingsScreen(),
+            : AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                layoutBuilder: (currentChild, previousChildren) {
+                  return Stack(
+                    alignment: Alignment.centerLeft,
+                    children: <Widget>[
+                      ...previousChildren,
+                      if (currentChild != null) currentChild,
+                    ],
+                  );
+                },
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SizeTransition(
+                      sizeFactor: animation,
+                      axis: Axis.horizontal,
+                      alignment: Alignment.centerLeft,
+                      child: child,
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
+                  );
+                },
+                child: _isSearchOpen
+                    ? KeyedSubtree(
+                        key: const ValueKey<String>('search_open'),
+                        child: SizedBox(
+                          height: 44,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: colors.surfaceContainerHigh,
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              alignment: Alignment.center,
+                              child: TextField(
+                                controller: _searchController,
+                                focusNode: _searchFocusNode,
+                                textAlignVertical: TextAlignVertical.center,
+                                onChanged: (value) =>
+                                    setState(() => _searchQuery = value),
+                                style: const TextStyle(fontSize: 14),
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  hintText: _selectedTab == 0
+                                      ? l10n.search
+                                      : 'Search games...',
+                                  hintStyle: TextStyle(
+                                    color: colors.onSurfaceVariant
+                                        .withValues(alpha: 0.7),
+                                    fontSize: 14,
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.search_rounded,
+                                    color: colors.primary,
+                                    size: 20,
+                                  ),
+                                  prefixIconConstraints: const BoxConstraints(
+                                      minWidth: 38, minHeight: 38),
+                                  suffixIconConstraints: const BoxConstraints(
+                                      minWidth: 38, minHeight: 38),
+                                  suffixIcon: _searchQuery.isNotEmpty
+                                      ? IconButton(
+                                          icon: const Icon(
+                                              Icons.close_rounded,
+                                              size: 18),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(
+                                              minWidth: 38, minHeight: 38),
+                                          onPressed: () {
+                                            _searchController.clear();
+                                            setState(
+                                                () => _searchQuery = '');
+                                          },
+                                        )
+                                      : null,
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    : KeyedSubtree(
+                        key: ValueKey<int>(_selectedTab),
+                        child: Text(
+                          _selectedTab == 0
+                              ? 'Questopia'
+                              : (_selectedTab == 1
+                                  ? l10n.catalog
+                                  : l10n.settings),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+              ),
+        actions: isDesktop || _selectedTab == 2
+            ? null
+            : (_isSearchOpen
+                ? [
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      tooltip: 'Close search',
+                      onPressed: _closeSearch,
+                    ),
+                    const SizedBox(width: 8),
+                  ]
+                : [
+                    if (_selectedTab == 0) ...[
+                      IconButton(
+                        tooltip: l10n.search,
+                        icon: const Icon(Icons.search_rounded),
+                        onPressed: _openSearch,
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        tooltip: _showFavoritesOnly
+                            ? 'Show all games'
+                            : 'Show favorites only',
+                        icon: Icon(
+                          _showFavoritesOnly
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          color: _showFavoritesOnly ? colors.error : null,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _showFavoritesOnly = !_showFavoritesOnly;
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        tooltip: 'Import game',
+                        icon: const Icon(Icons.folder_open_rounded),
+                        onPressed: _importGameFolder,
+                      ),
+                    ] else if (_selectedTab == 1) ...[
+                      IconButton(
+                        tooltip: l10n.search,
+                        icon: const Icon(Icons.search_rounded),
+                        onPressed: _openSearch,
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        tooltip: 'Refresh catalog',
+                        icon: const Icon(Icons.refresh_rounded),
+                        onPressed: () => ref
+                            .read(libraryProvider.notifier)
+                            .refreshRemoteCatalog(force: true),
+                      ),
+                    ],
+                    const SizedBox(width: 8),
+                  ]),
         body: isDesktop
             ? SafeArea(
                 child: Row(
@@ -202,48 +441,22 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     NavigationRail(
                       selectedIndex: _selectedTab <= 2 ? _selectedTab : 0,
                       onDestinationSelected: (value) async {
+                        _closeSearch();
                         if (value == 3) {
-                          final confirmed = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => M3ETheme(
-                              data: M3EThemeData(
-                                colorScheme: QuestopiaTheme.m3eColorSchemeFrom(colors),
-                              ),
-                              child: AlertDialog(
-                                title: const Text('Add Game'),
-                                content: const Text(
-                                    'Would you like to select and import a game folder from your device?'),
-                                actions: [
-                                  M3EButton.icon(
-                                    onPressed: () => Navigator.pop(ctx, false),
-                                    icon: const Icon(Icons.close_rounded, size: 16),
-                                    label: const Text('Cancel'),
-                                    style: M3EButtonStyle.outlined,
-                                    size: M3EButtonSize.sm,
-                                    shape: M3EButtonShape.round,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  M3EButton.icon(
-                                    onPressed: () => Navigator.pop(ctx, true),
-                                    icon: const Icon(Icons.check_rounded, size: 16),
-                                    label: const Text('Import'),
-                                    style: M3EButtonStyle.filled,
-                                    size: M3EButtonSize.sm,
-                                    shape: M3EButtonShape.round,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                          if (confirmed == true) {
-                            await _importGameFolder();
-                          }
+                          await _importGameFolder();
                           return;
                         }
                         setState(() => _selectedTab = value);
+                        if (value == 1) {
+                          final state = ref.read(libraryProvider);
+                          if (!state.hasLoadedRemote && !state.isLoadingRemote) {
+                            ref.read(libraryProvider.notifier).refreshRemoteCatalog();
+                          }
+                        }
                       },
                       labelType: NavigationRailLabelType.all,
-                      backgroundColor: colors.surfaceContainerLow,
+                      backgroundColor: colors.surface,
+                      indicatorColor: colors.secondaryContainer,
                       destinations: [
                         NavigationRailDestination(
                           icon: const Icon(Icons.library_books_outlined),
@@ -257,6 +470,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         ),
                         NavigationRailDestination(
                           icon: const Icon(Icons.settings_outlined),
+                          selectedIcon: const Icon(Icons.settings),
                           label: Text(l10n.settings),
                         ),
                         NavigationRailDestination(
@@ -265,7 +479,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         ),
                       ],
                     ),
-                    const VerticalDivider(thickness: 1, width: 1),
                     Expanded(
                       child: _selectedTab == 2
                           ? const SettingsScreen(isInline: true)
@@ -274,81 +487,136 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   ],
                 ),
               )
-            : isAndroid
-                  ? BottomShell(
-                      appearance: BottomShellAppearance.gNav(),
-                      branches: [
-                        BottomBranch(
-                          id: 'library',
-                          destination: BottomDestination(
-                            icon: Icons.library_books_outlined,
-                            selectedIcon: Icons.library_books,
-                            label: l10n.library,
-                          ),
-                          builder: (_) => SafeArea(child: mainContentFor(0)),
-                        ),
-                        BottomBranch(
-                          id: 'catalog',
-                          destination: BottomDestination(
-                            icon: Icons.explore_outlined,
-                            selectedIcon: Icons.explore,
-                            label: l10n.catalog,
-                          ),
-                          builder: (_) => SafeArea(child: mainContentFor(1)),
-                        ),
-                      ],
-                    )
-                  : SafeArea(child: mainContent),
-        bottomNavigationBar: isDesktop || isAndroid
-            ? null
-            : Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                child: Container(
-                  height: 68,
-                  decoration: BoxDecoration(
-                    color: colors.surfaceContainer,
-                    borderRadius: BorderRadius.circular(34),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(34),
-                    child: NavigationBar(
-                      backgroundColor: Colors.transparent,
-                      elevation: 0,
-                      selectedIndex: _selectedTab,
-                      onDestinationSelected: (value) =>
-                          setState(() => _selectedTab = value),
-                      destinations: [
-                        NavigationDestination(
-                          icon: const Icon(Icons.library_books_outlined),
-                          selectedIcon: const Icon(Icons.library_books),
-                          label: l10n.library,
-                        ),
-                        NavigationDestination(
-                          icon: const Icon(Icons.explore_outlined),
-                          selectedIcon: const Icon(Icons.explore),
-                          label: l10n.catalog,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+            : SafeArea(
+                child: _selectedTab == 2
+                    ? const SettingsScreen(isInline: true)
+                    : mainContent,
               ),
+        bottomNavigationBar: isDesktop
+            ? null
+            : _buildMobileBottomBar(context, l10n, colors),
       ),
     );
   }
 
-  Widget _buildLocalTab(List<LocalGame> games, LibraryState state) {
-    return RefreshIndicator(
-      onRefresh: () => ref.read(libraryProvider.notifier).refreshLocalGames(force: true),
-      child: _buildLocalGrid(games, state.isLoadingLocal),
+  Widget _buildMobileBottomBar(
+    BuildContext context,
+    AppLocalizations l10n,
+    ColorScheme colors,
+  ) {
+    final settings = ref.watch(settingsProvider);
+    final isBlur = settings.isNavBarBlur;
+
+    final items = [
+      (
+        icon: Icons.library_books_outlined,
+        selectedIcon: Icons.library_books,
+        label: l10n.library,
+      ),
+      (
+        icon: Icons.explore_outlined,
+        selectedIcon: Icons.explore,
+        label: l10n.catalog,
+      ),
+      (
+        icon: Icons.settings_outlined,
+        selectedIcon: Icons.settings,
+        label: l10n.settings,
+      ),
+    ];
+
+    Widget barContent = Container(
+      decoration: BoxDecoration(
+        color: isBlur ? colors.surface.withValues(alpha: 0.78) : colors.surface,
+        border: Border(
+          top: BorderSide(
+            color: colors.outlineVariant.withValues(alpha: isBlur ? 0.2 : 0.35),
+            width: 0.5,
+          ),
+        ),
+      ),
+      padding: EdgeInsets.only(
+        top: 6,
+        bottom: MediaQuery.paddingOf(context).bottom + 6,
+        left: 16,
+        right: 16,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: List.generate(items.length, (index) {
+          final isSelected = _selectedTab == index;
+          final item = items[index];
+
+          return GestureDetector(
+            onTap: () {
+              if (settings.isEdgeFeedback) {
+                HapticFeedback.lightImpact();
+              }
+              _closeSearch();
+              setState(() => _selectedTab = index);
+              if (index == 1) {
+                final state = ref.read(libraryProvider);
+                if (!state.hasLoadedRemote && !state.isLoadingRemote) {
+                  ref.read(libraryProvider.notifier).refreshRemoteCatalog();
+                }
+              }
+            },
+            behavior: HitTestBehavior.opaque,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOutCubic,
+              padding: EdgeInsets.symmetric(
+                horizontal: isSelected ? 18 : 12,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? colors.secondaryContainer
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isSelected ? item.selectedIcon : item.icon,
+                    size: 22,
+                    color: isSelected
+                        ? colors.onSecondaryContainer
+                        : colors.onSurfaceVariant,
+                  ),
+                  if (isSelected) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      item.label,
+                      style: TextStyle(
+                        color: colors.onSecondaryContainer,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          );
+        }),
+      ),
     );
+
+    if (isBlur) {
+      return ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: barContent,
+        ),
+      );
+    }
+    return barContent;
+  }
+
+  Widget _buildLocalTab(List<LocalGame> games, LibraryState state) {
+    return _buildLocalGrid(games, state.isLoadingLocal);
   }
 
   Widget _buildRemoteTab(List<RemoteGame> games, LibraryState state) {
@@ -356,12 +624,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       children: [
         _buildCatalogFilterBar(state),
         Expanded(
-          child: RefreshIndicator(
-            onRefresh: () => ref
-                .read(libraryProvider.notifier)
-                .refreshRemoteCatalog(force: true),
-            child: _buildRemoteGrid(games, state),
-          ),
+          child: _buildRemoteGrid(games, state),
         ),
         if (state.totalPages > 1) _buildPaginationBar(state),
       ],
@@ -417,7 +680,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   }
 
   Widget _buildCatalogFilterBar(LibraryState state) {
-    final colors = Theme.of(context).colorScheme;
     final notifier = ref.read(libraryProvider.notifier);
 
     return SingleChildScrollView(
@@ -425,64 +687,47 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: colors.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(20),
-              border:
-                  Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
+          ChoiceChip(
+            showCheckmark: false,
+            avatar: const Icon(Icons.sort_rounded, size: 18),
+            label: Text(state.catalogSort.label),
+            selected: true,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.sort_rounded, size: 16, color: colors.primary),
-                const SizedBox(width: 6),
-                DropdownButtonHideUnderline(
-                  child: DropdownButton<CatalogSortOption>(
-                    value: state.catalogSort,
-                    isDense: true,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: colors.onSurface,
-                    ),
-                    items: CatalogSortOption.values.map((opt) {
-                      return DropdownMenuItem(
-                        value: opt,
-                        child: Text(opt.label),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) {
-                        notifier.setCatalogFilter(sort: val);
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ),
+            onSelected: (_) => _showSortPickerSheet(context, state),
           ),
           const SizedBox(width: 8),
           for (final lang in const ['', 'ru', 'en']) ...[
-            FilterChip(
+            ChoiceChip(
+              showCheckmark: false,
+              label: Text(lang.isEmpty ? 'All Languages' : lang.toUpperCase()),
               selected: state.catalogLanguage == lang,
-              label: Text(
-                lang.isEmpty ? 'All Languages' : lang.toUpperCase(),
-                style: const TextStyle(fontSize: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(
+                    state.catalogLanguage == lang ? 24 : 8),
               ),
-              visualDensity: VisualDensity.compact,
-              onSelected: (selected) {
+              onSelected: (_) {
                 notifier.setCatalogFilter(language: lang);
               },
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
           ],
-          FilterChip(
+          ChoiceChip(
+            showCheckmark: false,
+            avatar: Icon(
+              state.catalogFeaturedOnly
+                  ? Icons.star_rounded
+                  : Icons.star_border_rounded,
+              size: 18,
+              color: state.catalogFeaturedOnly ? Colors.amber : null,
+            ),
+            label: const Text('Featured'),
             selected: state.catalogFeaturedOnly,
-            avatar: const Text('⭐', style: TextStyle(fontSize: 12)),
-            label: const Text('Featured', style: TextStyle(fontSize: 12)),
-            visualDensity: VisualDensity.compact,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(
+                  state.catalogFeaturedOnly ? 24 : 8),
+            ),
             onSelected: (selected) {
               notifier.setCatalogFilter(featuredOnly: selected);
             },
@@ -492,46 +737,132 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     );
   }
 
+  void _showSortPickerSheet(BuildContext context, LibraryState state) {
+    final notifier = ref.read(libraryProvider.notifier);
+    showQuestopiaSheet<void>(
+      context: context,
+      builder: (ctx) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 8, bottom: 12),
+                child: Text(
+                  'Sort Catalog',
+                  style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ),
+              SegmentedListSection(
+                children: [
+                  for (final opt in CatalogSortOption.values)
+                    SegmentedListTile(
+                      leading: Icon(
+                        state.catalogSort == opt
+                            ? Icons.radio_button_checked_rounded
+                            : Icons.radio_button_unchecked_rounded,
+                        color: state.catalogSort == opt
+                            ? Theme.of(ctx).colorScheme.primary
+                            : null,
+                      ),
+                      title: Text(opt.label),
+                      trailing: state.catalogSort == opt
+                          ? Icon(Icons.check_rounded,
+                              color: Theme.of(ctx).colorScheme.primary)
+                          : null,
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        notifier.setCatalogFilter(sort: opt);
+                      },
+                    ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildLocalGrid(List<LocalGame> games, bool isLoading) {
     if (isLoading && games.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
+          SizedBox(height: 120),
+          Center(child: CircularProgressIndicator()),
+        ],
+      );
     }
 
     if (games.isEmpty) {
       return ListView(
-        children: const [
-          SizedBox(height: 120),
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          const SizedBox(height: 120),
           Center(
-            child: Text('No games found in local library.'),
+            child: Text(
+              _showFavoritesOnly
+                  ? 'No favorite games found.'
+                  : 'No games found in local library.',
+            ),
           ),
         ],
       );
     }
 
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isCompact = screenWidth < 600;
+
     return GridView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 380,
-        mainAxisExtent: 245,
-        crossAxisSpacing: 14,
-        mainAxisSpacing: 14,
+      padding: EdgeInsets.fromLTRB(
+        isCompact ? 12 : 20,
+        4,
+        isCompact ? 12 : 20,
+        isCompact ? 20 : 24,
+      ),
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: isCompact ? 200 : 320,
+        mainAxisExtent: isCompact ? 208 : 245,
+        crossAxisSpacing: isCompact ? 10 : 14,
+        mainAxisSpacing: isCompact ? 10 : 14,
       ),
       itemCount: games.length,
       itemBuilder: (context, index) {
         final game = games[index];
-        return _LocalGameCard(
+        return LocalGameCard(
           game: game,
-          onPlay: () {
+          isCompact: isCompact,
+          onPlay: () async {
+            final f = File(game.gameFilePath);
+            if (!await f.exists()) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Game file not found at ${game.gameFilePath}. Folder may have been moved or storage permission revoked.',
+                    ),
+                  ),
+                );
+              }
+              return;
+            }
             ref.read(gameEngineProvider.notifier).loadGame(game);
             // The game player owns the full screen (it has its own in-game
             // tabs), so it always pushes on the root navigator instead of the
             // active Android shell branch navigator.
-            Navigator.of(context, rootNavigator: true).push(
-              MaterialPageRoute<void>(
-                builder: (_) => GameScreen(title: game.title),
-              ),
-            );
+            if (context.mounted) {
+              Navigator.of(context, rootNavigator: true).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => GameScreen(title: game.title),
+                ),
+              );
+            }
           },
           onToggleFavorite: () {
             ref.read(libraryProvider.notifier).toggleFavorite(game);
@@ -546,7 +877,13 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
   Widget _buildRemoteGrid(List<RemoteGame> games, LibraryState state) {
     if (state.isLoadingRemote && games.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
+          SizedBox(height: 120),
+          Center(child: CircularProgressIndicator()),
+        ],
+      );
     }
 
     if (state.remoteError != null && games.isEmpty) {
@@ -592,14 +929,22 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       );
     }
 
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isCompact = screenWidth < 600;
+
     return GridView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 380,
-        mainAxisExtent: 245,
-        crossAxisSpacing: 14,
-        mainAxisSpacing: 14,
+      padding: EdgeInsets.fromLTRB(
+        isCompact ? 12 : 20,
+        4,
+        isCompact ? 12 : 20,
+        isCompact ? 20 : 24,
+      ),
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: isCompact ? 200 : 320,
+        mainAxisExtent: isCompact ? 208 : 245,
+        crossAxisSpacing: isCompact ? 10 : 14,
+        mainAxisSpacing: isCompact ? 10 : 14,
       ),
       itemCount: games.length,
       itemBuilder: (context, index) {
@@ -607,8 +952,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         final isDownloading = state.downloadingGameId == remoteGame.id;
         final progress = isDownloading ? state.downloadProgress : null;
 
-        return _RemoteGameCard(
+        return RemoteGameCard(
           game: remoteGame,
+          isCompact: isCompact,
           isDownloading: isDownloading,
           progress: progress,
           onDownload: () => _download(remoteGame),
@@ -631,373 +977,5 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     } catch (error) {
       messenger.showSnackBar(SnackBar(content: Text(error.toString())));
     }
-  }
-}
-
-class _LocalGameCard extends StatelessWidget {
-  const _LocalGameCard({
-    required this.game,
-    required this.onPlay,
-    required this.onToggleFavorite,
-    required this.onRemove,
-  });
-
-  final LocalGame game;
-  final VoidCallback onPlay;
-  final VoidCallback onToggleFavorite;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-    final hasPoster =
-        game.posterPath.isNotEmpty && File(game.posterPath).existsSync();
-
-    return GameCardFrame(
-      onTap: onPlay,
-      onLongPress: () async {
-        final confirmed = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => M3ETheme(
-            data: M3EThemeData(
-              colorScheme: QuestopiaTheme.m3eColorSchemeFrom(colors),
-            ),
-            child: AlertDialog(
-              title: const Text('Remove from library'),
-              content: Text('Remove "${game.title}" from your library?\n\nNote: Game files on your device will NOT be deleted.'),
-              actions: [
-                M3EButton.icon(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  icon: const Icon(Icons.close_rounded, size: 16),
-                  label: const Text('Cancel'),
-                  style: M3EButtonStyle.outlined,
-                  size: M3EButtonSize.sm,
-                  shape: M3EButtonShape.round,
-                ),
-                const SizedBox(width: 8),
-                M3EButton.icon(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                  label: const Text('Remove'),
-                  style: M3EButtonStyle.filled,
-                  size: M3EButtonSize.sm,
-                  shape: M3EButtonShape.round,
-                ),
-              ],
-            ),
-          ),
-        );
-        if (confirmed == true) {
-          onRemove();
-        }
-      },
-      posterWidget: SizedBox(
-        height: 120,
-        width: double.infinity,
-        child: hasPoster
-            ? Image.file(
-                File(game.posterPath),
-                fit: BoxFit.cover,
-              )
-            : Container(
-                color: colors.secondaryContainer,
-                child: Center(
-                  child: Icon(
-                    Icons.auto_stories_rounded,
-                    size: 40,
-                    color: colors.onSecondaryContainer,
-                  ),
-                ),
-              ),
-      ),
-      titleWidget: Text(
-        game.title,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitleWidget: Text(
-        game.author.isNotEmpty
-            ? game.author
-            : 'QSP Interactive Fiction',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: colors.onSurfaceVariant,
-            ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      actionsWidget: Row(
-        children: [
-          M3EButton.icon(
-            onPressed: onPlay,
-            icon: const Icon(Icons.play_arrow_rounded, size: 18),
-            label: Text(l10n.play),
-            style: M3EButtonStyle.filled,
-            size: M3EButtonSize.sm,
-            shape: M3EButtonShape.round,
-          ),
-          const Spacer(),
-          IconButton(
-            tooltip: game.isFavorite
-                ? 'Remove from favorites'
-                : 'Add to favorites',
-            icon: Icon(
-              game.isFavorite
-                  ? Icons.star_rounded
-                  : Icons.star_outline_rounded,
-              color: game.isFavorite ? colors.primary : null,
-            ),
-            onPressed: onToggleFavorite,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RemoteGameCard extends StatelessWidget {
-  const _RemoteGameCard({
-    required this.game,
-    required this.isDownloading,
-    required this.progress,
-    required this.onDownload,
-  });
-
-  final RemoteGame game;
-  final bool isDownloading;
-  final double? progress;
-  final VoidCallback onDownload;
-
-  String get _sizeLabel {
-    if (game.fileSize <= 0) return '';
-    if (game.fileSize >= 1024 * 1024) {
-      return '${(game.fileSize / (1024 * 1024)).toStringAsFixed(1)} MB';
-    }
-    if (game.fileSize >= 1024) {
-      return '${(game.fileSize / 1024).toStringAsFixed(0)} KB';
-    }
-    return '${game.fileSize} B';
-  }
-
-  Widget _buildPoster(ColorScheme colors) {
-    final poster = game.posterUrl;
-    if (poster.isNotEmpty) {
-      debugPrint('[Poster] Primary image attempt for #${game.id} (${game.displayName}): $poster');
-      return Image.network(
-        poster,
-        height: 120,
-        width: double.infinity,
-        fit: BoxFit.cover,
-        errorBuilder: (ctx, err, stack) {
-          debugPrint('[Poster] Primary image failed for #${game.id}: $err ($poster)');
-          if (game.id.isNotEmpty && !poster.contains('cover-titled-v2.jpg')) {
-            final fallbackUrl1 =
-                'https://qsp.org/storage/games/${game.id}/cover-titled-v2.jpg';
-            debugPrint('[Poster] Fallback 1 attempt for #${game.id}: $fallbackUrl1');
-            return Image.network(
-              fallbackUrl1,
-              height: 120,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (ctx2, err2, stack2) {
-                debugPrint('[Poster] Fallback 1 failed for #${game.id}: $err2 ($fallbackUrl1)');
-                final fallbackUrl2 =
-                    'https://qsp.org/storage/games/${game.id}/cover.jpg';
-                debugPrint('[Poster] Fallback 2 attempt for #${game.id}: $fallbackUrl2');
-                return Image.network(
-                  fallbackUrl2,
-                  height: 120,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (ctx3, err3, stack3) {
-                    debugPrint('[Poster] Fallback 2 failed for #${game.id}: $err3 ($fallbackUrl2)');
-                    return _buildPlaceholder(colors);
-                  },
-                );
-              },
-            );
-          }
-          return _buildPlaceholder(colors);
-        },
-        loadingBuilder: (ctx, child, loading) {
-          if (loading == null) {
-            debugPrint('[Poster] Successfully rendered poster for #${game.id}');
-            return child;
-          }
-          return Container(
-            height: 120,
-            width: double.infinity,
-            color: colors.surfaceContainerHigh,
-            child: const Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-          );
-        },
-      );
-    }
-    debugPrint('[Poster] No primary poster URL for #${game.id} (${game.displayName})');
-    return _buildPlaceholder(colors);
-  }
-
-  Widget _buildPlaceholder(ColorScheme colors) {
-    return Container(
-      height: 120,
-      width: double.infinity,
-      color: colors.tertiaryContainer,
-      child: Center(
-        child: Icon(
-          Icons.cloud_download_rounded,
-          size: 40,
-          color: colors.onTertiaryContainer,
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context)!;
-
-    return Card(
-      elevation: 1,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-          bottomLeft: Radius.circular(8),
-          bottomRight: Radius.circular(20),
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          GestureDetector(
-            onLongPress: game.posterUrl.isNotEmpty
-                ? () => showPosterMenuSheet(
-                      context: context,
-                      imageUri: game.posterUrl,
-                    )
-                : null,
-            child: _buildPoster(colors),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            game.displayName,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (game.lang.isNotEmpty) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: colors.primaryContainer,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              game.lang.toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: colors.onPrimaryContainer,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        if (game.author.isNotEmpty)
-                          Expanded(
-                            child: Text(
-                              'Author: ${game.author}',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: colors.onSurfaceVariant,
-                                  ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        if (game.version.isNotEmpty) ...[
-                          const SizedBox(width: 4),
-                          Text(
-                            'v${game.version}',
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: colors.outline,
-                                ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    if (_sizeLabel.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        'Size: $_sizeLabel',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: colors.outline,
-                            ),
-                      ),
-                    ],
-                    const SizedBox(height: 6),
-                    if (isDownloading)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          LinearProgressIndicator(value: progress),
-                          const SizedBox(height: 4),
-                          Text(
-                            progress == null
-                                ? l10n.downloading
-                                : '${(progress! * 100).toStringAsFixed(0)}%',
-                            style: Theme.of(context).textTheme.labelSmall,
-                          ),
-                        ],
-                      )
-                    else
-                      SizedBox(
-                        width: double.infinity,
-                        child: M3EButton.icon(
-                          onPressed: onDownload,
-                          icon: const Icon(Icons.download_rounded, size: 18),
-                          label: Text(l10n.download),
-                          style: M3EButtonStyle.tonal,
-                          size: M3EButtonSize.sm,
-                          shape: M3EButtonShape.round,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

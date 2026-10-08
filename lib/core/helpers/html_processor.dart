@@ -51,8 +51,8 @@ class HtmlProcessor {
     }
   }
 
-  static final RegExp _ogvImgRegExp = RegExp(
-    '<img([^>]*?)src\\s*=\\s*["\']([^"\']*?\\.og[gv])(["\'][^>]*?)>',
+  static final RegExp _videoImgRegExp = RegExp(
+    '<img([^>]*?)src\\s*=\\s*["\']([^"\']*?\\.(?:mp4|webm|ogv|ogg|m4v|mov))(["\'][^>]*?)>',
     caseSensitive: false,
   );
   static final RegExp _imgRegExp = RegExp(
@@ -60,49 +60,88 @@ class HtmlProcessor {
     caseSensitive: false,
   );
 
-  /// Converts `.ogv`/`.ogg` image sources into `<video>` tags backed by the
-  /// bundled OGV.js decoder, mirroring the legacy media pipeline.
-  static String wrapOgvVideos(String html) {
+  /// Converts all video files in `<img>` tags (`.mp4`, `.webm`, `.ogv`, `.ogg`, etc.)
+  /// into looping, muted, autoplaying `<video>` elements.
+  static String wrapVideos(String html) {
     if (html.isEmpty) return html;
-    return html.replaceAllMapped(_ogvImgRegExp, (match) {
+    return html.replaceAllMapped(_videoImgRegExp, (match) {
       final src = match.group(2) ?? '';
-      final rest = (match.group(1) ?? '') + (match.group(3) ?? '');
-      final style = rest.contains('style=')
-          ? ''
-          : ' style="max-width:100%;height:auto;"';
-      return '<video src="$src" controls preload="metadata"$style></video>';
+      return '<video src="$src" autoplay loop muted playsinline webkit-playsinline preload="auto" style="max-width:100%;height:auto;display:block;margin:8px auto;border-radius:6px;object-fit:contain;background-color:transparent;"></video>';
     });
   }
 
-  /// OGV.js bootstrap: when the browser cannot play OGV natively, the
-  /// bundled decoder takes over `video[src$=".ogv"]` elements.
-  static String ogvBootstrapScript() {
+  /// Backward-compatible alias for wrapVideos.
+  static String wrapOgvVideos(String html) => wrapVideos(html);
+
+  /// Video bootstrap script: automatically starts playback, enforces looping,
+  /// handles webview autoplay policies, and attaches OGV.js fallback for .ogv files.
+  static String videoBootstrapScript() {
     return '''
 <script src="https://questopia.local/ogv/ogv.js"></script>
 <script>
 (function() {
-  function needsOgv(video) {
-    var src = video.getAttribute('src') || '';
-    if (!/\\.og[gv](\\?|#|\$)/i.test(src)) return false;
-    try {
-      var t = video.canPlayType('video/ogg; codecs="theora"');
-      return !t;
-    } catch (e) { return true; }
-  }
-  function hook() {
-    if (typeof OGVPlayer === 'undefined') return;
-    document.querySelectorAll('video[src]').forEach(function(video) {
-      if (needsOgv(video) && !video.dataset.ogvHooked) {
-        video.dataset.ogvHooked = '1';
-        try { new OGVPlayer({video: video}); } catch (e) {}
+  function setupVideos() {
+    var videos = document.querySelectorAll('video');
+    videos.forEach(function(v) {
+      v.autoplay = true;
+      v.loop = true;
+      v.muted = true;
+      v.playsInline = true;
+      v.setAttribute('playsinline', '');
+      v.setAttribute('webkit-playsinline', '');
+      v.setAttribute('autoplay', '');
+      v.setAttribute('loop', '');
+      v.setAttribute('muted', '');
+      
+      // Enforce loop restart
+      v.onended = function() {
+        v.currentTime = 0;
+        v.play().catch(function(){});
+      };
+      
+      // Auto play attempt
+      var playPromise = v.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(function() {
+          var resumeOnTouch = function() {
+            v.play().catch(function(){});
+            document.removeEventListener('touchstart', resumeOnTouch);
+          };
+          document.addEventListener('touchstart', resumeOnTouch, {once: true});
+        });
+      }
+
+      // OGV fallback
+      var src = v.getAttribute('src') || '';
+      if (/\\.og[gv](\\?|#|\$)/i.test(src) && !v.dataset.ogvHooked && typeof OGVPlayer !== 'undefined') {
+        try {
+          var canPlay = v.canPlayType('video/ogg; codecs="theora"');
+          if (!canPlay) {
+            v.dataset.ogvHooked = '1';
+            var player = new OGVPlayer({video: v});
+            player.loop = true;
+            player.muted = true;
+            player.play();
+          }
+        } catch (e) {}
       }
     });
   }
-  document.addEventListener('DOMContentLoaded', hook);
-  hook();
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupVideos);
+  } else {
+    setupVideos();
+  }
+  window.addEventListener('load', setupVideos);
+  setTimeout(setupVideos, 200);
+  setTimeout(setupVideos, 600);
 })();
 </script>''';
   }
+
+  /// Alias for backward compatibility
+  static String ogvBootstrapScript() => videoBootstrapScript();
 
   /// Removes all image tags for text-only mode (`pref_disable_image`).
   static String stripImageTags(String html) {

@@ -3,7 +3,7 @@ import 'package:material_segmented_list/material_segmented_list.dart';
 
 import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/providers/settings_provider.dart';
-import '../../../../core/utils/sheet_helper.dart';
+import '../../../../core/helpers/sheet_helper.dart';
 
 abstract final class SettingsPickerSheets {
   static List<String> typefaceNames(BuildContext context) {

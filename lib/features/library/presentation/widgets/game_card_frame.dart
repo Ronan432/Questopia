@@ -9,6 +9,8 @@ class GameCardFrame extends StatelessWidget {
     required this.actionsWidget,
     this.onTap,
     this.onLongPress,
+    this.contentPadding =
+        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
   });
 
   final Widget posterWidget;
@@ -17,17 +19,18 @@ class GameCardFrame extends StatelessWidget {
   final Widget actionsWidget;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final EdgeInsetsGeometry contentPadding;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 1,
+      elevation: 0.5,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-          bottomLeft: Radius.circular(8),
-          bottomRight: Radius.circular(20),
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+          bottomLeft: Radius.circular(6),
+          bottomRight: Radius.circular(16),
         ),
       ),
       clipBehavior: Clip.antiAlias,
@@ -40,14 +43,20 @@ class GameCardFrame extends StatelessWidget {
             posterWidget,
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: contentPadding,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    titleWidget,
-                    const SizedBox(height: 2),
-                    subtitleWidget,
-                    const Spacer(),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        titleWidget,
+                        const SizedBox(height: 1),
+                        subtitleWidget,
+                      ],
+                    ),
                     actionsWidget,
                   ],
                 ),

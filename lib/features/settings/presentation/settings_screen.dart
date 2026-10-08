@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:material_3_expressive/components/buttons/enums/m3e_button_enums.dart';
 import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:material_segmented_list/material_segmented_list.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -9,7 +8,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/theme/questopia_theme.dart';
-import '../../../core/utils/path_picker_helper.dart';
+import '../../../core/helpers/path_picker_helper.dart';
 import '../../../core/widgets/questopia_scaffold.dart';
 import 'sheets/settings_picker_sheets.dart';
 import 'widgets/setting_tiles.dart';
@@ -126,36 +125,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           for (var i = 0; i < sections.length; i++) ...[
             if (i > 0) const SizedBox(width: 8),
-            _buildCategoryButton(
-              context: context,
-              label: sections[i],
-              icon: _sectionIcons[i],
-              isSelected: _selectedSection == i,
-              onPressed: () => setState(() => _selectedSection = i),
+            ChoiceChip(
+              showCheckmark: false,
+              avatar: Icon(_sectionIcons[i], size: 18),
+              label: Text(sections[i]),
+              selected: _selectedSection == i,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(_selectedSection == i ? 24 : 8),
+              ),
+              onSelected: (_) => setState(() => _selectedSection = i),
             ),
           ],
         ],
       ),
-    );
-  }
-
-  Widget _buildCategoryButton({
-    required BuildContext context,
-    required String label,
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onPressed,
-  }) {
-    return M3EButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 18),
-      label: Text(
-        label,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
-      style: isSelected ? M3EButtonStyle.filled : M3EButtonStyle.outlined,
-      size: M3EButtonSize.sm,
-      shape: M3EButtonShape.round,
     );
   }
 

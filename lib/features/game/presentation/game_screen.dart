@@ -1,5 +1,8 @@
 import 'dart:io';
+import 'dart:isolate';
+import 'dart:ui';
 
+import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -8,9 +11,10 @@ import 'package:material_segmented_list/material_segmented_list.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../core/media/poster_menu_sheet.dart';
+import '../../../core/native/qsp_models.dart';
 import '../../../core/providers/settings_provider.dart';
-import '../../../core/utils/html_processor.dart';
-import '../../../core/utils/sheet_helper.dart';
+import '../../../core/helpers/html_processor.dart';
+import '../../../core/helpers/sheet_helper.dart';
 import '../providers/game_engine_provider.dart';
 import 'dialogs/game_dialogs_host.dart';
 import 'sheets/cheat_modes_sheet.dart';
@@ -33,6 +37,64 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   String _lastMainHtmlLoaded = '';
   String _lastVarsHtmlLoaded = '';
+  Map<String, String>? _cachedAssetIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _buildFastAssetIndex();
+    final settings = ref.read(settingsProvider);
+    if (settings.isImmersiveMode) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    }
+  }
+
+  @override
+  void dispose() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    super.dispose();
+  }
+
+  Future<void> _buildFastAssetIndex() async {
+    final game = ref.read(gameEngineProvider).activeGame;
+    if (game == null) return;
+    final gameFolder = Directory(p.dirname(game.gameFilePath));
+    final rootFolder = Directory(game.folderPath);
+    final targetPath =
+        gameFolder.existsSync() ? gameFolder.path : rootFolder.path;
+
+    try {
+      final index = await Isolate.run(() async {
+        final map = <String, String>{};
+        try {
+          final dir = Directory(targetPath);
+          if (dir.existsSync()) {
+            await for (final entity
+                in dir.list(recursive: true, followLinks: false)) {
+              if (entity is File) {
+                final rel = p
+                    .relative(entity.path, from: targetPath)
+                    .replaceAll('\\', '/')
+                    .toLowerCase();
+                map[rel] = entity.path;
+                final base = p.basename(entity.path).toLowerCase();
+                map[base] = entity.path;
+              }
+            }
+          }
+        } catch (_) {}
+        return map;
+      });
+
+      if (mounted) {
+        _cachedAssetIndex = index;
+        debugPrint(
+            '[GameScreen] Built pre-cached asset index with ${index.length} entries for "$targetPath"');
+      }
+    } catch (e) {
+      debugPrint('[GameScreen] Error building asset index: $e');
+    }
+  }
 
   String _stripTags(String html) {
     if (html.isEmpty) return html;
@@ -132,12 +194,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       processedHtml = HtmlProcessor.stripImageTags(processedHtml);
     }
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final fontColor = settings.useGameTextColor
+    var fontColor = settings.useGameTextColor
         ? '#${settings.gameTextColor.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}'
-        : (isDark ? '#E2E2E2' : '#1C1B1F');
-    final bgColor = settings.useGameBackgroundColor
+        : (isDark ? '#FFFFFF' : '#000000');
+    var bgColor = settings.useGameBackgroundColor
         ? '#${settings.gameBackColor.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}'
         : (isDark ? '#121212' : '#FFFFFF');
+
+    // Prevent invisible content when text and background colors are identical or colliding
+    if (fontColor.toUpperCase() == bgColor.toUpperCase()) {
+      fontColor = isDark ? '#FFFFFF' : '#000000';
+      bgColor = isDark ? '#121212' : '#FFFFFF';
+    }
+
     final linkColor = settings.useGameLinkColor
         ? '#${settings.gameLinkColor.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}'
         : '#3B82F6';
@@ -149,7 +218,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
       <base href="https://questopia.local/">
-      ${HtmlProcessor.ogvBootstrapScript()}
+      ${HtmlProcessor.videoBootstrapScript()}
       <style>
         body {
           background-color: $bgColor;
@@ -160,9 +229,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           padding: 12px;
           margin: 0;
         }
-        img { max-width: 100%; height: auto; border-radius: 8px; }
-        video { max-width: 100%; height: auto; background-color: transparent !important; }
-        video canvas { object-fit: fill !important; }
+        img { max-width: 100%; height: auto; display: block; margin: 8px auto; border-radius: 4px; }
+        video { max-width: 100%; height: auto; display: block; margin: 8px auto; border-radius: 4px; background-color: transparent !important; object-fit: contain; }
+        video canvas { object-fit: contain !important; }
         a { color: $linkColor; text-decoration: underline; }
       </style>
     </head>
@@ -252,6 +321,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       }
 
       final gameDir = Directory(p.dirname(game.gameFilePath));
+      final rootFolder = Directory(game.folderPath);
 
       var cleanPath = rawPath.trim();
       if (cleanPath.contains('?')) {
@@ -274,17 +344,30 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           cleanPath = cleanPath.substring(1);
         }
       }
-      cleanPath = cleanPath.replaceAll('\\', '/');
 
-      final file = _resolveCaseInsensitiveFile(gameDir, cleanPath);
+      File? file;
+      if (_cachedAssetIndex != null) {
+        final cleanLower = cleanPath.replaceAll('\\', '/').toLowerCase();
+        final indexedPath = _cachedAssetIndex![cleanLower] ??
+            _cachedAssetIndex![p.basename(cleanLower)];
+        if (indexedPath != null) {
+          file = File(indexedPath);
+        }
+      }
+
+      file ??= _resolveCaseInsensitiveFile(gameDir, cleanPath) ??
+          _resolveCaseInsensitiveFile(rootFolder, cleanPath);
+
       if (file == null || !await file.exists()) {
-        debugPrint('[GameScreen] Media file not found: "$cleanPath" in ${gameDir.path}');
+        debugPrint(
+            '[GameScreen] Media file not found: "$cleanPath" in ${gameDir.path} or ${rootFolder.path}');
         return null;
       }
 
       final mime = HtmlProcessor.mimeTypeForPath(cleanPath);
       final bytes = await file.readAsBytes();
-      debugPrint('[GameScreen] Serving local media file "$cleanPath" (${bytes.length} bytes, mime: $mime)');
+      debugPrint(
+          '[GameScreen] Serving local media file "$cleanPath" (${bytes.length} bytes, mime: $mime)');
       return WebResourceResponse(
         contentType: mime,
         data: bytes,
@@ -294,7 +377,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           'Content-Type': mime,
           'Content-Length': '${bytes.length}',
           'Access-Control-Allow-Origin': '*',
-          'Access-Control-Expose-Headers': 'Content-Range, Content-Length, Accept-Ranges',
+          'Access-Control-Expose-Headers':
+              'Content-Range, Content-Length, Accept-Ranges',
         },
       );
     } catch (error) {
@@ -305,10 +389,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   /// Case-insensitive & slash-tolerant local file resolution in [gameDir].
   File? _resolveCaseInsensitiveFile(Directory gameDir, String relativePath) {
+    if (!gameDir.existsSync()) return null;
+
     final directFile = File(p.join(gameDir.path, relativePath));
     if (directFile.existsSync()) return directFile;
 
-    final parts = p.split(relativePath);
+    final normalized = File(p.normalize(
+        p.join(gameDir.path, relativePath.replaceAll('/', p.separator))));
+    if (normalized.existsSync()) return normalized;
+
+    final cleanRel = relativePath.replaceAll('\\', '/');
+    final parts = cleanRel.split('/');
     FileSystemEntity current = gameDir;
 
     for (final part in parts) {
@@ -327,9 +418,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       }
 
       FileSystemEntity? match;
+      final partLower = part.toLowerCase();
       for (final child in children) {
         final name = p.basename(child.path);
-        if (name.toLowerCase() == part.toLowerCase()) {
+        if (name.toLowerCase() == partLower) {
           match = child;
           break;
         }
@@ -341,6 +433,72 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     if (current is File) return current;
     return null;
+  }
+
+  /// Locates an asset file within the game directory using the fast index and fallback resolver.
+  File? _findGameAssetFile(String relativePath) {
+    if (relativePath.trim().isEmpty) return null;
+    final game = ref.read(gameEngineProvider).activeGame;
+    if (game == null) return null;
+
+    var cleanPath = relativePath.trim();
+    if (cleanPath.contains('?')) {
+      cleanPath = cleanPath.split('?').first;
+    }
+    if (cleanPath.contains('#')) {
+      cleanPath = cleanPath.split('#').first;
+    }
+    try {
+      cleanPath = Uri.decodeFull(cleanPath);
+    } catch (_) {}
+
+    while (cleanPath.startsWith('/') ||
+        cleanPath.startsWith('\\') ||
+        cleanPath.startsWith('./')) {
+      if (cleanPath.startsWith('./')) {
+        cleanPath = cleanPath.substring(2);
+      } else {
+        cleanPath = cleanPath.substring(1);
+      }
+    }
+
+    if (_cachedAssetIndex != null) {
+      final cleanLower = cleanPath.replaceAll('\\', '/').toLowerCase();
+      final indexedPath = _cachedAssetIndex![cleanLower] ??
+          _cachedAssetIndex![p.basename(cleanLower)];
+      if (indexedPath != null) {
+        final f = File(indexedPath);
+        if (f.existsSync()) return f;
+      }
+    }
+
+    final gameDir = Directory(p.dirname(game.gameFilePath));
+    final rootFolder = Directory(game.folderPath);
+    return _resolveCaseInsensitiveFile(gameDir, cleanPath) ??
+        _resolveCaseInsensitiveFile(rootFolder, cleanPath);
+  }
+
+  /// Extracts image paths (from image property or embedded <img> tag) and sanitized text.
+  ({String? imagePath, String text}) _parseVisualItem(
+    String rawName,
+    String rawImage,
+  ) {
+    var imgPath = rawImage.trim();
+    if (imgPath.isEmpty) {
+      final match = RegExp(
+        r'''<img[^>]+src=["']?([^"'>\s]+)["']?''',
+        caseSensitive: false,
+      ).firstMatch(rawName);
+      if (match != null) {
+        imgPath = match.group(1) ?? '';
+      }
+    }
+
+    final cleanText = _stripTags(rawName).trim();
+    return (
+      imagePath: imgPath.isNotEmpty ? imgPath : null,
+      text: cleanText,
+    );
   }
 
   Future<void> _onWebViewLongPress(
@@ -450,41 +608,100 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 ],
               ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _activeTab,
-        onDestinationSelected: (index) {
-          debugPrint('[GameScreen] Switching tab to $index');
-          setState(() {
-            _activeTab = index;
-          });
-        },
-        destinations: [
-          NavigationDestination(
-            icon: Badge(
-              isLabelVisible: engineState.gameState.isMainDescChanged && _activeTab != 0,
-              child: const Icon(Icons.article_outlined),
+      bottomNavigationBar: settings.isNavBarBlur
+          ? ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                child: NavigationBar(
+                  backgroundColor: Theme.of(context)
+                      .colorScheme
+                      .surface
+                      .withValues(alpha: 0.78),
+                  selectedIndex: _activeTab,
+                  onDestinationSelected: (index) {
+                    if (settings.isEdgeFeedback) {
+                      HapticFeedback.lightImpact();
+                    }
+                    debugPrint('[GameScreen] Switching tab to $index');
+                    setState(() {
+                      _activeTab = index;
+                    });
+                  },
+                  destinations: [
+                    NavigationDestination(
+                      icon: Badge(
+                        isLabelVisible:
+                            engineState.gameState.isMainDescChanged &&
+                                _activeTab != 0,
+                        child: const Icon(Icons.article_outlined),
+                      ),
+                      selectedIcon: const Icon(Icons.article_rounded),
+                      label: 'Story',
+                    ),
+                    NavigationDestination(
+                      icon: Badge(
+                        isLabelVisible:
+                            engineState.gameState.isVarsDescChanged &&
+                                _activeTab != 1,
+                        child: const Icon(Icons.tune_rounded),
+                      ),
+                      selectedIcon: const Icon(Icons.tune_rounded),
+                      label: 'Status',
+                    ),
+                    NavigationDestination(
+                      icon: Badge(
+                        isLabelVisible: engineState.gameState.isObjectsChanged &&
+                            _activeTab != 2,
+                        child: const Icon(Icons.backpack_outlined),
+                      ),
+                      selectedIcon: const Icon(Icons.backpack_rounded),
+                      label: 'Inventory',
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : NavigationBar(
+              selectedIndex: _activeTab,
+              onDestinationSelected: (index) {
+                if (settings.isEdgeFeedback) {
+                  HapticFeedback.lightImpact();
+                }
+                debugPrint('[GameScreen] Switching tab to $index');
+                setState(() {
+                  _activeTab = index;
+                });
+              },
+              destinations: [
+                NavigationDestination(
+                  icon: Badge(
+                    isLabelVisible: engineState.gameState.isMainDescChanged &&
+                        _activeTab != 0,
+                    child: const Icon(Icons.article_outlined),
+                  ),
+                  selectedIcon: const Icon(Icons.article_rounded),
+                  label: 'Story',
+                ),
+                NavigationDestination(
+                  icon: Badge(
+                    isLabelVisible: engineState.gameState.isVarsDescChanged &&
+                        _activeTab != 1,
+                    child: const Icon(Icons.tune_rounded),
+                  ),
+                  selectedIcon: const Icon(Icons.tune_rounded),
+                  label: 'Status',
+                ),
+                NavigationDestination(
+                  icon: Badge(
+                    isLabelVisible: engineState.gameState.isObjectsChanged &&
+                        _activeTab != 2,
+                    child: const Icon(Icons.backpack_outlined),
+                  ),
+                  selectedIcon: const Icon(Icons.backpack_rounded),
+                  label: 'Inventory',
+                ),
+              ],
             ),
-            selectedIcon: const Icon(Icons.article_rounded),
-            label: 'Story',
-          ),
-          NavigationDestination(
-            icon: Badge(
-              isLabelVisible: engineState.gameState.isVarsDescChanged && _activeTab != 1,
-              child: const Icon(Icons.tune_rounded),
-            ),
-            selectedIcon: const Icon(Icons.tune_rounded),
-            label: 'Status',
-          ),
-          NavigationDestination(
-            icon: Badge(
-              isLabelVisible: engineState.gameState.isObjectsChanged && _activeTab != 2,
-              child: const Icon(Icons.backpack_outlined),
-            ),
-            selectedIcon: const Icon(Icons.backpack_rounded),
-            label: 'Inventory',
-          ),
-        ],
-      ),
     );
   }
 
@@ -495,99 +712,191 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     GameEngineNotifier engineNotifier,
     SettingsState settings,
   ) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Card(
-              clipBehavior: Clip.antiAlias,
-              child: InAppWebView(
-                initialData: InAppWebViewInitialData(
-                  data: _buildStyledHtml(mainHtml),
-                  mimeType: 'text/html',
-                  encoding: 'utf-8',
-                  baseUrl: WebUri('https://questopia.local/'),
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    double maxActionHeight;
+    switch (settings.actionsHeightRatio) {
+      case '1/5':
+        maxActionHeight = screenHeight * 0.20;
+        break;
+      case '1/4':
+        maxActionHeight = screenHeight * 0.25;
+        break;
+      case '1/3':
+        maxActionHeight = screenHeight * 0.33;
+        break;
+      case '1/2':
+        maxActionHeight = screenHeight * 0.50;
+        break;
+      case '2/3':
+        maxActionHeight = screenHeight * 0.66;
+        break;
+      default:
+        maxActionHeight = screenHeight * 0.33;
+        break;
+    }
+    maxActionHeight = maxActionHeight.clamp(80.0, 450.0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: InAppWebView(
+            initialData: InAppWebViewInitialData(
+              data: _buildStyledHtml(mainHtml),
+              mimeType: 'text/html',
+              encoding: 'utf-8',
+              baseUrl: WebUri('https://questopia.local/'),
+            ),
+            initialSettings: InAppWebViewSettings(
+              supportZoom: settings.isPinchZoomEnabled,
+              builtInZoomControls: true,
+              displayZoomControls: false,
+              mediaPlaybackRequiresUserGesture: false,
+              allowFileAccessFromFileURLs: true,
+              allowUniversalAccessFromFileURLs: true,
+              allowContentAccess: true,
+              allowFileAccess: true,
+            ),
+            onWebViewCreated: (controller) {
+              debugPrint('[GameScreen] Main onWebViewCreated fired: $controller');
+              _mainWebViewController = controller;
+              _updateMainWebViewContent(mainHtml, force: true);
+            },
+            onLoadStart: (controller, url) {
+              debugPrint('[GameScreen] Main onLoadStart: $url');
+            },
+            onLoadStop: (controller, url) {
+              debugPrint('[GameScreen] Main onLoadStop: $url');
+            },
+            onReceivedError: (controller, request, error) {
+              final url = request.url.toString();
+              if (url.contains('about:blank')) return;
+              debugPrint(
+                  '[GameScreen] Main onReceivedError: ${error.description} on $url');
+            },
+            shouldInterceptRequest: _interceptMedia,
+            onLongPressHitTestResult: _onWebViewLongPress,
+            shouldOverrideUrlLoading: (controller, navigationAction) async {
+              final url = navigationAction.request.url.toString();
+              debugPrint('[GameScreen] Main shouldOverrideUrlLoading: $url');
+              if (url.startsWith('exec:')) {
+                final code = HtmlProcessor.decodeExecUrl(url);
+                debugPrint('[GameScreen] Executing link code: "$code"');
+                engineNotifier.execCode(code);
+                return NavigationActionPolicy.CANCEL;
+              }
+              return NavigationActionPolicy.ALLOW;
+            },
+          ),
+        ),
+        if (engineState.gameState.actions.isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              border: Border(
+                top: BorderSide(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .outlineVariant
+                      .withValues(alpha: 0.3),
+                  width: 0.5,
                 ),
-                initialSettings: InAppWebViewSettings(
-                  supportZoom: settings.isPinchZoomEnabled,
-                  builtInZoomControls: true,
-                  displayZoomControls: false,
-                  mediaPlaybackRequiresUserGesture: false,
-                  allowFileAccessFromFileURLs: true,
-                  allowUniversalAccessFromFileURLs: true,
-                  allowContentAccess: true,
-                  allowFileAccess: true,
-                ),
-                onWebViewCreated: (controller) {
-                  debugPrint('[GameScreen] Main onWebViewCreated fired: $controller');
-                  _mainWebViewController = controller;
-                  _updateMainWebViewContent(mainHtml, force: true);
-                },
-                onLoadStart: (controller, url) {
-                  debugPrint('[GameScreen] Main onLoadStart: $url');
-                },
-                onLoadStop: (controller, url) {
-                  debugPrint('[GameScreen] Main onLoadStop: $url');
-                },
-                onReceivedError: (controller, request, error) {
-                  final url = request.url.toString();
-                  if (url.contains('about:blank')) return;
-                  debugPrint(
-                      '[GameScreen] Main onReceivedError: ${error.description} on $url');
-                },
-                shouldInterceptRequest: _interceptMedia,
-                onLongPressHitTestResult: _onWebViewLongPress,
-                shouldOverrideUrlLoading: (controller, navigationAction) async {
-                  final url = navigationAction.request.url.toString();
-                  debugPrint('[GameScreen] Main shouldOverrideUrlLoading: $url');
-                  if (url.startsWith('exec:')) {
-                    final code = HtmlProcessor.decodeExecUrl(url);
-                    debugPrint('[GameScreen] Executing link code: "$code"');
-                    engineNotifier.execCode(code);
-                    return NavigationActionPolicy.CANCEL;
-                  }
-                  return NavigationActionPolicy.ALLOW;
-                },
               ),
             ),
-          ),
-          if (engineState.gameState.actions.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 120),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxActionHeight),
               child: SingleChildScrollView(
                 child: Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: engineState.gameState.actions.map((act) {
-                    return FilledButton.tonal(
-                      onPressed: () {
-                        debugPrint('[GameScreen] Tapped action #${act.index}: "${act.name}"');
-                        engineNotifier.execAction(act.index);
-                      },
-                      child: Text(_stripTags(act.name)),
-                    );
+                    return _buildActionButton(context, act, engineNotifier);
                   }).toList(),
                 ),
               ),
             ),
-          ],
-          const SizedBox(height: 10),
-          TextField(
-            textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(
-              hintText: 'Type command or response...',
-              prefixIcon: Icon(Icons.keyboard_alt_outlined),
-            ),
-            onSubmitted: (value) {
-              if (value.trim().isNotEmpty) {
-                debugPrint('[GameScreen] Submitted command text: "${value.trim()}"');
-                engineNotifier.execCode(value.trim());
-              }
-            },
           ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildActionButton(
+    BuildContext context,
+    QspAction act,
+    GameEngineNotifier engineNotifier,
+  ) {
+    final colors = Theme.of(context).colorScheme;
+    final visual = _parseVisualItem(act.name, act.image);
+    final file =
+        visual.imagePath != null ? _findGameAssetFile(visual.imagePath!) : null;
+
+    Widget? imageWidget;
+    if (file != null && file.existsSync()) {
+      imageWidget = ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: ExtendedImage.file(
+          file,
+          height: 28,
+          fit: BoxFit.contain,
+          clearMemoryCacheWhenDispose: false,
+        ),
+      );
+    }
+
+    if (imageWidget != null && visual.text.isEmpty) {
+      // Pure image button - custom sleek square/pill tile
+      return Material(
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(12),
+        elevation: 0.5,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            debugPrint(
+                '[GameScreen] Tapped action #${act.index}: "${act.name}"');
+            engineNotifier.execAction(act.index);
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 32, maxHeight: 44),
+              child: imageWidget,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return FilledButton.tonal(
+      onPressed: () {
+        debugPrint(
+            '[GameScreen] Tapped action #${act.index}: "${act.name}"');
+        engineNotifier.execAction(act.index);
+      },
+      style: FilledButton.styleFrom(
+        padding: EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: imageWidget != null ? 8 : 10,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (imageWidget != null) ...[
+            imageWidget,
+            if (visual.text.isNotEmpty) const SizedBox(width: 8),
+          ],
+          if (visual.text.isNotEmpty)
+            Flexible(
+              child: Text(
+                visual.text,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
         ],
       ),
     );
@@ -621,55 +930,49 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        child: InAppWebView(
-          initialData: InAppWebViewInitialData(
-            data: _buildStyledHtml(varsHtml),
-            mimeType: 'text/html',
-            encoding: 'utf-8',
-            baseUrl: WebUri('https://questopia.local/'),
-          ),
-          initialSettings: InAppWebViewSettings(
-            supportZoom: settings.isPinchZoomEnabled,
-            builtInZoomControls: true,
-            displayZoomControls: false,
-            mediaPlaybackRequiresUserGesture: false,
-          ),
-          onWebViewCreated: (controller) {
-            debugPrint('[GameScreen] Vars onWebViewCreated fired: $controller');
-            _varsWebViewController = controller;
-            _updateVarsWebViewContent(varsHtml, force: true);
-          },
-          onLoadStart: (controller, url) {
-            debugPrint('[GameScreen] Vars onLoadStart: $url');
-          },
-          onLoadStop: (controller, url) {
-            debugPrint('[GameScreen] Vars onLoadStop: $url');
-          },
-          onReceivedError: (controller, request, error) {
-            final url = request.url.toString();
-            if (url.contains('about:blank')) return;
-            debugPrint(
-                '[GameScreen] Vars onReceivedError: ${error.description} on $url');
-          },
-          shouldInterceptRequest: _interceptMedia,
-          onLongPressHitTestResult: _onWebViewLongPress,
-          shouldOverrideUrlLoading: (controller, navigationAction) async {
-            final url = navigationAction.request.url.toString();
-            debugPrint('[GameScreen] Vars shouldOverrideUrlLoading: $url');
-            if (url.startsWith('exec:')) {
-              final code = HtmlProcessor.decodeExecUrl(url);
-              debugPrint('[GameScreen] Executing link code from Vars: "$code"');
-              ref.read(gameEngineProvider.notifier).execCode(code);
-              return NavigationActionPolicy.CANCEL;
-            }
-            return NavigationActionPolicy.ALLOW;
-          },
-        ),
+    return InAppWebView(
+      initialData: InAppWebViewInitialData(
+        data: _buildStyledHtml(varsHtml),
+        mimeType: 'text/html',
+        encoding: 'utf-8',
+        baseUrl: WebUri('https://questopia.local/'),
       ),
+      initialSettings: InAppWebViewSettings(
+        supportZoom: settings.isPinchZoomEnabled,
+        builtInZoomControls: true,
+        displayZoomControls: false,
+        mediaPlaybackRequiresUserGesture: false,
+      ),
+      onWebViewCreated: (controller) {
+        debugPrint('[GameScreen] Vars onWebViewCreated fired: $controller');
+        _varsWebViewController = controller;
+        _updateVarsWebViewContent(varsHtml, force: true);
+      },
+      onLoadStart: (controller, url) {
+        debugPrint('[GameScreen] Vars onLoadStart: $url');
+      },
+      onLoadStop: (controller, url) {
+        debugPrint('[GameScreen] Vars onLoadStop: $url');
+      },
+      onReceivedError: (controller, request, error) {
+        final url = request.url.toString();
+        if (url.contains('about:blank')) return;
+        debugPrint(
+            '[GameScreen] Vars onReceivedError: ${error.description} on $url');
+      },
+      shouldInterceptRequest: _interceptMedia,
+      onLongPressHitTestResult: _onWebViewLongPress,
+      shouldOverrideUrlLoading: (controller, navigationAction) async {
+        final url = navigationAction.request.url.toString();
+        debugPrint('[GameScreen] Vars shouldOverrideUrlLoading: $url');
+        if (url.startsWith('exec:')) {
+          final code = HtmlProcessor.decodeExecUrl(url);
+          debugPrint('[GameScreen] Executing link code from Vars: "$code"');
+          ref.read(gameEngineProvider.notifier).execCode(code);
+          return NavigationActionPolicy.CANCEL;
+        }
+        return NavigationActionPolicy.ALLOW;
+      },
     );
   }
 
@@ -679,6 +982,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     GameEngineNotifier engineNotifier,
   ) {
     final objects = engineState.gameState.objects;
+    final colors = Theme.of(context).colorScheme;
+
     if (objects.isEmpty) {
       return Center(
         child: Column(
@@ -687,13 +992,13 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             Icon(
               Icons.backpack_outlined,
               size: 48,
-              color: Theme.of(context).colorScheme.outline,
+              color: colors.outline,
             ),
             const SizedBox(height: 12),
             Text(
               'Inventory is empty',
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.outline,
+                    color: colors.outline,
                   ),
             ),
           ],
@@ -701,21 +1006,145 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       );
     }
 
+    final parsedObjects = objects.map((obj) {
+      final visual = _parseVisualItem(obj.name, obj.image);
+      final file = visual.imagePath != null
+          ? _findGameAssetFile(visual.imagePath!)
+          : null;
+      return (obj: obj, visual: visual, file: file);
+    }).toList();
+
+    final allPureImages = parsedObjects.every(
+      (p) => p.file != null && p.file!.existsSync() && p.visual.text.isEmpty,
+    );
+
+    if (allPureImages) {
+      // Pure image inventory design: sleek, native square tiles grid
+      return GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 84,
+          childAspectRatio: 1.0,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+        ),
+        itemCount: parsedObjects.length,
+        itemBuilder: (context, index) {
+          final item = parsedObjects[index];
+          return Card(
+            elevation: 1,
+            margin: EdgeInsets.zero,
+            color: colors.surfaceContainerHigh,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(
+                color: colors.outlineVariant.withValues(alpha: 0.6),
+                width: 1,
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () {
+                debugPrint(
+                    '[GameScreen] Selected object #${item.obj.index}: "${item.obj.name}"');
+                engineNotifier.selectObject(item.obj.index);
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Center(
+                  child: ExtendedImage.file(
+                    item.file!,
+                    fit: BoxFit.contain,
+                    clearMemoryCacheWhenDispose: false,
+                    loadStateChanged: (state) {
+                      if (state.extendedImageLoadState == LoadState.failed) {
+                        return Icon(
+                          Icons.inventory_2_outlined,
+                          color: colors.outline,
+                        );
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: objects.length,
+      itemCount: parsedObjects.length,
       itemBuilder: (context, index) {
-        final obj = objects[index];
+        final item = parsedObjects[index];
+        final hasImage = item.file != null && item.file!.existsSync();
+
         return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            leading: const CircleAvatar(
-              child: Icon(Icons.backpack_outlined),
+          margin: const EdgeInsets.only(bottom: 10),
+          elevation: 0.5,
+          color: colors.surfaceContainerLow,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(
+              color: colors.outlineVariant.withValues(alpha: 0.4),
+              width: 0.5,
             ),
-            title: Text(obj.name),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: ListTile(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            leading: hasImage
+                ? Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: colors.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: colors.outlineVariant.withValues(alpha: 0.5),
+                        width: 0.5,
+                      ),
+                    ),
+                    padding: const EdgeInsets.all(4),
+                    child: ExtendedImage.file(
+                      item.file!,
+                      fit: BoxFit.contain,
+                      clearMemoryCacheWhenDispose: false,
+                      loadStateChanged: (state) {
+                        if (state.extendedImageLoadState == LoadState.failed) {
+                          return Icon(
+                            Icons.inventory_2_outlined,
+                            color: colors.outline,
+                          );
+                        }
+                        return null;
+                      },
+                    ),
+                  )
+                : CircleAvatar(
+                    backgroundColor: colors.secondaryContainer,
+                    child: Icon(
+                      Icons.inventory_2_outlined,
+                      color: colors.onSecondaryContainer,
+                    ),
+                  ),
+            title: Text(
+              item.visual.text.isNotEmpty
+                  ? item.visual.text
+                  : 'Item #${item.obj.index + 1}',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+                color: colors.onSurface,
+              ),
+            ),
             onTap: () {
-              debugPrint('[GameScreen] Selected object #${obj.index}: "${obj.name}"');
-              engineNotifier.selectObject(obj.index);
+              debugPrint(
+                  '[GameScreen] Selected object #${item.obj.index}: "${item.obj.name}"');
+              engineNotifier.selectObject(item.obj.index);
             },
           ),
         );

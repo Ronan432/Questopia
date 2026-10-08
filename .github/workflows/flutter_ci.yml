@@ -2,14 +2,34 @@ name: Flutter CI
 
 on:
   push:
-    branches: [ master, flutter ]
+    branches: [ master, flutter, main ]
   pull_request:
-    branches: [ master, flutter ]
+    branches: [ master, flutter, main ]
 
 jobs:
-  build:
+  analyze:
+    name: Static Analysis
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze code
+        run: flutter analyze
+
+  build-android:
+    name: Build Android APK
+    needs: analyze
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,15 +43,50 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
           channel: 'stable'
           cache: true
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Analyze code
-        run: flutter analyze
+      - name: Build Minified Release APKs (Split per ABI)
+        run: flutter build apk --release --split-per-abi --tree-shake-icons
 
-      - name: Build Android APK
-        run: flutter build apk --debug
+      - name: Upload Android APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: questopia-android-apks
+          path: build/app/outputs/flutter-apk/*.apk
+          retention-days: 14
+
+  build-windows:
+    name: Build Windows x64
+    needs: analyze
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Minified Windows Release
+        run: flutter build windows --release --tree-shake-icons
+
+      - name: Archive Windows Release
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "Questopia-Windows-x64.zip" -Force
+
+      - name: Upload Windows Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: questopia-windows-x64
+          path: Questopia-Windows-x64.zip
+          retention-days: 14

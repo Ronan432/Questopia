@@ -64,7 +64,7 @@ class _WindowTitleBarState extends State<WindowTitleBar> with WindowListener {
     return DragToMoveArea(
       child: Container(
         height: 40,
-        color: colors.surfaceContainerLow,
+        color: colors.surface,
         child: Row(
           children: [
             const SizedBox(width: 12),

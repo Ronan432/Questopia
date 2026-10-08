@@ -8,6 +8,7 @@ class QuestopiaScaffold extends StatelessWidget {
     super.key,
     required this.title,
     required this.body,
+    this.titleWidget,
     this.actions,
     this.bottomNavigationBar,
   });
@@ -16,10 +17,12 @@ class QuestopiaScaffold extends StatelessWidget {
     super.key,
     required this.title,
     required this.body,
+    this.titleWidget,
     this.actions,
   }) : bottomNavigationBar = null;
 
   final String title;
+  final Widget? titleWidget;
   final Widget body;
   final List<Widget>? actions;
   final Widget? bottomNavigationBar;
@@ -39,8 +42,11 @@ class QuestopiaScaffold extends StatelessWidget {
         child: showCustomTitleBar
             ? WindowTitleBar(title: title)
             : AppBar(
-                title: Text(title),
+                title: titleWidget ?? Text(title),
                 actions: actions,
+                scrolledUnderElevation: 0,
+                surfaceTintColor: Colors.transparent,
+                backgroundColor: Theme.of(context).colorScheme.surface,
               ),
       ),
       body: body,

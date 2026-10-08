@@ -192,7 +192,12 @@ abstract final class QuestopiaTheme {
       fontFamily: 'Netflix Sans',
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.surface,
-      appBarTheme: AppBarTheme(backgroundColor: scheme.surface),
+      appBarTheme: AppBarTheme(
+        backgroundColor: scheme.surface,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+      ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: scheme.surfaceContainer,
         indicatorColor: scheme.secondaryContainer,

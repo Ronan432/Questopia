@@ -95,19 +95,123 @@ class GameDialogsHost extends ConsumerWidget {
   }
 }
 
+class GameMorphButton extends StatefulWidget {
+  const GameMorphButton({
+    super.key,
+    required this.onPressed,
+    required this.child,
+    this.filled = true,
+  });
+
+  final VoidCallback? onPressed;
+  final Widget child;
+  final bool filled;
+
+  @override
+  State<GameMorphButton> createState() => _GameMorphButtonState();
+}
+
+class _GameMorphButtonState extends State<GameMorphButton> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final borderRadius = _isPressed
+        ? BorderRadius.circular(8)
+        : BorderRadius.circular(24);
+
+    final bg = widget.filled
+        ? theme.colorScheme.primary
+        : Colors.transparent;
+    final fg = widget.filled
+        ? theme.colorScheme.onPrimary
+        : theme.colorScheme.primary;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: borderRadius,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: borderRadius,
+          onHighlightChanged: (highlighted) {
+            setState(() {
+              _isPressed = highlighted;
+            });
+          },
+          onTap: widget.onPressed,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: DefaultTextStyle(
+              style: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
+                color: fg,
+                fontWeight: FontWeight.w600,
+              ),
+              child: IconTheme(
+                data: IconThemeData(color: fg, size: 18),
+                child: widget.child,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _MessageDialog extends StatelessWidget {
   const _MessageDialog({required this.text, required this.onClose});
 
   final String text;
   final VoidCallback onClose;
 
+  String _cleanText(String input) {
+    if (input.isEmpty) return input;
+    return input
+        .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+        .replaceAll(RegExp(r'</?p>', caseSensitive: false), '\n')
+        .replaceAll(RegExp(r'<[^>]*>', caseSensitive: false, dotAll: true), '')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .trim();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final clean = _cleanText(text);
+
     return AlertDialog(
-      title: const Text('Message'),
-      content: SingleChildScrollView(child: Text(text)),
+      backgroundColor: colors.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(
+        'Message',
+        style: TextStyle(
+          color: colors.onSurface,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ),
+      ),
+      content: SingleChildScrollView(
+        child: Text(
+          clean.isNotEmpty ? clean : text,
+          style: TextStyle(
+            color: colors.onSurface,
+            fontSize: 15,
+            height: 1.5,
+          ),
+        ),
+      ),
       actions: [
-        FilledButton(onPressed: onClose, child: const Text('OK')),
+        GameMorphButton(onPressed: onClose, child: const Text('OK')),
       ],
     );
   }
@@ -147,17 +251,42 @@ class _InputDialogState extends State<_InputDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final cleanPrompt = widget.prompt
+        .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), ' ')
+        .replaceAll(RegExp(r'<[^>]*>', caseSensitive: false, dotAll: true), '')
+        .trim();
+
     return AlertDialog(
-      title: Text(widget.prompt.isNotEmpty ? widget.prompt : 'Input'),
+      backgroundColor: colors.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(
+        cleanPrompt.isNotEmpty ? cleanPrompt : 'Input',
+        style: TextStyle(
+          color: colors.onSurface,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ),
+      ),
       content: TextField(
         controller: _controller,
         autofocus: true,
+        style: TextStyle(color: colors.onSurface, fontSize: 16),
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: colors.surfaceContainerHighest,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: colors.outline),
+          ),
+        ),
         textInputAction: TextInputAction.done,
         onSubmitted: widget.onSubmit,
       ),
       actions: [
-        TextButton(onPressed: widget.onCancel, child: const Text('Cancel')),
-        FilledButton(
+        GameMorphButton(
+            filled: false, onPressed: widget.onCancel, child: const Text('Cancel')),
+        GameMorphButton(
           onPressed: () => widget.onSubmit(_controller.text),
           child: const Text('OK'),
         ),
@@ -179,25 +308,57 @@ class _MenuDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return AlertDialog(
-      title: const Text('Choose'),
+      backgroundColor: colors.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(
+        'Choose',
+        style: TextStyle(
+          color: colors.onSurface,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ),
+      ),
       content: SizedBox(
         width: double.maxFinite,
         child: items.isEmpty
-            ? const Text('No options')
+            ? Text(
+                'No options',
+                style: TextStyle(color: colors.onSurfaceVariant),
+              )
             : ListView.builder(
                 shrinkWrap: true,
                 itemCount: items.length,
                 itemBuilder: (context, index) {
+                  final cleanTitle = items[index].name
+                      .replaceAll(
+                          RegExp(r'<[^>]*>',
+                              caseSensitive: false, dotAll: true),
+                          '')
+                      .trim();
                   return ListTile(
-                    title: Text(items[index].name),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    title: Text(
+                      cleanTitle.isNotEmpty ? cleanTitle : items[index].name,
+                      style: TextStyle(
+                        color: colors.onSurface,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 15,
+                      ),
+                    ),
                     onTap: () => onSelect(index),
                   );
                 },
               ),
       ),
       actions: [
-        TextButton(onPressed: onCancel, child: const Text('Cancel')),
+        GameMorphButton(
+            filled: false, onPressed: onCancel, child: const Text('Cancel')),
       ],
     );
   }
@@ -211,6 +372,7 @@ class _ErrorDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final details = [
       if (error != null) ...[
         'Error #${error!.errorNum}: ${error!.errorDesc}',
@@ -220,11 +382,30 @@ class _ErrorDialog extends StatelessWidget {
       ] else
         'Unknown engine error',
     ].join('\n');
+
     return AlertDialog(
-      title: const Text('Error'),
-      content: SingleChildScrollView(child: Text(details)),
+      backgroundColor: colors.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(
+        'Error',
+        style: TextStyle(
+          color: colors.error,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ),
+      ),
+      content: SingleChildScrollView(
+        child: Text(
+          details,
+          style: TextStyle(
+            color: colors.onSurface,
+            fontSize: 14,
+            height: 1.4,
+          ),
+        ),
+      ),
       actions: [
-        FilledButton(onPressed: onClose, child: const Text('OK')),
+        GameMorphButton(onPressed: onClose, child: const Text('OK')),
       ],
     );
   }
@@ -238,17 +419,22 @@ class _ImagePreviewDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final isFile = imageUrl.isNotEmpty && File(imageUrl).existsSync();
     final isRemote =
         imageUrl.toLowerCase().startsWith('http://') ||
         imageUrl.toLowerCase().startsWith('https://');
+
     return Dialog(
+      backgroundColor: colors.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           AppBar(
             automaticallyImplyLeading: false,
-            title: const Text('Image'),
+            backgroundColor: Colors.transparent,
+            title: Text('Image', style: TextStyle(color: colors.onSurface)),
             actions: [
               if (imageUrl.isNotEmpty)
                 IconButton(
@@ -274,7 +460,10 @@ class _ImagePreviewDialog extends StatelessWidget {
                       ? Image.network(imageUrl)
                       : Padding(
                           padding: const EdgeInsets.all(24),
-                          child: Text('Image not found: $imageUrl'),
+                          child: Text(
+                            'Image not found: $imageUrl',
+                            style: TextStyle(color: colors.onSurfaceVariant),
+                          ),
                         ),
             ),
           ),
@@ -295,12 +484,27 @@ class _RestartConfirmationDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return AlertDialog(
-      title: const Text('Restart game?'),
-      content: const Text('Unsaved progress will be lost.'),
+      backgroundColor: colors.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(
+        'Restart game?',
+        style: TextStyle(
+          color: colors.onSurface,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ),
+      ),
+      content: Text(
+        'Unsaved progress will be lost.',
+        style: TextStyle(color: colors.onSurfaceVariant, fontSize: 15),
+      ),
       actions: [
-        TextButton(onPressed: onCancel, child: const Text('Cancel')),
-        FilledButton(onPressed: onConfirm, child: const Text('Restart')),
+        GameMorphButton(
+            filled: false, onPressed: onCancel, child: const Text('Cancel')),
+        GameMorphButton(onPressed: onConfirm, child: const Text('Restart')),
       ],
     );
   }
@@ -332,8 +536,19 @@ class _ExecutorDialogState extends State<_ExecutorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return AlertDialog(
-      title: const Text('QSP console'),
+      backgroundColor: colors.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(
+        'QSP console',
+        style: TextStyle(
+          color: colors.onSurface,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ),
+      ),
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
@@ -345,14 +560,28 @@ class _ExecutorDialogState extends State<_ExecutorDialog> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     widget.output.isEmpty ? 'No output yet' : widget.output,
-                    style: const TextStyle(fontFamily: 'monospace'),
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      color: colors.onSurface,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ),
             ),
+            const SizedBox(height: 8),
             TextField(
               controller: _controller,
-              decoration: const InputDecoration(hintText: 'QSP code...'),
+              style: TextStyle(color: colors.onSurface),
+              decoration: InputDecoration(
+                hintText: 'QSP code...',
+                hintStyle: TextStyle(color: colors.onSurfaceVariant),
+                filled: true,
+                fillColor: colors.surfaceContainerHighest,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
               textInputAction: TextInputAction.done,
               onSubmitted: (value) {
                 if (value.trim().isNotEmpty) {
@@ -365,8 +594,9 @@ class _ExecutorDialogState extends State<_ExecutorDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: widget.onClose, child: const Text('Close')),
-        FilledButton(
+        GameMorphButton(
+            filled: false, onPressed: widget.onClose, child: const Text('Close')),
+        GameMorphButton(
           onPressed: () {
             if (_controller.text.trim().isNotEmpty) {
               widget.onRun(_controller.text.trim());
@@ -388,12 +618,27 @@ class _FileLoadDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return AlertDialog(
-      title: const Text('Open save file'),
-      content: const Text('Pick an external .sav file to load.'),
+      backgroundColor: colors.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Text(
+        'Open save file',
+        style: TextStyle(
+          color: colors.onSurface,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ),
+      ),
+      content: Text(
+        'Pick an external .sav file to load.',
+        style: TextStyle(color: colors.onSurfaceVariant, fontSize: 15),
+      ),
       actions: [
-        TextButton(onPressed: onClose, child: const Text('Cancel')),
-        FilledButton(
+        GameMorphButton(
+            filled: false, onPressed: onClose, child: const Text('Cancel')),
+        GameMorphButton(
           onPressed: () async {
             final result = await FilePicker.platform.pickFiles(
               type: FileType.custom,

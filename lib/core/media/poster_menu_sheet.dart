@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../helpers/sheet_helper.dart';
 import 'game_media.dart';
 
 Future<void> showPosterMenuSheet({
@@ -9,7 +10,7 @@ Future<void> showPosterMenuSheet({
   String languageCode = 'en',
 }) {
   final service = mediaService ?? MediaService();
-  return showModalBottomSheet<void>(
+  return showQuestopiaSheet<void>(
     context: context,
     showDragHandle: true,
     builder: (sheetContext) {
@@ -27,7 +28,8 @@ Future<void> showPosterMenuSheet({
         );
       }
 
-      return SafeArea(
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

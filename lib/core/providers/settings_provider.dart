@@ -233,8 +233,9 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     state = SettingsState(
       themeMode: _themeModes[
           (prefs.getInt(_kThemeMode) ?? 0).clamp(0, _themeModes.length - 1)],
-      themeColor:
-          prefs.getString(_kThemeColor) ?? _legacyString(prefs, 'themeColor') ?? 'dynamic',
+      themeColor: prefs.getString(_kThemeColor) ??
+          _legacyString(prefs, 'themeColor') ??
+          'dynamic',
       fontSize: prefs.getDouble(_kFontSize) ??
           double.tryParse(_legacyString(prefs, 'fontSize') ?? '') ??
           16.0,
@@ -247,10 +248,12 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
           _legacyBool(prefs, 'isUseGameFont') ??
           _legacyBool(prefs, 'useGameFont') ??
           false,
-      isUseAutoscroll:
-          prefs.getBool(_kAutoscroll) ?? _legacyBool(prefs, 'autoscroll') ?? true,
-      isUseSeparator:
-          prefs.getBool(_kSeparator) ?? _legacyBool(prefs, 'separator') ?? false,
+      isUseAutoscroll: prefs.getBool(_kAutoscroll) ??
+          _legacyBool(prefs, 'autoscroll') ??
+          true,
+      isUseSeparator: prefs.getBool(_kSeparator) ??
+          _legacyBool(prefs, 'separator') ??
+          false,
       isSquarePosters: prefs.getBool(_kSquarePosters) ??
           _legacyBool(prefs, 'squarePosters') ??
           false,
@@ -265,15 +268,13 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       isImageDisabled: prefs.getBool(_kImageDisabled) ??
           _legacyBool(prefs, 'pref_disable_image') ??
           false,
-      isPinchZoomEnabled: prefs.getBool(_kPinchZoom) ??
-          _legacyBool(prefs, 'pinchZoom') ??
-          true,
+      isPinchZoomEnabled:
+          prefs.getBool(_kPinchZoom) ?? _legacyBool(prefs, 'pinchZoom') ?? true,
       isFullscreenImages: prefs.getBool(_kFullscreenImages) ??
           _legacyBool(prefs, 'fullScreenImage') ??
           false,
-      isAutosaveEnabled: prefs.getBool(_kAutosave) ??
-          _legacyBool(prefs, 'autosave') ??
-          false,
+      isAutosaveEnabled:
+          prefs.getBool(_kAutosave) ?? _legacyBool(prefs, 'autosave') ?? false,
       autosaveInterval: prefs.getInt(_kAutosaveInterval) ??
           _legacyInt(prefs, 'autosaveInterval') ??
           15,
@@ -283,7 +284,9 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       actionsHeightRatio: prefs.getString(_kActsHeight) ??
           _legacyString(prefs, 'actsHeight') ??
           '1/3',
-      language: prefs.getString(_kLanguage) ?? _legacyString(prefs, 'lang') ?? 'system',
+      language: prefs.getString(_kLanguage) ??
+          _legacyString(prefs, 'lang') ??
+          'system',
       gamesDirectory: prefs.getString(_kGamesDir) ?? '',
       isImmersiveMode: prefs.getBool(_kImmersive) ??
           _legacyBool(prefs, 'immersiveMode') ??
@@ -309,9 +312,8 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       gameLinkColor: prefs.getInt(_kGameLinkColor) ??
           _legacyInt(prefs, 'linkColor') ??
           0xFF0000FF,
-      isAutoWidth: prefs.getBool(_kAutoWidth) ??
-          _legacyBool(prefs, 'autoWidth') ??
-          true,
+      isAutoWidth:
+          prefs.getBool(_kAutoWidth) ?? _legacyBool(prefs, 'autoWidth') ?? true,
       customWidthImage: prefs.getInt(_kCustomWidthImage) ??
           int.tryParse(_legacyString(prefs, 'customWidthImage') ?? '') ??
           400,
@@ -321,10 +323,8 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       customHeightImage: prefs.getInt(_kCustomHeightImage) ??
           int.tryParse(_legacyString(prefs, 'customHeightImage') ?? '') ??
           400,
-      isNavBarBlur:
-          prefs.getBool(_kNavBarBlur) ?? false,
-      navBarBlurPercent:
-          prefs.getDouble(_kNavBarBlurPercent) ?? 70.0,
+      isNavBarBlur: prefs.getBool(_kNavBarBlur) ?? false,
+      navBarBlurPercent: prefs.getDouble(_kNavBarBlurPercent) ?? 70.0,
       isExecStringEnabled: prefs.getBool(_kExecString) ??
           _legacyBool(prefs, 'execString') ??
           false,

@@ -30,7 +30,8 @@ class GameScreen extends ConsumerStatefulWidget {
 }
 
 class _GameScreenState extends ConsumerState<GameScreen> {
-  int _activeTab = 0; // 0: Story (Main Desc & Actions), 1: Status (Vars Desc), 2: Inventory (Objects)
+  int _activeTab =
+      0; // 0: Story (Main Desc & Actions), 1: Status (Vars Desc), 2: Inventory (Objects)
 
   InAppWebViewController? _mainWebViewController;
   InAppWebViewController? _varsWebViewController;
@@ -98,7 +99,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   String _stripTags(String html) {
     if (html.isEmpty) return html;
-    return html.replaceAll(RegExp(r'<[^>]*>', caseSensitive: false, dotAll: true), '').trim();
+    return html
+        .replaceAll(RegExp(r'<[^>]*>', caseSensitive: false, dotAll: true), '')
+        .trim();
   }
 
   GameDialogType _lastDialogShown = GameDialogType.none;
@@ -184,9 +187,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   title: const Text('QSP Console'),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    ref
-                        .read(gameEngineProvider.notifier)
-                        .showExecutor();
+                    ref.read(gameEngineProvider.notifier).showExecutor();
                   },
                 ),
                 SegmentedListTile(
@@ -194,9 +195,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   title: const Text('Open Save File'),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    ref
-                        .read(gameEngineProvider.notifier)
-                        .showFileLoad();
+                    ref.read(gameEngineProvider.notifier).showFileLoad();
                   },
                 ),
               ],
@@ -264,14 +263,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   }
 
   void _updateMainWebViewContent(String rawHtml, {bool force = false}) {
-    if (!force && rawHtml == _lastMainHtmlLoaded && _mainWebViewController != null) {
+    if (!force &&
+        rawHtml == _lastMainHtmlLoaded &&
+        _mainWebViewController != null) {
       return;
     }
     _lastMainHtmlLoaded = rawHtml;
     final styledHtml = _buildStyledHtml(rawHtml);
 
     if (_mainWebViewController != null) {
-      debugPrint('[GameScreen] Loading data into Main WebView (${styledHtml.length} bytes)');
+      debugPrint(
+          '[GameScreen] Loading data into Main WebView (${styledHtml.length} bytes)');
       _mainWebViewController?.loadData(
         data: styledHtml,
         mimeType: 'text/html',
@@ -279,19 +281,23 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         baseUrl: WebUri('https://questopia.local/'),
       );
     } else {
-      debugPrint('[GameScreen] Main WebView Controller not initialized yet, content buffered.');
+      debugPrint(
+          '[GameScreen] Main WebView Controller not initialized yet, content buffered.');
     }
   }
 
   void _updateVarsWebViewContent(String rawHtml, {bool force = false}) {
-    if (!force && rawHtml == _lastVarsHtmlLoaded && _varsWebViewController != null) {
+    if (!force &&
+        rawHtml == _lastVarsHtmlLoaded &&
+        _varsWebViewController != null) {
       return;
     }
     _lastVarsHtmlLoaded = rawHtml;
     final styledHtml = _buildStyledHtml(rawHtml);
 
     if (_varsWebViewController != null) {
-      debugPrint('[GameScreen] Loading data into Vars WebView (${styledHtml.length} bytes)');
+      debugPrint(
+          '[GameScreen] Loading data into Vars WebView (${styledHtml.length} bytes)');
       _varsWebViewController?.loadData(
         data: styledHtml,
         mimeType: 'text/html',
@@ -299,7 +305,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         baseUrl: WebUri('https://questopia.local/'),
       );
     } else {
-      debugPrint('[GameScreen] Vars WebView Controller not initialized yet, content buffered.');
+      debugPrint(
+          '[GameScreen] Vars WebView Controller not initialized yet, content buffered.');
     }
   }
 
@@ -413,7 +420,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     if (!gameDir.existsSync()) return null;
 
     final cleanRel = relativePath.replaceAll('\\', '/');
-    final directFile = File(p.join(gameDir.path, cleanRel.replaceAll('/', p.separator)));
+    final directFile =
+        File(p.join(gameDir.path, cleanRel.replaceAll('/', p.separator)));
     if (directFile.existsSync()) return directFile;
 
     final normalized = File(p.normalize(
@@ -526,7 +534,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     InAppWebViewHitTestResult result,
   ) async {
     final extra = result.extra ?? '';
-    debugPrint('[GameScreen] WebView long press: type=${result.type}, extra="$extra"');
+    debugPrint(
+        '[GameScreen] WebView long press: type=${result.type}, extra="$extra"');
     if (result.type == InAppWebViewHitTestResultType.IMAGE_TYPE &&
         extra.isNotEmpty) {
       await showPosterMenuSheet(context: context, imageUri: extra);
@@ -633,8 +642,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           ? ClipRect(
               child: BackdropFilter(
                 filter: ImageFilter.blur(
-                  sigmaX: (settings.navBarBlurPercent.clamp(10.0, 100.0) / 100.0) * 24.0,
-                  sigmaY: (settings.navBarBlurPercent.clamp(10.0, 100.0) / 100.0) * 24.0,
+                  sigmaX:
+                      (settings.navBarBlurPercent.clamp(10.0, 100.0) / 100.0) *
+                          24.0,
+                  sigmaY:
+                      (settings.navBarBlurPercent.clamp(10.0, 100.0) / 100.0) *
+                          24.0,
                 ),
                 child: NavigationBar(
                   backgroundColor: Theme.of(context)
@@ -672,8 +685,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     ),
                     NavigationDestination(
                       icon: Badge(
-                        isLabelVisible: engineState.gameState.isObjectsChanged &&
-                            _activeTab != 2,
+                        isLabelVisible:
+                            engineState.gameState.isObjectsChanged &&
+                                _activeTab != 2,
                         child: const Icon(Icons.backpack_outlined),
                       ),
                       selectedIcon: const Icon(Icons.backpack_rounded),
@@ -778,7 +792,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               allowFileAccess: true,
             ),
             onWebViewCreated: (controller) {
-              debugPrint('[GameScreen] Main onWebViewCreated fired: $controller');
+              debugPrint(
+                  '[GameScreen] Main onWebViewCreated fired: $controller');
               _mainWebViewController = controller;
               _updateMainWebViewContent(mainHtml, force: true);
             },
@@ -891,8 +906,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     return FilledButton.tonal(
       onPressed: () {
-        debugPrint(
-            '[GameScreen] Tapped action #${act.index}: "${act.name}"');
+        debugPrint('[GameScreen] Tapped action #${act.index}: "${act.name}"');
         engineNotifier.execAction(act.index);
       },
       style: FilledButton.styleFrom(

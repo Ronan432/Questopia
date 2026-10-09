@@ -247,7 +247,8 @@ class CheatNotifier extends StateNotifier<CheatState> {
       ok = _backend.load(_snapshotSave!);
     }
     for (final v in state.snapshotVars) {
-      _backend.exec("${v.name} = ${v.isNumeric ? v.numValue : "'${_escape(v.strValue)}'"}");
+      _backend.exec(
+          "${v.name} = ${v.isNumeric ? v.numValue : "'${_escape(v.strValue)}'"}");
     }
     refresh();
     return ok;

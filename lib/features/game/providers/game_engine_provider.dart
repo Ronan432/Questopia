@@ -114,7 +114,8 @@ class GameEngineNotifier extends StateNotifier<GameEngineState> {
 
   void _installCallbacks(QspFfi ffi) {
     if (!ffi.supportsCallbacks) {
-      debugPrint('[GameEngineNotifier] Native library does not support callbacks.');
+      debugPrint(
+          '[GameEngineNotifier] Native library does not support callbacks.');
       return;
     }
     _bridge?.dispose();
@@ -139,11 +140,13 @@ class GameEngineNotifier extends StateNotifier<GameEngineState> {
 
     final ffi = _ffi;
     if (ffi == null) {
-      debugPrint('[GameEngineNotifier] WARNING: Native QspFfi is null! Using mock state.');
+      debugPrint(
+          '[GameEngineNotifier] WARNING: Native QspFfi is null! Using mock state.');
       state = state.copyWith(
         isLoading: false,
         gameState: QspGameState(
-          mainDesc: '<h3>Loaded ${game.title} (Mock Engine)</h3><p>Native libqsp.so/qsp.dll was not found on this system.</p>',
+          mainDesc:
+              '<h3>Loaded ${game.title} (Mock Engine)</h3><p>Native libqsp.so/qsp.dll was not found on this system.</p>',
           varsDesc: '<p>Mock Vars Window</p>',
           actions: [
             const QspAction(index: 0, name: 'Examine room', image: ''),
@@ -159,7 +162,8 @@ class GameEngineNotifier extends StateNotifier<GameEngineState> {
 
     final file = File(game.gameFilePath);
     if (!await file.exists()) {
-      debugPrint('[GameEngineNotifier] ERROR: Game file does not exist at "${game.gameFilePath}"!');
+      debugPrint(
+          '[GameEngineNotifier] ERROR: Game file does not exist at "${game.gameFilePath}"!');
       state = state.copyWith(isLoading: false);
       return false;
     }
@@ -174,7 +178,8 @@ class GameEngineNotifier extends StateNotifier<GameEngineState> {
     debugPrint('[GameEngineNotifier] Calling ffi.loadGameData()...');
     final loaded = ffi.loadGameData(bytes, isNew: true);
     if (!loaded) {
-      debugPrint('[GameEngineNotifier] ERROR: ffi.loadGameData() returned false!');
+      debugPrint(
+          '[GameEngineNotifier] ERROR: ffi.loadGameData() returned false!');
       _checkError();
       state = state.copyWith(isLoading: false);
       return false;
@@ -183,14 +188,17 @@ class GameEngineNotifier extends StateNotifier<GameEngineState> {
     debugPrint('[GameEngineNotifier] Calling ffi.restartGame()...');
     final restarted = ffi.restartGame(refresh: true);
     if (!restarted) {
-      debugPrint('[GameEngineNotifier] WARNING: ffi.restartGame() returned false!');
+      debugPrint(
+          '[GameEngineNotifier] WARNING: ffi.restartGame() returned false!');
     }
 
-    debugPrint('[GameEngineNotifier] ffi.loadGameData() succeeded. Refreshing state...');
+    debugPrint(
+        '[GameEngineNotifier] ffi.loadGameData() succeeded. Refreshing state...');
     _refreshState();
     _checkError();
     state = state.copyWith(isLoading: false);
-    debugPrint('[GameEngineNotifier] loadGame complete. activeGame="${state.activeGame?.title}"');
+    debugPrint(
+        '[GameEngineNotifier] loadGame complete. activeGame="${state.activeGame?.title}"');
     return true;
   }
 
@@ -288,7 +296,8 @@ class GameEngineNotifier extends StateNotifier<GameEngineState> {
               previewImageUrl: resolved,
             );
           } else {
-            debugPrint('[GameEngineNotifier] Image not found for SHOWIMAGE: "$cleanPath" (resolved: "$resolved")');
+            debugPrint(
+                '[GameEngineNotifier] Image not found for SHOWIMAGE: "$cleanPath" (resolved: "$resolved")');
             state = state.copyWith(
               activeDialog: GameDialogType.none,
               previewImageUrl: '',
@@ -404,7 +413,8 @@ class GameEngineNotifier extends StateNotifier<GameEngineState> {
 
   Future<void> _openStatusFile(String path) async {
     final resolved = _resolveGameFile(path);
-    debugPrint('[GameEngineNotifier] _openStatusFile("$path") resolved to "$resolved"');
+    debugPrint(
+        '[GameEngineNotifier] _openStatusFile("$path") resolved to "$resolved"');
     final file = File(resolved);
     if (!await file.exists()) {
       debugPrint('[GameEngineNotifier] Status file missing at "$resolved"');

@@ -64,12 +64,14 @@ class PathPickerHelper {
       );
 
       if (result == null || result.files.isEmpty) {
-        debugPrint('[QUESTOPIA_IMPORT] [PICKER] pickGameFile cancelled by user (result is null/empty)');
+        debugPrint(
+            '[QUESTOPIA_IMPORT] [PICKER] pickGameFile cancelled by user (result is null/empty)');
         return null;
       }
 
       final file = result.files.single;
-      debugPrint('[QUESTOPIA_IMPORT] [PICKER] File picked: name="${file.name}", path="${file.path}", size=${file.size}, bytes=${file.bytes != null}');
+      debugPrint(
+          '[QUESTOPIA_IMPORT] [PICKER] File picked: name="${file.name}", path="${file.path}", size=${file.size}, bytes=${file.bytes != null}');
 
       String? pickedPath;
       if (file.path != null && file.path!.trim().isNotEmpty) {
@@ -79,18 +81,21 @@ class PathPickerHelper {
         final tempFile = File(p.join(tempDir.path, file.name));
         await tempFile.writeAsBytes(file.bytes!);
         pickedPath = tempFile.path;
-        debugPrint('[QUESTOPIA_IMPORT] [PICKER] Wrote in-memory bytes to temporary file: $pickedPath');
+        debugPrint(
+            '[QUESTOPIA_IMPORT] [PICKER] Wrote in-memory bytes to temporary file: $pickedPath');
       }
 
       if (pickedPath != null && pickedPath.isNotEmpty) {
-        final ext =
-            p.extension(pickedPath).replaceFirst('.', '').toLowerCase();
-        debugPrint('[QUESTOPIA_IMPORT] [PICKER] Resolved file path: "$pickedPath" with extension: "$ext"');
+        final ext = p.extension(pickedPath).replaceFirst('.', '').toLowerCase();
+        debugPrint(
+            '[QUESTOPIA_IMPORT] [PICKER] Resolved file path: "$pickedPath" with extension: "$ext"');
         if (gameFileExtensions.contains(ext)) {
-          debugPrint('[QUESTOPIA_IMPORT] [PICKER] Extension "$ext" is VALID. Returning path: "$pickedPath"');
+          debugPrint(
+              '[QUESTOPIA_IMPORT] [PICKER] Extension "$ext" is VALID. Returning path: "$pickedPath"');
           return pickedPath;
         } else {
-          debugPrint('[QUESTOPIA_IMPORT] [PICKER] Extension "$ext" is INVALID. Supported: $gameFileExtensions');
+          debugPrint(
+              '[QUESTOPIA_IMPORT] [PICKER] Extension "$ext" is INVALID. Supported: $gameFileExtensions');
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -114,7 +119,8 @@ class PathPickerHelper {
     String currentPath = '',
     String title = 'Select folder',
   }) async {
-    debugPrint('[QUESTOPIA_IMPORT] [PICKER] pickDirectory called (currentPath: "$currentPath", title: "$title")');
+    debugPrint(
+        '[QUESTOPIA_IMPORT] [PICKER] pickDirectory called (currentPath: "$currentPath", title: "$title")');
     await ensureStoragePermissions();
 
     try {
@@ -123,7 +129,8 @@ class PathPickerHelper {
         initialDirectory: currentPath.isNotEmpty ? currentPath : null,
       );
 
-      debugPrint('[QUESTOPIA_IMPORT] [PICKER] Directory picker returned: "$selectedPath"');
+      debugPrint(
+          '[QUESTOPIA_IMPORT] [PICKER] Directory picker returned: "$selectedPath"');
       if (selectedPath != null && selectedPath.trim().isNotEmpty) {
         return selectedPath.trim();
       }

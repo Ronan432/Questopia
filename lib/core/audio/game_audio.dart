@@ -68,7 +68,8 @@ final class _SoundEntry {
 /// `isSoundEnabled` preference. The engine callback bridge (phase 4)
 /// calls [playFile] and [closeFile].
 final class GameAudio {
-  GameAudio({AudioBackend? backend}) : _backend = backend ?? AudioPlayersBackend();
+  GameAudio({AudioBackend? backend})
+      : _backend = backend ?? AudioPlayersBackend();
 
   final AudioBackend _backend;
   final Map<String, _SoundEntry> _sounds = {};

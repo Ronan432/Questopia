@@ -61,29 +61,34 @@ class _WindowTitleBarState extends State<WindowTitleBar> with WindowListener {
 
     final colors = Theme.of(context).colorScheme;
 
-    return DragToMoveArea(
-      child: Container(
-        height: 40,
-        color: colors.surface,
-        child: Row(
-          children: [
-            const SizedBox(width: 12),
-            const QuestopiaLogoIcon(size: 26),
-            const Spacer(),
-            _WindowButtons(
-              isMaximized: _isMaximized,
-              onMaximizeToggle: () async {
-                if (await windowManager.isMaximized()) {
-                  await windowManager.unmaximize();
-                  if (mounted) setState(() => _isMaximized = false);
-                } else {
-                  await windowManager.maximize();
-                  if (mounted) setState(() => _isMaximized = true);
-                }
-              },
+    return Container(
+      height: 40,
+      color: colors.surface,
+      child: Row(
+        children: [
+          Expanded(
+            child: DragToMoveArea(
+              child: Row(
+                children: const [
+                  SizedBox(width: 12),
+                  QuestopiaLogoIcon(size: 26),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+          _WindowButtons(
+            isMaximized: _isMaximized,
+            onMaximizeToggle: () {
+              if (_isMaximized) {
+                windowManager.unmaximize();
+                if (mounted) setState(() => _isMaximized = false);
+              } else {
+                windowManager.maximize();
+                if (mounted) setState(() => _isMaximized = true);
+              }
+            },
+          ),
+        ],
       ),
     );
   }
@@ -182,7 +187,9 @@ class _TitleBarButtonState extends State<_TitleBarButton> {
       child: Tooltip(
         message: widget.tooltip,
         child: Material(
-          color: _hovered ? colors.onSurface.withValues(alpha: 0.1) : Colors.transparent,
+          color: _hovered
+              ? colors.onSurface.withValues(alpha: 0.1)
+              : Colors.transparent,
           child: InkWell(
             onTap: widget.onPressed,
             borderRadius: BorderRadius.zero,
@@ -226,7 +233,9 @@ class _TitleBarCloseButtonState extends State<_TitleBarCloseButton> {
       child: Tooltip(
         message: widget.tooltip,
         child: Material(
-          color: _hovered ? Colors.red.withValues(alpha: 0.85) : Colors.transparent,
+          color: _hovered
+              ? Colors.red.withValues(alpha: 0.85)
+              : Colors.transparent,
           child: InkWell(
             onTap: widget.onPressed,
             borderRadius: BorderRadius.zero,

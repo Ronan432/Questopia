@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -66,6 +67,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     Icons.info_outline,
   ];
 
+  int _previousSection = 0;
   int _selectedSection = 0;
 
   @override
@@ -85,11 +87,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 720),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                children: sectionedItems.length > _selectedSection
-                    ? sectionedItems[_selectedSection]
-                    : [],
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                transitionBuilder: (child, animation) {
+                  final isForward = _selectedSection > _previousSection;
+                  // If they are equal, it might be the initial build, so default to 0.05
+                  final offset = _selectedSection == _previousSection ? 0.05 : (isForward ? 0.05 : -0.05);
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: Offset(offset, 0),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  );
+                },
+                child: ListView(
+                  key: ValueKey<int>(_selectedSection),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  children: sectionedItems.length > _selectedSection
+                      ? sectionedItems[_selectedSection]
+                      : [],
+                ),
               ),
             ),
           ),
@@ -132,11 +153,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               label: Text(sections[i]),
               selected: _selectedSection == i,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(_selectedSection == i ? 24 : 8),
+                borderRadius:
+                    BorderRadius.circular(_selectedSection == i ? 24 : 8),
               ),
               onSelected: (_) {
                 HapticFeedback.lightImpact();
-                setState(() => _selectedSection = i);
+                setState(() {
+                  _previousSection = _selectedSection;
+                  _selectedSection = i;
+                });
               },
             ),
           ],
@@ -182,8 +207,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             context,
             icon: Icons.brightness_6_outlined,
             title: l10n.theme,
-            value:
-                SettingsPickerSheets.themeLabel(context, settings.themeMode),
+            value: SettingsPickerSheets.themeLabel(context, settings.themeMode),
             onTap: () => SettingsPickerSheets.showThemeModePicker(
                 context, notifier, settings),
           ),
@@ -242,7 +266,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             if (settings.isNavBarBlur)
               _sliderTile(
                 icon: Icons.blur_linear_outlined,
-                label: '${l10n.navBarBlur}: ${settings.navBarBlurPercent.round()}%',
+                label:
+                    '${l10n.navBarBlur}: ${settings.navBarBlurPercent.round()}%',
                 value: settings.navBarBlurPercent,
                 min: 10,
                 max: 100,
@@ -265,8 +290,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               min: 10,
               max: 100,
               divisions: 9,
-              onChanged: (value) =>
-                  notifier.setAutosaveInterval(value.round()),
+              onChanged: (value) => notifier.setAutosaveInterval(value.round()),
             ),
           _switchTile(
             icon: Icons.security_outlined,
@@ -315,8 +339,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             context,
             icon: Icons.style_outlined,
             title: l10n.typeface,
-            value: typefaces[settings.typefaceIndex
-                .clamp(0, typefaces.length - 1)],
+            value: typefaces[
+                settings.typefaceIndex.clamp(0, typefaces.length - 1)],
             onTap: () => SettingsPickerSheets.showTypefacePicker(
                 context, notifier, settings),
           ),
@@ -337,8 +361,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: ColorRow(
                 label: l10n.textColor,
                 color: Color(settings.gameTextColor),
-                onPick: (color) =>
-                    notifier.setGameTextColor(color.toARGB32()),
+                onPick: (color) => notifier.setGameTextColor(color.toARGB32()),
               ),
             ),
           _switchTile(
@@ -352,8 +375,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: ColorRow(
                 label: l10n.backgroundColor,
                 color: Color(settings.gameBackColor),
-                onPick: (color) =>
-                    notifier.setGameBackColor(color.toARGB32()),
+                onPick: (color) => notifier.setGameBackColor(color.toARGB32()),
               ),
             ),
           _switchTile(
@@ -367,8 +389,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: ColorRow(
                 label: l10n.linkColor,
                 color: Color(settings.gameLinkColor),
-                onPick: (color) =>
-                    notifier.setGameLinkColor(color.toARGB32()),
+                onPick: (color) => notifier.setGameLinkColor(color.toARGB32()),
               ),
             ),
         ],
@@ -414,8 +435,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               min: 100,
               max: 2000,
               divisions: 19,
-              onChanged: (value) =>
-                  notifier.setCustomWidthImage(value.round()),
+              onChanged: (value) => notifier.setCustomWidthImage(value.round()),
             ),
           _switchTile(
             icon: Icons.height_outlined,

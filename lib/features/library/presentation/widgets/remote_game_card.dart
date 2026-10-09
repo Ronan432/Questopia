@@ -15,6 +15,8 @@ class RemoteGameCard extends StatelessWidget {
     required this.isDownloading,
     required this.progress,
     required this.onDownload,
+    this.isInstalled = false,
+    this.onPlay,
     this.isCompact = false,
   });
 
@@ -22,6 +24,8 @@ class RemoteGameCard extends StatelessWidget {
   final bool isDownloading;
   final double? progress;
   final VoidCallback onDownload;
+  final bool isInstalled;
+  final VoidCallback? onPlay;
   final bool isCompact;
 
   String get _sizeLabel {
@@ -53,7 +57,7 @@ class RemoteGameCard extends StatelessWidget {
       posterWidget: GamePoster(
         remoteUrl: game.posterUrl,
         isLocal: false,
-        height: isCompact ? 90 : 120,
+        height: isCompact ? 84 : 112,
       ),
       titleWidget: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,38 +133,49 @@ class RemoteGameCard extends StatelessWidget {
           ],
         ],
       ),
-      actionsWidget: isDownloading
-          ? Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                LinearProgressIndicator(value: progress),
-                const SizedBox(height: 4),
-                Text(
-                  progress == null
-                      ? l10n.downloading
-                      : '${(progress! * 100).toStringAsFixed(0)}%',
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-              ],
-            )
-          : Row(
-              children: [
-                const Spacer(),
-                M3EButton.icon(
-                  onPressed: onDownload,
-                  icon: Icon(Icons.download_rounded,
-                      size: isCompact ? 16 : 18),
-                  label: Text(
-                    l10n.download,
-                    style: TextStyle(fontSize: isCompact ? 11.5 : 13),
+      actionsWidget: SizedBox(
+        width: double.infinity,
+        child: isDownloading
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LinearProgressIndicator(value: progress),
+                  const SizedBox(height: 4),
+                  Text(
+                    progress == null
+                        ? l10n.downloading
+                        : '${(progress! * 100).toStringAsFixed(0)}%',
+                    style: Theme.of(context).textTheme.labelSmall,
                   ),
-                  style: M3EButtonStyle.filled,
-                  size: M3EButtonSize.sm,
-                  shape: M3EButtonShape.round,
-                ),
-              ],
-            ),
+                ],
+              )
+            : (isInstalled
+                ? M3EButton.icon(
+                    onPressed: onPlay,
+                    icon: Icon(Icons.play_arrow_rounded,
+                        size: isCompact ? 16 : 18),
+                    label: Text(
+                      l10n.play,
+                      style: TextStyle(fontSize: isCompact ? 11.5 : 13),
+                    ),
+                    style: M3EButtonStyle.filled,
+                    size: M3EButtonSize.sm,
+                    shape: M3EButtonShape.round,
+                  )
+                : M3EButton.icon(
+                    onPressed: onDownload,
+                    icon:
+                        Icon(Icons.download_rounded, size: isCompact ? 16 : 18),
+                    label: Text(
+                      l10n.download,
+                      style: TextStyle(fontSize: isCompact ? 11.5 : 13),
+                    ),
+                    style: M3EButtonStyle.filled,
+                    size: M3EButtonSize.sm,
+                    shape: M3EButtonShape.round,
+                  )),
+      ),
     );
   }
 }

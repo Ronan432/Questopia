@@ -123,7 +123,8 @@ class LocalGameCard extends StatelessWidget {
                       style: const TextStyle(fontSize: 16),
                     ),
                     trailing: game.isFavorite
-                        ? Icon(Icons.check_circle_rounded, color: colors.primary)
+                        ? Icon(Icons.check_circle_rounded,
+                            color: colors.primary)
                         : null,
                     minVerticalPadding: 16,
                     onTap: () {

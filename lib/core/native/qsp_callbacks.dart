@@ -252,8 +252,8 @@ final class QspCallbackBridge {
   void installOneWayCallbacks() {
     if (_installed) return;
     _handler = _onEvent;
-    final setCallback = _library.lookupFunction<NativeSetCallback,
-        DartSetCallback>('QSPSetCallback');
+    final setCallback = _library
+        .lookupFunction<NativeSetCallback, DartSetCallback>('QSPSetCallback');
 
     void installStr(QspCallbackId id, DartStrCallback fn) {
       final callable = NativeCallable<NativeStrCallback>.listener(fn);

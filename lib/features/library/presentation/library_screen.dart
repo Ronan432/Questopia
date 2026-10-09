@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform, kIsWeb;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -88,7 +89,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       context: context,
       builder: (ctx) => M3ETheme(
         data: M3EThemeData(
-          colorScheme: QuestopiaTheme.m3eColorSchemeFrom(Theme.of(context).colorScheme),
+          colorScheme:
+              QuestopiaTheme.m3eColorSchemeFrom(Theme.of(context).colorScheme),
         ),
         child: AlertDialog(
           title: const Text('Crash report'),
@@ -114,9 +116,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final libraryNotifier = ref.read(libraryProvider.notifier);
 
     final selected = await PathPickerHelper.pickGame(context);
-    debugPrint('[QUESTOPIA_IMPORT] [UI] PathPickerHelper.pickGame returned: "$selected"');
+    debugPrint(
+        '[QUESTOPIA_IMPORT] [UI] PathPickerHelper.pickGame returned: "$selected"');
     if (selected == null || selected.isEmpty || !mounted) {
-      debugPrint('[QUESTOPIA_IMPORT] [UI] Import aborted: selected path is null/empty or unmounted');
+      debugPrint(
+          '[QUESTOPIA_IMPORT] [UI] Import aborted: selected path is null/empty or unmounted');
       return;
     }
 
@@ -152,7 +156,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     );
 
     try {
-      debugPrint('[QUESTOPIA_IMPORT] [UI] Calling libraryNotifier.importGameFolder("$selected")');
+      debugPrint(
+          '[QUESTOPIA_IMPORT] [UI] Calling libraryNotifier.importGameFolder("$selected")');
       final game = await libraryNotifier.importGameFolder(selected);
       if (mounted) {
         Navigator.of(context, rootNavigator: true).pop();
@@ -162,7 +167,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         });
       }
       if (game != null && mounted) {
-        debugPrint('[QUESTOPIA_IMPORT] [UI] Import successful! Game: "${game.title}" (file: ${game.gameFilePath})');
+        debugPrint(
+            '[QUESTOPIA_IMPORT] [UI] Import successful! Game: "${game.title}" (file: ${game.gameFilePath})');
         messenger.showSnackBar(
           SnackBar(content: Text('Imported ${game.title}')),
         );
@@ -194,7 +200,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           game.author.toLowerCase().contains(q);
     }).toList();
 
-    debugPrint('[QUESTOPIA_UI] LibraryScreen build: total localGames=${libraryState.localGames.length}, filteredLocal=${filteredLocal.length}, favoritesOnly=$_showFavoritesOnly, query="$_searchQuery"');
+    debugPrint(
+        '[QUESTOPIA_UI] LibraryScreen build: total localGames=${libraryState.localGames.length}, filteredLocal=${filteredLocal.length}, favoritesOnly=$_showFavoritesOnly, query="$_searchQuery"');
 
     final filteredRemote = libraryState.remoteGames.where((game) {
       if (_searchQuery.isEmpty) return true;
@@ -228,9 +235,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     borderRadius: BorderRadius.circular(28),
                   ),
                 ),
-                hintText: tabIndex == 0
-                    ? l10n.search
-                    : 'Search online catalog...',
+                hintText:
+                    tabIndex == 0 ? l10n.search : 'Search online catalog...',
                 hintStyle: WidgetStateProperty.all(
                   TextStyle(
                     color: colors.onSurfaceVariant.withValues(alpha: 0.7),
@@ -279,6 +285,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 layoutBuilder: (currentChild, previousChildren) {
                   return Stack(
                     alignment: Alignment.centerRight,
+                    clipBehavior: Clip.none,
                     children: <Widget>[
                       ...previousChildren,
                       if (currentChild != null) currentChild,
@@ -286,6 +293,12 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   );
                 },
                 transitionBuilder: (child, animation) {
+                  if (child.key != const ValueKey<String>('search_open')) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    );
+                  }
                   return FadeTransition(
                     opacity: animation,
                     child: SizeTransition(
@@ -337,16 +350,14 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                                       minWidth: 38, minHeight: 38),
                                   suffixIcon: _searchQuery.isNotEmpty
                                       ? IconButton(
-                                          icon: const Icon(
-                                              Icons.close_rounded,
+                                          icon: const Icon(Icons.close_rounded,
                                               size: 18),
                                           padding: EdgeInsets.zero,
                                           constraints: const BoxConstraints(
                                               minWidth: 38, minHeight: 38),
                                           onPressed: () {
                                             _searchController.clear();
-                                            setState(
-                                                () => _searchQuery = '');
+                                            setState(() => _searchQuery = '');
                                           },
                                         )
                                       : null,
@@ -391,7 +402,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     if (_selectedTab == 0) ...[
                       IconButton(
                         tooltip: 'Import game',
-                        icon: const Icon(Icons.folder_open_rounded),
+                        icon: const Icon(Icons.add_rounded),
                         onPressed: _importGameFolder,
                       ),
                       const SizedBox(width: 4),
@@ -449,8 +460,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         setState(() => _selectedTab = value);
                         if (value == 1) {
                           final state = ref.read(libraryProvider);
-                          if (!state.hasLoadedRemote && !state.isLoadingRemote) {
-                            ref.read(libraryProvider.notifier).refreshRemoteCatalog();
+                          if (!state.hasLoadedRemote &&
+                              !state.isLoadingRemote) {
+                            ref
+                                .read(libraryProvider.notifier)
+                                .refreshRemoteCatalog();
                           }
                         }
                       },
@@ -474,28 +488,63 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                           label: Text(l10n.settings),
                         ),
                         NavigationRailDestination(
-                          icon: const Icon(Icons.folder_open_rounded),
+                          icon: const Icon(Icons.add_rounded),
                           label: const Text('Add Game'),
                         ),
                       ],
                     ),
                     Expanded(
-                      child: _selectedTab == 2
-                          ? const SettingsScreen(isInline: true)
-                          : mainContent,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        transitionBuilder: (child, animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0.05, 0),
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: KeyedSubtree(
+                          key: ValueKey<int>(_selectedTab),
+                          child: _selectedTab == 2
+                              ? const SettingsScreen(isInline: true)
+                              : mainContent,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               )
             : SafeArea(
-                child: _selectedTab == 2
-                    ? const SettingsScreen(isInline: true)
-                    : mainContent,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0.05, 0),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: KeyedSubtree(
+                    key: ValueKey<int>(_selectedTab),
+                    child: _selectedTab == 2
+                        ? const SettingsScreen(isInline: true)
+                        : mainContent,
+                  ),
+                ),
               ),
         extendBody: !isDesktop && ref.watch(settingsProvider).isNavBarBlur,
-        bottomNavigationBar: isDesktop
-            ? null
-            : _buildMobileBottomBar(context, l10n, colors),
+        bottomNavigationBar:
+            isDesktop ? null : _buildMobileBottomBar(context, l10n, colors),
       ),
     );
   }
@@ -571,9 +620,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 vertical: 8,
               ),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? colors.secondaryContainer
-                    : Colors.transparent,
+                color:
+                    isSelected ? colors.secondaryContainer : Colors.transparent,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -726,8 +774,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             label: const Text('Featured'),
             selected: state.catalogFeaturedOnly,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(
-                  state.catalogFeaturedOnly ? 24 : 8),
+              borderRadius:
+                  BorderRadius.circular(state.catalogFeaturedOnly ? 24 : 8),
             ),
             onSelected: (selected) {
               notifier.setCatalogFilter(featuredOnly: selected);
@@ -910,8 +958,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           const SizedBox(height: 16),
           Center(
             child: FilledButton.icon(
-              onPressed: () =>
-                  ref.read(libraryProvider.notifier).refreshRemoteCatalog(force: true),
+              onPressed: () => ref
+                  .read(libraryProvider.notifier)
+                  .refreshRemoteCatalog(force: true),
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Retry'),
             ),
@@ -953,11 +1002,44 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         final isDownloading = state.downloadingGameId == remoteGame.id;
         final progress = isDownloading ? state.downloadProgress : null;
 
+        LocalGame? matchingLocal;
+        try {
+          matchingLocal = state.localGames.firstWhere(
+            (g) => g.id == remoteGame.id || g.title == remoteGame.displayName,
+          );
+        } catch (_) {}
+
         return RemoteGameCard(
           game: remoteGame,
           isCompact: isCompact,
           isDownloading: isDownloading,
           progress: progress,
+          isInstalled: matchingLocal != null,
+          onPlay: matchingLocal != null
+              ? () async {
+                  final f = File(matchingLocal!.gameFilePath);
+                  if (!await f.exists()) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Game file not found at ${matchingLocal!.gameFilePath}. Folder may have been moved or storage permission revoked.',
+                          ),
+                        ),
+                      );
+                    }
+                    return;
+                  }
+                  ref.read(gameEngineProvider.notifier).loadGame(matchingLocal!);
+                  if (context.mounted) {
+                    Navigator.of(context, rootNavigator: true).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => GameScreen(title: matchingLocal!.title),
+                      ),
+                    );
+                  }
+                }
+              : null,
           onDownload: () => _download(remoteGame),
         );
       },
@@ -967,9 +1049,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   Future<void> _download(RemoteGame remoteGame) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final downloaded = await ref
-          .read(libraryProvider.notifier)
-          .downloadGame(remoteGame);
+      final downloaded =
+          await ref.read(libraryProvider.notifier).downloadGame(remoteGame);
       if (downloaded != null) {
         messenger.showSnackBar(
           SnackBar(content: Text('Downloaded ${remoteGame.displayName}')),

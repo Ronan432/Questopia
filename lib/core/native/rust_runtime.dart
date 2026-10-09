@@ -8,10 +8,10 @@ typedef DartRustParseHtml = Pointer<Utf8> Function(Pointer<Utf8> input);
 typedef NativeRustParseRepoXml = Pointer<Utf8> Function(Pointer<Utf8> input);
 typedef DartRustParseRepoXml = Pointer<Utf8> Function(Pointer<Utf8> input);
 
-typedef NativeRustExtractArchive =
-    Int32 Function(Pointer<Utf8> archivePath, Pointer<Utf8> targetDir);
-typedef DartRustExtractArchive =
-    int Function(Pointer<Utf8> archivePath, Pointer<Utf8> targetDir);
+typedef NativeRustExtractArchive = Int32 Function(
+    Pointer<Utf8> archivePath, Pointer<Utf8> targetDir);
+typedef DartRustExtractArchive = int Function(
+    Pointer<Utf8> archivePath, Pointer<Utf8> targetDir);
 
 typedef NativeRustFreeString = Void Function(Pointer<Utf8> ptr);
 typedef DartRustFreeString = void Function(Pointer<Utf8> ptr);
@@ -19,14 +19,17 @@ typedef DartRustFreeString = void Function(Pointer<Utf8> ptr);
 class RustRuntime {
   RustRuntime._(this.library) {
     try {
-      _parseHtml = library
-          .lookupFunction<NativeRustParseHtml, DartRustParseHtml>('rust_parse_html');
-      _parseRepoXml = library.lookupFunction<NativeRustParseRepoXml,
-          DartRustParseRepoXml>('rust_parse_repository_xml');
+      _parseHtml =
+          library.lookupFunction<NativeRustParseHtml, DartRustParseHtml>(
+              'rust_parse_html');
+      _parseRepoXml =
+          library.lookupFunction<NativeRustParseRepoXml, DartRustParseRepoXml>(
+              'rust_parse_repository_xml');
       _extractArchive = library.lookupFunction<NativeRustExtractArchive,
           DartRustExtractArchive>('rust_extract_archive');
-      _freeString = library.lookupFunction<NativeRustFreeString,
-          DartRustFreeString>('rust_free_string');
+      _freeString =
+          library.lookupFunction<NativeRustFreeString, DartRustFreeString>(
+              'rust_free_string');
     } catch (_) {
       // Functions will be null if not exported
     }

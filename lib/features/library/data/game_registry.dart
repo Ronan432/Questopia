@@ -86,9 +86,10 @@ class GameRegistry {
         games.removeWhere((e) =>
             (e['id'] != null && e['id'] == id) ||
             (e['path'] != null && e['path'] == entry['path']) ||
-            (e['folderPath'] != null && e['folderPath'] == entry['folderPath']));
-        ignored.removeWhere((x) =>
-            x == id || x == entry['path'] || x == entry['folderPath']);
+            (e['folderPath'] != null &&
+                e['folderPath'] == entry['folderPath']));
+        ignored.removeWhere(
+            (x) => x == id || x == entry['path'] || x == entry['folderPath']);
 
         games.insert(0, entry);
 
@@ -118,8 +119,8 @@ class GameRegistry {
               (e['path'] != null && e['path'] == entry['path']) ||
               (e['folderPath'] != null &&
                   e['folderPath'] == entry['folderPath']));
-          ignored.removeWhere((x) =>
-              x == id || x == entry['path'] || x == entry['folderPath']);
+          ignored.removeWhere(
+              (x) => x == id || x == entry['path'] || x == entry['folderPath']);
           games.add(entry);
         }
 
@@ -140,8 +141,8 @@ class GameRegistry {
         final games = (full['games'] as List).cast<Map<String, dynamic>>();
         final ignored = (full['ignored'] as List).cast<String>();
 
-        games.removeWhere((e) =>
-            e['id'] == id || e['path'] == id || e['folderPath'] == id);
+        games.removeWhere(
+            (e) => e['id'] == id || e['path'] == id || e['folderPath'] == id);
         if (!ignored.contains(id)) {
           ignored.add(id);
         }

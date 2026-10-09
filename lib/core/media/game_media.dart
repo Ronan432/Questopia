@@ -101,8 +101,7 @@ Future<Uint8List?> defaultImageBytesReader(String imagePathOrUrl) async {
   }
 }
 
-Future<http.Response> defaultMultipartUploader(
-    Uri url, Uint8List bytes) async {
+Future<http.Response> defaultMultipartUploader(Uri url, Uint8List bytes) async {
   final request = http.MultipartRequest('POST', url)
     ..headers['User-Agent'] =
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
@@ -200,8 +199,8 @@ final class MediaService {
     String languageCode = 'en',
   }) async {
     try {
-      final url = await resolveSearchUrl(imagePathOrUrl,
-          languageCode: languageCode);
+      final url =
+          await resolveSearchUrl(imagePathOrUrl, languageCode: languageCode);
       if (url == null || url.isEmpty) return false;
       await _urlOpener(Uri.parse(url));
       return true;

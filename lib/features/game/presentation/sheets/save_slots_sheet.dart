@@ -128,7 +128,9 @@ class _SaveSlotsSheetState extends ConsumerState<SaveSlotsSheet> {
                                         },
                                         size: M3EButtonSize.sm,
                                         style: M3EButtonStyle.tonal,
-                                        icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                                        icon: const Icon(
+                                            Icons.play_arrow_rounded,
+                                            size: 18),
                                         label: const Text('Load'),
                                       )
                                     : null,
@@ -142,7 +144,9 @@ class _SaveSlotsSheetState extends ConsumerState<SaveSlotsSheet> {
                         Padding(
                           padding: const EdgeInsets.only(left: 8, bottom: 8),
                           child: Text(
-                            isSaveMode ? 'Select Slot to Save' : 'Select Slot to Load',
+                            isSaveMode
+                                ? 'Select Slot to Save'
+                                : 'Select Slot to Load',
                             style: Theme.of(context)
                                 .textTheme
                                 .titleSmall
@@ -188,7 +192,8 @@ class _SaveSlotsSheetState extends ConsumerState<SaveSlotsSheet> {
                                   ? M3EButton.icon(
                                       onPressed: () {
                                         engineNotifier.saveToSlot(slotIndex);
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           SnackBar(
                                             content: Text(
                                                 'Saved game to Slot ${slotIndex + 1}'),
@@ -199,18 +204,23 @@ class _SaveSlotsSheetState extends ConsumerState<SaveSlotsSheet> {
                                       style: hasData
                                           ? M3EButtonStyle.outlined
                                           : M3EButtonStyle.filled,
-                                      icon: const Icon(Icons.save_outlined, size: 18),
-                                      label: Text(hasData ? 'Overwrite' : 'Save'),
+                                      icon: const Icon(Icons.save_outlined,
+                                          size: 18),
+                                      label:
+                                          Text(hasData ? 'Overwrite' : 'Save'),
                                     )
                                   : (hasData
                                       ? M3EButton.icon(
                                           onPressed: () {
                                             Navigator.pop(context);
-                                            engineNotifier.loadFromSlot(slotIndex);
+                                            engineNotifier
+                                                .loadFromSlot(slotIndex);
                                           },
                                           size: M3EButtonSize.sm,
                                           style: M3EButtonStyle.filled,
-                                          icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                                          icon: const Icon(
+                                              Icons.play_arrow_rounded,
+                                              size: 18),
                                           label: const Text('Load'),
                                         )
                                       : null),
@@ -239,9 +249,10 @@ class _SaveSlotsSheetState extends ConsumerState<SaveSlotsSheet> {
                       child: Center(
                         child: Text(
                           'Page ${_page + 1} / 10',
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                         ),
                       ),
                     ),
@@ -272,7 +283,8 @@ class _SaveSlotsSheetState extends ConsumerState<SaveSlotsSheet> {
                           );
                           final path = result?.files.singleOrNull?.path;
                           if (path != null && path.isNotEmpty) {
-                            final ok = await engineNotifier.importSaveFile(path);
+                            final ok =
+                                await engineNotifier.importSaveFile(path);
                             if (mounted) {
                               navigator.pop();
                               messenger.showSnackBar(
@@ -300,7 +312,8 @@ class _SaveSlotsSheetState extends ConsumerState<SaveSlotsSheet> {
                           if (bytes == null || bytes.isEmpty) {
                             messenger.showSnackBar(
                               const SnackBar(
-                                  content: Text('No active save data to export')),
+                                  content:
+                                      Text('No active save data to export')),
                             );
                             return;
                           }
@@ -321,7 +334,8 @@ class _SaveSlotsSheetState extends ConsumerState<SaveSlotsSheet> {
                         },
                         size: M3EButtonSize.sm,
                         style: M3EButtonStyle.outlined,
-                        icon: const Icon(Icons.file_download_outlined, size: 18),
+                        icon:
+                            const Icon(Icons.file_download_outlined, size: 18),
                         label: const Text('Export .sav'),
                       ),
                     ),

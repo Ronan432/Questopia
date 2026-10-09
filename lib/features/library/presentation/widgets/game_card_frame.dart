@@ -34,7 +34,8 @@ class GameCardFrame extends StatelessWidget {
         ),
       ),
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
         onLongPress: onLongPress,
         child: Column(

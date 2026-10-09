@@ -119,9 +119,8 @@ class _GameMorphButtonState extends State<GameMorphButton> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final borderRadius = _isPressed
-        ? BorderRadius.circular(8)
-        : BorderRadius.circular(24);
+    final borderRadius =
+        _isPressed ? BorderRadius.circular(8) : BorderRadius.circular(24);
 
     final bg = widget.filled
         ? theme.colorScheme.primary
@@ -130,32 +129,43 @@ class _GameMorphButtonState extends State<GameMorphButton> {
         ? theme.colorScheme.onPrimary
         : theme.colorScheme.onSurface;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      curve: Curves.easeOutCubic,
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: borderRadius,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: borderRadius,
-          onHighlightChanged: (highlighted) {
-            setState(() {
-              _isPressed = highlighted;
-            });
-          },
-          onTap: widget.onPressed,
+    return GestureDetector(
+      onTapDown: (_) {
+        if (widget.onPressed != null) {
+          setState(() => _isPressed = true);
+        }
+      },
+      onTapUp: (_) {
+        if (widget.onPressed != null) {
+          setState(() => _isPressed = false);
+          widget.onPressed!();
+        }
+      },
+      onTapCancel: () {
+        if (widget.onPressed != null) {
+          setState(() => _isPressed = false);
+        }
+      },
+      child: AnimatedScale(
+        scale: _isPressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOutCubic,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            color: widget.onPressed == null ? bg.withValues(alpha: 0.5) : bg,
+            borderRadius: borderRadius,
+          ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: DefaultTextStyle(
               style: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
-                color: fg,
+                color: widget.onPressed == null ? fg.withValues(alpha: 0.5) : fg,
                 fontWeight: FontWeight.w600,
               ),
               child: IconTheme(
-                data: IconThemeData(color: fg, size: 18),
+                data: IconThemeData(color: widget.onPressed == null ? fg.withValues(alpha: 0.5) : fg, size: 18),
                 child: widget.child,
               ),
             ),
@@ -361,7 +371,9 @@ class _InputDialogState extends State<_InputDialog> {
       ),
       actions: [
         GameMorphButton(
-            filled: false, onPressed: widget.onCancel, child: const Text('Cancel')),
+            filled: false,
+            onPressed: widget.onCancel,
+            child: const Text('Cancel')),
         GameMorphButton(
           onPressed: () => widget.onSubmit(_controller.text),
           child: const Text('OK'),
@@ -408,7 +420,8 @@ class _MenuDialog extends StatelessWidget {
                 shrinkWrap: true,
                 itemCount: items.length,
                 itemBuilder: (context, index) {
-                  final cleanTitle = items[index].name
+                  final cleanTitle = items[index]
+                      .name
                       .replaceAll(
                           RegExp(r'<[^>]*>',
                               caseSensitive: false, dotAll: true),
@@ -497,8 +510,7 @@ class _ImagePreviewDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final isFile = imageUrl.isNotEmpty && File(imageUrl).existsSync();
-    final isRemote =
-        imageUrl.toLowerCase().startsWith('http://') ||
+    final isRemote = imageUrl.toLowerCase().startsWith('http://') ||
         imageUrl.toLowerCase().startsWith('https://');
 
     return Dialog(
@@ -671,7 +683,9 @@ class _ExecutorDialogState extends State<_ExecutorDialog> {
       ),
       actions: [
         GameMorphButton(
-            filled: false, onPressed: widget.onClose, child: const Text('Close')),
+            filled: false,
+            onPressed: widget.onClose,
+            child: const Text('Close')),
         GameMorphButton(
           onPressed: () {
             if (_controller.text.trim().isNotEmpty) {

@@ -12,23 +12,23 @@ typedef NativeQSPGetVersion = QSPStringStruct Function();
 typedef NativeQSPGetMainDesc = QSPStringStruct Function();
 typedef NativeQSPGetVarsDesc = QSPStringStruct Function();
 
-typedef NativeQSPGetActions =
-    Int32 Function(Pointer<QSPListItemStruct> items, Int32 bufSize);
-typedef NativeQSPSetSelActionIndex =
-    Int8 Function(Int32 index, Int32 toRefreshUI);
+typedef NativeQSPGetActions = Int32 Function(
+    Pointer<QSPListItemStruct> items, Int32 bufSize);
+typedef NativeQSPSetSelActionIndex = Int8 Function(
+    Int32 index, Int32 toRefreshUI);
 typedef NativeQSPExecuteSelActionCode = Int8 Function(Int32 toRefreshUI);
 
-typedef NativeQSPGetObjects =
-    Int32 Function(Pointer<QSPListItemStruct> items, Int32 bufSize);
-typedef NativeQSPSetSelObjectIndex =
-    Int8 Function(Int32 index, Int32 toRefreshUI);
+typedef NativeQSPGetObjects = Int32 Function(
+    Pointer<QSPListItemStruct> items, Int32 bufSize);
+typedef NativeQSPSetSelObjectIndex = Int8 Function(
+    Int32 index, Int32 toRefreshUI);
 
-typedef NativeQSPExecString =
-    Int8 Function(QSPStringStruct str, Int32 toRefreshUI);
-typedef NativeQSPLoadGameWorldFromData =
-    Int8 Function(Pointer<Uint8> data, Int32 size, Int32 isNewGame);
-typedef NativeQSPOpenSavedGameFromData =
-    Int8 Function(Pointer<Uint8> data, Int32 size, Int32 toRefreshUI);
+typedef NativeQSPExecString = Int8 Function(
+    QSPStringStruct str, Int32 toRefreshUI);
+typedef NativeQSPLoadGameWorldFromData = Int8 Function(
+    Pointer<Uint8> data, Int32 size, Int32 isNewGame);
+typedef NativeQSPOpenSavedGameFromData = Int8 Function(
+    Pointer<Uint8> data, Int32 size, Int32 toRefreshUI);
 typedef NativeQSPSaveGameAsData = Int8 Function(
     Pointer<Uint8> buf, Pointer<Int32> bufSize, Int32 toRefreshUI);
 typedef NativeQSPRestartGame = Int8 Function(Int32 toRefreshUI);
@@ -37,8 +37,8 @@ typedef NativeQSPSetCallback = Void Function(
     Int32, Pointer<NativeFunction<Int64 Function()>>);
 typedef NativeQSPExecCounter = Int8 Function(Int32 toRefreshUI);
 
-typedef NativeQSPGetVarValue = Int32 Function(QSPStringStruct name,
-    Int32 index, Pointer<Void> variantRes); // Simplified for primitive lookup
+typedef NativeQSPGetVarValue = Int32 Function(QSPStringStruct name, Int32 index,
+    Pointer<Void> variantRes); // Simplified for primitive lookup
 typedef NativeQSPGetNumVarValue = Int8 Function(
     QSPStringStruct name, Int32 index, Pointer<Int32> res);
 typedef NativeQSPGetStrVarValue = Int8 Function(
@@ -60,8 +60,7 @@ typedef DartQSPGetObjects = int Function(
     Pointer<QSPListItemStruct> items, int bufSize);
 typedef DartQSPSetSelObjectIndex = int Function(int index, int toRefreshUI);
 
-typedef DartQSPExecString = int Function(
-    QSPStringStruct str, int toRefreshUI);
+typedef DartQSPExecString = int Function(QSPStringStruct str, int toRefreshUI);
 typedef DartQSPLoadGameWorldFromData = int Function(
     Pointer<Uint8> data, int size, int isNewGame);
 typedef DartQSPOpenSavedGameFromData = int Function(
@@ -83,10 +82,11 @@ class QspFfi {
   QspFfi._(this._library) {
     debugPrint('[QSP FFI] Binding functions from dynamic library...');
     _init = _library.lookupFunction<NativeQSPInit, DartQSPInit>('QSPInit');
-    _terminate = _library.lookupFunction<NativeQSPTerminate, DartQSPTerminate>(
-        'QSPTerminate');
-    _getVersion = _library
-        .lookupFunction<NativeQSPGetVersion, DartQSPGetVersion>('QSPGetVersion');
+    _terminate = _library
+        .lookupFunction<NativeQSPTerminate, DartQSPTerminate>('QSPTerminate');
+    _getVersion =
+        _library.lookupFunction<NativeQSPGetVersion, DartQSPGetVersion>(
+            'QSPGetVersion');
     _getMainDesc =
         _library.lookupFunction<NativeQSPGetMainDesc, DartQSPGetMainDesc>(
             'QSPGetMainDesc');
@@ -109,31 +109,36 @@ class QspFfi {
     _setSelObjectIndex = _library.lookupFunction<NativeQSPSetSelObjectIndex,
         DartQSPSetSelObjectIndex>('QSPSetSelObjectIndex');
 
-    _execString = _library
-        .lookupFunction<NativeQSPExecString, DartQSPExecString>('QSPExecString');
+    _execString =
+        _library.lookupFunction<NativeQSPExecString, DartQSPExecString>(
+            'QSPExecString');
     _loadGameWorldFromData = _library.lookupFunction<
         NativeQSPLoadGameWorldFromData,
         DartQSPLoadGameWorldFromData>('QSPLoadGameWorldFromData');
     _openSavedGameFromData = _library.lookupFunction<
         NativeQSPOpenSavedGameFromData,
         DartQSPOpenSavedGameFromData>('QSPOpenSavedGameFromData');
-    _saveGameAsData = _library.lookupFunction<NativeQSPSaveGameAsData,
-        DartQSPSaveGameAsData>('QSPSaveGameAsData');
-    _restartGame = _library
-        .lookupFunction<NativeQSPRestartGame, DartQSPRestartGame>('QSPRestartGame');
+    _saveGameAsData =
+        _library.lookupFunction<NativeQSPSaveGameAsData, DartQSPSaveGameAsData>(
+            'QSPSaveGameAsData');
+    _restartGame =
+        _library.lookupFunction<NativeQSPRestartGame, DartQSPRestartGame>(
+            'QSPRestartGame');
     _getLastErrorData = _library.lookupFunction<NativeQSPGetLastErrorData,
         DartQSPGetLastErrorData>('QSPGetLastErrorData');
 
     try {
-      _setCallback = _library.lookupFunction<NativeQSPSetCallback,
-          DartQSPSetCallback>('QSPSetCallback');
+      _setCallback =
+          _library.lookupFunction<NativeQSPSetCallback, DartQSPSetCallback>(
+              'QSPSetCallback');
       debugPrint('[QSP FFI] QSPSetCallback successfully resolved.');
     } catch (_) {
       debugPrint('[QSP FFI] QSPSetCallback symbol unavailable.');
     }
     try {
-      _execCounter = _library.lookupFunction<NativeQSPExecCounter,
-          DartQSPExecCounter>('QSPExecCounter');
+      _execCounter =
+          _library.lookupFunction<NativeQSPExecCounter, DartQSPExecCounter>(
+              'QSPExecCounter');
       debugPrint('[QSP FFI] QSPExecCounter successfully resolved.');
     } catch (_) {
       debugPrint('[QSP FFI] QSPExecCounter symbol unavailable.');
@@ -318,7 +323,8 @@ class QspFfi {
   }
 
   bool loadGameData(Uint8List data, {bool isNew = true}) {
-    debugPrint('[QSP FFI] loadGameData(size: ${data.length} bytes, isNew: $isNew)');
+    debugPrint(
+        '[QSP FFI] loadGameData(size: ${data.length} bytes, isNew: $isNew)');
     final ptr = calloc<Uint8>(data.length);
     try {
       ptr.asTypedList(data.length).setAll(0, data);
@@ -331,7 +337,8 @@ class QspFfi {
   }
 
   bool openSaveData(Uint8List data, {bool refresh = true}) {
-    debugPrint('[QSP FFI] openSaveData(size: ${data.length} bytes, refresh: $refresh)');
+    debugPrint(
+        '[QSP FFI] openSaveData(size: ${data.length} bytes, refresh: $refresh)');
     final ptr = calloc<Uint8>(data.length);
     try {
       ptr.asTypedList(data.length).setAll(0, data);
@@ -373,8 +380,7 @@ class QspFfi {
 
   bool get supportsCallbacks => _setCallback != null;
 
-  void setCallback(
-      int type, Pointer<NativeFunction<Int64 Function()>> func) {
+  void setCallback(int type, Pointer<NativeFunction<Int64 Function()>> func) {
     debugPrint('[QSP FFI] setCallback(type: $type)');
     _setCallback?.call(type, func);
   }

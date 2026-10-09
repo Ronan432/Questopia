@@ -19,11 +19,14 @@ Future<T?> showQuestopiaSheet<T>({
       (defaultTargetPlatform == TargetPlatform.windows ||
           defaultTargetPlatform == TargetPlatform.macOS ||
           defaultTargetPlatform == TargetPlatform.linux);
-  final topPadding = mediaQuery.padding.top + (showCustomTitleBar ? 40.0 : 24.0);
-  final maxSheetHeight = (mediaQuery.size.height - topPadding).clamp(200.0, mediaQuery.size.height);
+  final topPadding =
+      mediaQuery.padding.top + (showCustomTitleBar ? 40.0 : 24.0);
+  final maxSheetHeight = (mediaQuery.size.height - topPadding)
+      .clamp(200.0, mediaQuery.size.height);
   final colors = Theme.of(context).colorScheme;
-  final sheetBgColor = backgroundColor ?? colors.surfaceContainerHigh;
-  final isDark = ThemeData.estimateBrightnessForColor(sheetBgColor) == Brightness.dark;
+  final sheetBgColor = backgroundColor ?? colors.surfaceContainerLowest;
+  final isDark =
+      ThemeData.estimateBrightnessForColor(sheetBgColor) == Brightness.dark;
 
   return showModalBottomSheet<T>(
     context: context,
@@ -41,8 +44,10 @@ Future<T?> showQuestopiaSheet<T>({
     ),
     builder: (sheetContext) {
       final sheetMediaQuery = MediaQuery.of(sheetContext);
-      final currentTopPadding = sheetMediaQuery.padding.top + (showCustomTitleBar ? 40.0 : 24.0);
-      final currentMaxHeight = (sheetMediaQuery.size.height - currentTopPadding).clamp(200.0, sheetMediaQuery.size.height);
+      final currentTopPadding =
+          sheetMediaQuery.padding.top + (showCustomTitleBar ? 40.0 : 24.0);
+      final currentMaxHeight = (sheetMediaQuery.size.height - currentTopPadding)
+          .clamp(200.0, sheetMediaQuery.size.height);
 
       final overlayStyle = SystemUiOverlayStyle(
         systemNavigationBarColor: Colors.transparent,
@@ -50,8 +55,9 @@ Future<T?> showQuestopiaSheet<T>({
         systemNavigationBarIconBrightness:
             isDark ? Brightness.light : Brightness.dark,
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness:
-            colors.brightness == Brightness.dark ? Brightness.light : Brightness.dark,
+        statusBarIconBrightness: colors.brightness == Brightness.dark
+            ? Brightness.light
+            : Brightness.dark,
       );
 
       return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -63,10 +69,10 @@ Future<T?> showQuestopiaSheet<T>({
           child: ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
               child: Container(
                 decoration: BoxDecoration(
-                  color: sheetBgColor.withValues(alpha: 0.82),
+                  color: sheetBgColor.withValues(alpha: 0.90),
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(28)),
                   border: Border(
@@ -95,12 +101,13 @@ Future<T?> showQuestopiaSheet<T>({
                       if (showDragHandle) ...[
                         Center(
                           child: Container(
-                            margin: const EdgeInsets.only(top: 12, bottom: 8),
-                            width: 38,
-                            height: 4.5,
+                            margin: const EdgeInsets.only(top: 10, bottom: 6),
+                            width: 36,
+                            height: 4,
                             decoration: BoxDecoration(
-                              color: colors.onSurfaceVariant.withValues(alpha: 0.4),
-                              borderRadius: BorderRadius.circular(3),
+                              color: colors.onSurfaceVariant
+                                  .withValues(alpha: 0.4),
+                              borderRadius: BorderRadius.circular(2),
                             ),
                           ),
                         ),

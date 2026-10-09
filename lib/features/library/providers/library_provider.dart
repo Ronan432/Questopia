@@ -74,8 +74,9 @@ class LibraryState {
       remoteGames: remoteGames ?? this.remoteGames,
       isLoadingLocal: isLoadingLocal ?? this.isLoadingLocal,
       isLoadingRemote: isLoadingRemote ?? this.isLoadingRemote,
-      downloadingGameId:
-          clearDownloading ? null : (downloadingGameId ?? this.downloadingGameId),
+      downloadingGameId: clearDownloading
+          ? null
+          : (downloadingGameId ?? this.downloadingGameId),
       downloadProgress:
           clearProgress ? null : (downloadProgress ?? this.downloadProgress),
       remoteError: clearError ? null : (remoteError ?? this.remoteError),
@@ -90,8 +91,10 @@ class LibraryState {
 }
 
 class LibraryNotifier extends StateNotifier<LibraryState> {
-  LibraryNotifier(this._repository, this._customDir) : super(const LibraryState()) {
-    debugPrint('[QUESTOPIA_REFRESH] >>> LibraryNotifier INSTANTIATED ONCE (customDir: "$_customDir") <<<');
+  LibraryNotifier(this._repository, this._customDir)
+      : super(const LibraryState()) {
+    debugPrint(
+        '[QUESTOPIA_REFRESH] >>> LibraryNotifier INSTANTIATED ONCE (customDir: "$_customDir") <<<');
   }
 
   final GameRepository _repository;
@@ -100,13 +103,15 @@ class LibraryNotifier extends StateNotifier<LibraryState> {
 
   Future<void> refreshLocalGames({bool force = false}) async {
     final currentGen = ++_generation;
-    debugPrint('[QUESTOPIA_REFRESH] [LOCAL] refreshLocalGames START (gen: $currentGen, force: $force, currentCount: ${state.localGames.length})');
+    debugPrint(
+        '[QUESTOPIA_REFRESH] [LOCAL] refreshLocalGames START (gen: $currentGen, force: $force, currentCount: ${state.localGames.length})');
     if (!mounted) {
       debugPrint('[QUESTOPIA_REFRESH] [LOCAL] aborted: notifier not mounted');
       return;
     }
     if (!force && state.localGames.isNotEmpty) {
-      debugPrint('[QUESTOPIA_REFRESH] [LOCAL] skipped: already has ${state.localGames.length} games and force=false');
+      debugPrint(
+          '[QUESTOPIA_REFRESH] [LOCAL] skipped: already has ${state.localGames.length} games and force=false');
       return;
     }
     if (state.localGames.isEmpty) {
@@ -115,20 +120,24 @@ class LibraryNotifier extends StateNotifier<LibraryState> {
     try {
       final games = await _repository.scanLocalGames(_customDir);
       if (!mounted || currentGen != _generation) {
-        debugPrint('[QUESTOPIA_REFRESH] [LOCAL] Ignored stale scan result (gen $currentGen != $_generation)');
+        debugPrint(
+            '[QUESTOPIA_REFRESH] [LOCAL] Ignored stale scan result (gen $currentGen != $_generation)');
         return;
       }
       state = state.copyWith(localGames: games, isLoadingLocal: false);
-      debugPrint('[QUESTOPIA_REFRESH] [LOCAL] scanLocalGames SUCCESS: found ${games.length} games');
+      debugPrint(
+          '[QUESTOPIA_REFRESH] [LOCAL] scanLocalGames SUCCESS: found ${games.length} games');
     } catch (e, st) {
       debugPrint('[QUESTOPIA_REFRESH] [LOCAL] scanLocalGames ERROR: $e\n$st');
       if (!mounted || currentGen != _generation) return;
-      state = state.copyWith(localGames: state.localGames, isLoadingLocal: false);
+      state =
+          state.copyWith(localGames: state.localGames, isLoadingLocal: false);
     }
   }
 
   Future<void> refreshRemoteCatalog({bool force = false}) async {
-    debugPrint('[QUESTOPIA_REFRESH] [REMOTE] refreshRemoteCatalog START (force: $force, hasLoaded: ${state.hasLoadedRemote}, isLoading: ${state.isLoadingRemote}, page: ${state.currentPage})');
+    debugPrint(
+        '[QUESTOPIA_REFRESH] [REMOTE] refreshRemoteCatalog START (force: $force, hasLoaded: ${state.hasLoadedRemote}, isLoading: ${state.isLoadingRemote}, page: ${state.currentPage})');
     if (!mounted) {
       debugPrint('[QUESTOPIA_REFRESH] [REMOTE] aborted: notifier not mounted');
       return;
@@ -138,7 +147,8 @@ class LibraryNotifier extends StateNotifier<LibraryState> {
       return;
     }
     if (!force && state.hasLoadedRemote && state.remoteGames.isNotEmpty) {
-      debugPrint('[QUESTOPIA_REFRESH] [REMOTE] skipped: already loaded ${state.remoteGames.length} games and force=false');
+      debugPrint(
+          '[QUESTOPIA_REFRESH] [REMOTE] skipped: already loaded ${state.remoteGames.length} games and force=false');
       return;
     }
     state = state.copyWith(isLoadingRemote: true, clearError: true);
@@ -158,9 +168,11 @@ class LibraryNotifier extends StateNotifier<LibraryState> {
         hasLoadedRemote: true,
         clearError: true,
       );
-      debugPrint('[QUESTOPIA_REFRESH] [REMOTE] fetchRemoteCatalog SUCCESS: ${result.games.length} games (page ${result.currentPage}/${result.totalPages})');
+      debugPrint(
+          '[QUESTOPIA_REFRESH] [REMOTE] fetchRemoteCatalog SUCCESS: ${result.games.length} games (page ${result.currentPage}/${result.totalPages})');
     } on RepositoryException catch (error) {
-      debugPrint('[QUESTOPIA_REFRESH] [REMOTE] RepositoryException: ${error.message}');
+      debugPrint(
+          '[QUESTOPIA_REFRESH] [REMOTE] RepositoryException: ${error.message}');
       if (!mounted) return;
       state = state.copyWith(
         isLoadingRemote: false,
@@ -239,9 +251,11 @@ class LibraryNotifier extends StateNotifier<LibraryState> {
 
   /// Imports a game folder picked by the user into the local library.
   Future<LocalGame?> importGameFolder(String sourcePath) async {
-    debugPrint('[QUESTOPIA_IMPORT] [NOTIFIER] importGameFolder called with sourcePath: "$sourcePath"');
+    debugPrint(
+        '[QUESTOPIA_IMPORT] [NOTIFIER] importGameFolder called with sourcePath: "$sourcePath"');
     if (!mounted) {
-      debugPrint('[QUESTOPIA_IMPORT] [NOTIFIER] Notifier is unmounted, aborting');
+      debugPrint(
+          '[QUESTOPIA_IMPORT] [NOTIFIER] Notifier is unmounted, aborting');
       return null;
     }
     try {
@@ -258,9 +272,11 @@ class LibraryNotifier extends StateNotifier<LibraryState> {
             .where((g) => g.id != game.id && g.folderPath != game.folderPath)
             .toList();
         state = state.copyWith(localGames: [game, ...existing]);
-        debugPrint('[QUESTOPIA_IMPORT] [NOTIFIER] Injected imported game into state: "${game.title}" (total games in state: ${state.localGames.length})');
+        debugPrint(
+            '[QUESTOPIA_IMPORT] [NOTIFIER] Injected imported game into state: "${game.title}" (total games in state: ${state.localGames.length})');
       } else {
-        debugPrint('[QUESTOPIA_IMPORT] [NOTIFIER] Repository returned null game');
+        debugPrint(
+            '[QUESTOPIA_IMPORT] [NOTIFIER] Repository returned null game');
       }
       return game;
     } catch (e, st) {
@@ -280,8 +296,7 @@ class LibraryNotifier extends StateNotifier<LibraryState> {
     state = state.copyWith(
       localGames: [
         for (final entry in state.localGames)
-          if (entry.id == updated.id &&
-              entry.folderPath == updated.folderPath)
+          if (entry.id == updated.id && entry.folderPath == updated.folderPath)
             updated
           else
             entry,

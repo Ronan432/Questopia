@@ -108,14 +108,16 @@ abstract final class SettingsPickerSheets {
                         mode == settings.themeMode
                             ? Icons.brightness_auto_rounded
                             : Icons.brightness_4_outlined,
-                        color: mode == settings.themeMode ? colors.primary : null,
+                        color:
+                            mode == settings.themeMode ? colors.primary : null,
                       ),
                       title: Text(
                         themeLabel(context, mode),
                         style: const TextStyle(fontSize: 16),
                       ),
                       trailing: mode == settings.themeMode
-                          ? Icon(Icons.check_circle_rounded, color: colors.primary)
+                          ? Icon(Icons.check_circle_rounded,
+                              color: colors.primary)
                           : null,
                       onTap: () async {
                         HapticFeedback.lightImpact();
@@ -183,7 +185,8 @@ abstract final class SettingsPickerSheets {
                         style: const TextStyle(fontSize: 16),
                       ),
                       trailing: entry.key == settings.themeColor
-                          ? Icon(Icons.check_circle_rounded, color: colors.primary)
+                          ? Icon(Icons.check_circle_rounded,
+                              color: colors.primary)
                           : null,
                       onTap: () async {
                         HapticFeedback.lightImpact();
@@ -257,7 +260,8 @@ abstract final class SettingsPickerSheets {
                         style: const TextStyle(fontSize: 16),
                       ),
                       trailing: option.$1 == settings.language
-                          ? Icon(Icons.check_circle_rounded, color: colors.primary)
+                          ? Icon(Icons.check_circle_rounded,
+                              color: colors.primary)
                           : null,
                       onTap: () async {
                         HapticFeedback.lightImpact();

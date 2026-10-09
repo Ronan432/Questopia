@@ -27,7 +27,8 @@ abstract final class QuestopiaTheme {
             : const Color(0xffbbc6ff));
   }
 
-  static ThemeData light({String accent = 'dynamic', ColorScheme? dynamicScheme}) {
+  static ThemeData light(
+      {String accent = 'dynamic', ColorScheme? dynamicScheme}) {
     if (accent == 'monochrome') {
       return _themeWithScheme(
           Brightness.light, _monochromeScheme(Brightness.light));
@@ -58,7 +59,8 @@ abstract final class QuestopiaTheme {
   }
 
   /// Pure 100% grayscale monochrome color scheme (zero saturation across all roles).
-  static ColorScheme _monochromeScheme(Brightness brightness, {Color? surface}) {
+  static ColorScheme _monochromeScheme(Brightness brightness,
+      {Color? surface}) {
     if (brightness == Brightness.light) {
       return ColorScheme(
         brightness: Brightness.light,
@@ -125,11 +127,16 @@ abstract final class QuestopiaTheme {
         inverseSurface: const Color(0xFFE2E2E2),
         onInverseSurface: const Color(0xFF222222),
         inversePrimary: const Color(0xFF757575),
-        surfaceContainerLowest: isBlack ? Colors.black : const Color(0xFF0C0C0C),
-        surfaceContainerLow: isBlack ? const Color(0xFF121212) : const Color(0xFF161618),
-        surfaceContainer: isBlack ? const Color(0xFF181818) : const Color(0xFF1C1C1E),
-        surfaceContainerHigh: isBlack ? const Color(0xFF222222) : const Color(0xFF242426),
-        surfaceContainerHighest: isBlack ? const Color(0xFF2C2C2C) : const Color(0xFF2E2E30),
+        surfaceContainerLowest:
+            isBlack ? Colors.black : const Color(0xFF0C0C0C),
+        surfaceContainerLow:
+            isBlack ? const Color(0xFF121212) : const Color(0xFF161618),
+        surfaceContainer:
+            isBlack ? const Color(0xFF181818) : const Color(0xFF1C1C1E),
+        surfaceContainerHigh:
+            isBlack ? const Color(0xFF222222) : const Color(0xFF242426),
+        surfaceContainerHighest:
+            isBlack ? const Color(0xFF2C2C2C) : const Color(0xFF2E2E30),
       );
     }
   }

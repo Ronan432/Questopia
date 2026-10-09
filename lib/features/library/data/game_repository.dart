@@ -37,8 +37,7 @@ class WebCatalogResult {
 }
 
 class GameRepository {
-  static const String catalogUrl =
-      'https://qsp.org/gamestock/gamestock2.php';
+  static const String catalogUrl = 'https://qsp.org/gamestock/gamestock2.php';
   static const int _maxGameFileDepth = 8;
 
   Future<Directory> getGamesDirectory([String? customDir]) async {
@@ -51,7 +50,8 @@ class GameRepository {
 
     if (Platform.isAndroid) {
       try {
-        final downloadDir = Directory('/storage/emulated/0/Download/Questopia/games');
+        final downloadDir =
+            Directory('/storage/emulated/0/Download/Questopia/games');
         if (await downloadDir.exists()) {
           return downloadDir;
         }
@@ -94,8 +94,7 @@ class GameRepository {
         final current = queue.removeFirst();
         final subdirs = <Directory>[];
         try {
-          await for (final entity
-              in current.key.list(followLinks: false)) {
+          await for (final entity in current.key.list(followLinks: false)) {
             if (entity is File) {
               final ext = p.extension(entity.path).toLowerCase();
               if (ext == '.qsp' || ext == '.gam') return entity.path;
@@ -324,8 +323,8 @@ class GameRepository {
       await registry.batchUpsert(toBatchUpsert);
     }
 
-    games.sort(
-        (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+    games
+        .sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
     sw.stop();
     debugPrint(
         '[QUESTOPIA_REFRESH] [SCAN] scanLocalGames finished: ${games.length} total games loaded (took ${sw.elapsedMilliseconds}ms)');
@@ -390,8 +389,8 @@ class GameRepository {
               '${p.basename(p.normalize(sourceDir.path))} (${counter++})'));
         }
         await target.create(recursive: true);
-        final ok = await _extractArchiveFile(archive, target,
-            onProgress: onProgress);
+        final ok =
+            await _extractArchiveFile(archive, target, onProgress: onProgress);
         if (!ok) {
           throw RepositoryException('Failed to unpack game archive.');
         }
@@ -608,14 +607,14 @@ class GameRepository {
       if (page > 1) 'page': '$page',
     };
 
-    final webUri =
-        Uri.parse('https://qsp.org/games').replace(queryParameters: queryParams);
+    final webUri = Uri.parse('https://qsp.org/games')
+        .replace(queryParameters: queryParams);
     debugPrint('[GameRepository] Fetching web catalog page $page: $webUri');
 
     try {
-      final response = await http
-          .get(webUri, headers: {'Accept': 'text/html'})
-          .timeout(const Duration(seconds: 15));
+      final response = await http.get(webUri, headers: {
+        'Accept': 'text/html'
+      }).timeout(const Duration(seconds: 15));
       if (response.statusCode == 200) {
         final result = parseWebCatalogHtml(response.body);
         if (result.games.isNotEmpty) {
@@ -629,7 +628,8 @@ class GameRepository {
     }
 
     final fallbackGames = await _fetchGamestockXmlCatalog();
-    return WebCatalogResult(games: fallbackGames, currentPage: 1, totalPages: 1);
+    return WebCatalogResult(
+        games: fallbackGames, currentPage: 1, totalPages: 1);
   }
 
   /// Parses the HTML response from `https://qsp.org/games`.
@@ -656,8 +656,8 @@ class GameRepository {
     for (final m in matches) {
       final block = m.group(0)!;
 
-      final linkMatch =
-          RegExp(r'href="(https://qsp\.org/games/(\d+)[^"]*)"').firstMatch(block);
+      final linkMatch = RegExp(r'href="(https://qsp\.org/games/(\d+)[^"]*)"')
+          .firstMatch(block);
       if (linkMatch == null) continue;
       final gameUrl = linkMatch.group(1)!;
       final gameId = linkMatch.group(2)!;
@@ -681,8 +681,10 @@ class GameRepository {
           caseSensitive: false,
         ).firstMatch(block);
         if (plainTitleMatch != null) {
-          title =
-              plainTitleMatch.group(1)!.replaceAll(RegExp(r'<[^>]*>'), '').trim();
+          title = plainTitleMatch
+              .group(1)!
+              .replaceAll(RegExp(r'<[^>]*>'), '')
+              .trim();
         }
       }
 
@@ -773,12 +775,12 @@ class GameRepository {
         final jsonResult = rust.parseRepositoryXml(xmlPayload);
         if (jsonResult != null && jsonResult.isNotEmpty) {
           final decoded = jsonDecode(jsonResult);
-          if (decoded is Map<String, dynamic> &&
-              decoded['games'] is List) {
+          if (decoded is Map<String, dynamic> && decoded['games'] is List) {
             final games = (decoded['games'] as List)
                 .whereType<Map<String, dynamic>>()
                 .map(RemoteGame.fromJson)
-                .where((game) => game.title.isNotEmpty && game.fileUrl.isNotEmpty)
+                .where(
+                    (game) => game.title.isNotEmpty && game.fileUrl.isNotEmpty)
                 .toList();
             if (games.isNotEmpty) return games;
           }
@@ -798,7 +800,8 @@ class GameRepository {
       final nodes = document.findAllElements('game');
       var fallbackId = 1;
       for (final node in nodes) {
-        String tag(String name) => node.getElement(name)?.innerText.trim() ?? '';
+        String tag(String name) =>
+            node.getElement(name)?.innerText.trim() ?? '';
 
         final title = tag('title');
         if (title.isEmpty) continue;
@@ -875,13 +878,17 @@ class GameRepository {
     final folderName = remoteGame.id.isNotEmpty
         ? remoteGame.id
         : remoteGame.title.replaceAll(RegExp(r'[^\w\- ]+'), '').trim();
-    final targetFolder = Directory(
-        p.join(root.path, folderName.isEmpty ? 'game_${DateTime.now().millisecondsSinceEpoch}' : folderName));
+    final targetFolder = Directory(p.join(
+        root.path,
+        folderName.isEmpty
+            ? 'game_${DateTime.now().millisecondsSinceEpoch}'
+            : folderName));
     if (!await targetFolder.exists()) {
       await targetFolder.create(recursive: true);
     }
 
-    final directDownloadUrl = await resolveDirectDownloadUrl(remoteGame.fileUrl);
+    final directDownloadUrl =
+        await resolveDirectDownloadUrl(remoteGame.fileUrl);
 
     final fileName = resolveDownloadFileName(
       await _probeContentDisposition(directDownloadUrl),
@@ -899,7 +906,8 @@ class GameRepository {
           onProgress?.call((progress * 0.85).clamp(0.0, 0.85)),
     );
 
-    if (!await destinationFile.exists() || await destinationFile.length() == 0) {
+    if (!await destinationFile.exists() ||
+        await destinationFile.length() == 0) {
       throw RepositoryException('Download finished but the file is empty.');
     }
 
@@ -925,20 +933,21 @@ class GameRepository {
     }
 
     // Download and cache remote poster image if local folder doesn't have a poster image
-    if (await _findPosterAsync(targetFolder) == null && remoteGame.posterUrl.isNotEmpty) {
+    if (await _findPosterAsync(targetFolder) == null &&
+        remoteGame.posterUrl.isNotEmpty) {
       try {
-        final imgRes = await http
-            .get(Uri.parse(remoteGame.posterUrl), headers: {
-              'User-Agent':
-                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Referer': 'https://qsp.org/',
-            })
-            .timeout(const Duration(seconds: 10));
+        final imgRes =
+            await http.get(Uri.parse(remoteGame.posterUrl), headers: {
+          'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://qsp.org/',
+        }).timeout(const Duration(seconds: 10));
         if (imgRes.statusCode == 200 && imgRes.bodyBytes.isNotEmpty) {
           final ext = p.extension(remoteGame.posterUrl).toLowerCase();
           final targetPosterName =
               (ext == '.png' || ext == '.webp') ? 'poster$ext' : 'poster.jpg';
-          final cachedPoster = File(p.join(targetFolder.path, targetPosterName));
+          final cachedPoster =
+              File(p.join(targetFolder.path, targetPosterName));
           await cachedPoster.writeAsBytes(imgRes.bodyBytes);
         }
       } catch (_) {}
@@ -1066,13 +1075,11 @@ class GameRepository {
   /// so RFC 5987 file names survive the transfer.
   Future<String?> _probeContentDisposition(String fileUrl) async {
     try {
-      final response = await http
-          .head(Uri.parse(fileUrl), headers: {
-            'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Referer': 'https://qsp.org/',
-          })
-          .timeout(const Duration(seconds: 8));
+      final response = await http.head(Uri.parse(fileUrl), headers: {
+        'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://qsp.org/',
+      }).timeout(const Duration(seconds: 8));
       if (response.statusCode >= 200 && response.statusCode < 400) {
         return response.headers['content-disposition'];
       }
@@ -1108,15 +1115,16 @@ class GameRepository {
           }
           break;
         } else if (lower.startsWith('filename=')) {
-          fileName = part.substring('filename='.length).replaceAll('"', '').trim();
+          fileName =
+              part.substring('filename='.length).replaceAll('"', '').trim();
         }
       }
     }
 
     if (fileName == null || fileName.isEmpty || fileName == 'downloadfile') {
       final urlName = p.basename(Uri.tryParse(fileUrl)?.path ?? '');
-      if (_downloadableExtensions.contains(
-          p.extension(urlName).replaceFirst('.', '').toLowerCase())) {
+      if (_downloadableExtensions
+          .contains(p.extension(urlName).replaceFirst('.', '').toLowerCase())) {
         fileName = urlName;
       }
     }

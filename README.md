@@ -1,4 +1,4 @@
-# Questopia-RE [![Flutter CI](https://github.com/Ronan432/Questopia-RE/actions/workflows/flutter_ci.yml/badge.svg)](https://github.com/Ronan432/Questopia-RE/actions/workflows/flutter_ci.yml)
+# Questopia-RE
 
 Cross-platform player and library for [QSP](https://qsp.su/) (Quest Soft Player) text-based games, built with Flutter for Android and Windows.
 

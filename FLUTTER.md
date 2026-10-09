@@ -1,6 +1,6 @@
 # FLUTTER.md — Questopia Flutter Architecture & Handover Documentation
 
-> **Last Update:** October 8, 2026  
+> **Last Update:** October 9, 2026  
 > **Target Framework:** Flutter 3.44.6 / Dart 3.12.2  
 > **Branch:** `master`  
 > **`flutter analyze`:** CLEAN (0 issues)  
@@ -48,7 +48,7 @@ Questopia-RE is a high-performance cross-platform interpreter and library client
 ### 3.3. 3-Tier Game Import & Scanning Engine (`GameRepository`)
 - **Tier A (Zero-Copy Instant Indexing):** Directly indexes accessible external folders in $<0.005\text{ s}$ without file duplication.
 - **Tier B (Isolate Copy Fallback):** Asynchronous background isolate directory copy when direct reading is restricted on Android 11+ Scoped Storage.
-- **Tier C (Archive Extraction):** Fast extraction for `.zip`, `.aqsp`, `.rar`, `.7z`, `.tar`, `.gz` using Rust FFI decoders and Dart fallback streams.
+- **Tier C (Archive Extraction):** Fast extraction for `.zip`, `.aqsp`, `.rar`, `.7z`, `.tar`, `.gz` using Rust FFI decoders, system `bsdtar` (Windows/Linux/macOS), and Dart fallback streams with Zip Slip protection.
 - **Isolate BFS Traversal & Deduplication:** Multi-threaded BFS search detects nested entry files (`.qsp` / `.gam`) up to depth 8. Prunes dead registry entries automatically and deduplicates across canonical absolute file paths and title+filesize signatures to eliminate duplicate entries.
 - **Execution Tracing:** Microsecond-precision `Stopwatch` metrics for all scans and imports.
 
@@ -60,20 +60,20 @@ Questopia-RE is a high-performance cross-platform interpreter and library client
 ### 3.5. Game Player, WebView2 & Pre-Cached $O(1)$ Media Resolution (`GameScreen`)
 - **Edge-to-Edge Square Viewport:** WebView is rendered edge-to-edge without rounded card margins, filling the screen corners completely.
 - **Universal Video Playback & Seamless Looping:** Converts all video formats (`.mp4`, `.webm`, `.ogv`, `.ogg`, `.m4v`, `.mov`) in `<img>` tags to `<video autoplay loop muted playsinline>` backed by a self-recovering JS loop script and WASM OGVPlayer fallback, preserving fixed media boundaries without text shifting.
-- **Image-Aware Action Buttons:** Dynamically detects and renders images inside action names (`<img src="...">`) or `act.image` with dedicated sleek icon-tile styling for pure-image actions and leading thumbnails for text actions.
+- **Image-Aware Action Buttons & Interactive Links:** Dynamically detects and renders images inside action names (`<img src="...">`) or `act.image`. Handles `exec:` navigation across relative, base-encoded, and WebView2 embedded image links on desktop and mobile.
 - **Adaptive RPG Inventory Tab:** Renders objects with case-insensitive local asset image resolution. Pure-image inventory items render in a responsive square-tile grid (`childAspectRatio: 1.0`), while named items display in a structured list with 52x52 square image previews.
 - **High-Contrast Dialog Engine (`GameDialogsHost`):** Formatted with theme-aware `surfaceContainerHigh` surfaces, sanitized HTML text, safe embedded image extraction (`<img>` / `[img]`), error-safe asset fallbacks, and tonal overlay pill styling for Cancel actions.
 - **Pre-Cached Asset Index:** Builds a case-insensitive, backslash-normalized, Unicode-tolerant asset index (`_cachedAssetIndex`) in a background isolate upon game launch with zero-disk interception.
 - **3-Tab Navigation:** Story (`mainDesc`), Status (`varsDesc`), and Inventory (`objects`) tabs with real-time badges.
 
 ### 3.6. UI / UX Design System & Active Morph Shaping
-- **Active Morph Shaping:** Dynamic radius transitions between compact Rounded Rectangles (`BorderRadius.circular(8)`) when unselected, and full Stadium Pills (`BorderRadius.circular(24)`) when selected.
-- **Frosted Glass Backdrop Sheets (`showQuestopiaSheet` & `_openGameSheet`):** Modal bottom sheets feature `SafeArea` enforcement (never crossing or overlapping the status bar), real-time background Gaussian blur (`sigma: 20`), translucent frosted surfaces, and reliable drag/barrier dismissal.
+- **Active Morph Shaping:** Dynamic radius transitions between compact Rounded Rectangles (`BorderRadius.circular(8)`) when unselected/focused, and full Stadium Pills (`BorderRadius.circular(24)` / `BorderRadius.circular(28)`) for category chips and desktop search bar.
+- **Frosted Glass Backdrop Sheets (`showQuestopiaSheet` & `_BlurredModalBottomSheetRoute`):** Modal bottom sheets feature `SafeArea` enforcement (never crossing or overlapping the status bar), full-screen background Gaussian blur (`sigma: 6.0`), translucent frosted surfaces, and reliable drag/barrier dismissal.
 - **Phone-Optimized Compact Grid & Contextual Game Menu:** Streamlined, compact 2-column game cards with direct Play buttons; tapping anywhere else on the card opens a Material Expressive segmented drawer sheet (Play, Favorite toggle, Delete).
 - **Right-Aligned Animated Search:** Search button positioned at the far right of the app bar with a smooth right-to-left expanding input animation.
 - **Tactile Settings Feedback:** Universal light haptic feedback integrated across settings category chips, switch toggles, navigation tiles, color pickers, and picker sheets.
 - **Adjustable Navigation Bar Blur:** Navigation bar backdrop blur with configurable intensity slider (10% to 100%), real-time Gaussian filter, and `extendBody` scaffold integration.
-- **Desktop Navigation:** Left-side borderless `NavigationRail` with instant inline settings.
+- **Desktop Title Bar & Navigation:** Custom title bar with right-click Windows system menu integration (`windowManager.popUpWindowMenu()`), MSVC `/MP` parallel compilation flags, and left-side borderless `NavigationRail` with bold active item text and storefront catalog branding.
 - **High-Performance Posters (`GamePoster`):** Memory-capped GPU texture caching via `extended_image` and native vector rendering via `flutter_svg`. Short-circuits missing/SVG covers to avoid network ANRs.
 
 ---

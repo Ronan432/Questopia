@@ -75,8 +75,17 @@ class HtmlProcessor {
   /// Decodes exec: URL payloads received from WebView link intercepts.
   static String decodeExecUrl(String rawUrl) {
     var payload = rawUrl;
-    if (payload.toLowerCase().startsWith('exec:')) {
-      payload = payload.substring(5);
+    final lower = payload.toLowerCase();
+    final execIdx = lower.indexOf('exec:');
+    if (execIdx != -1) {
+      payload = payload.substring(execIdx + 5);
+    } else {
+      final execEncodedIdx = lower.indexOf('exec%3a');
+      if (execEncodedIdx != -1) {
+        payload = payload.substring(execEncodedIdx + 7);
+      } else if (lower.startsWith('exec:')) {
+        payload = payload.substring(5);
+      }
     }
 
     if (payload.startsWith('base64:')) {

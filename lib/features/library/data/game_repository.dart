@@ -1255,25 +1255,59 @@ class GameRepository {
       return true;
     }
 
+    await target.create(recursive: true);
+
     final rust = RustRuntime.tryLoad();
     if (rust != null) {
       try {
         final count = rust.extractArchive(archiveFile.path, target.path);
         if (count > 0) return true;
       } catch (_) {
-        // Fall back to the Dart implementation.
+        // Fall back to system or Dart extraction.
+      }
+    }
+
+    final archiveFilePath = archiveFile.path;
+    final targetPath = target.path;
+
+    // On Desktop (Windows, macOS, Linux), bsdtar (tar) supports RAR, 7z, ZIP, TAR, GZ, etc.
+    if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
+      try {
+        final result = await Process.run(
+          'tar',
+          ['-xf', archiveFilePath, '-C', targetPath],
+        );
+        if (result.exitCode == 0) {
+          final entries = await target.list(followLinks: false).toList();
+          if (entries.isNotEmpty) return true;
+        }
+      } catch (e) {
+        debugPrint('[GameRepository] System tar extraction error: $e');
       }
     }
 
     try {
-      final archiveFilePath = archiveFile.path;
-      final targetPath = target.path;
-
       final success = await Isolate.run(() {
         final file = File(archiveFilePath);
         final bytes = file.readAsBytesSync();
-        final archive = ZipDecoder().decodeBytes(bytes);
         final targetRoot = p.normalize(targetPath);
+
+        Archive? archive;
+        try {
+          archive = ZipDecoder().decodeBytes(bytes);
+        } catch (_) {
+          try {
+            archive = TarDecoder().decodeBytes(bytes);
+          } catch (_) {
+            archive = null;
+          }
+        }
+
+        if (archive == null) return false;
+
         for (final entry in archive) {
           final safePath = _safeArchivePath(targetRoot, entry.name);
           if (safePath == null) continue;

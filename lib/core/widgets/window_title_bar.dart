@@ -67,12 +67,18 @@ class _WindowTitleBarState extends State<WindowTitleBar> with WindowListener {
       child: Row(
         children: [
           Expanded(
-            child: DragToMoveArea(
-              child: Row(
-                children: const [
-                  SizedBox(width: 12),
-                  QuestopiaLogoIcon(size: 26),
-                ],
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onSecondaryTap: () {
+                windowManager.popUpWindowMenu();
+              },
+              child: DragToMoveArea(
+                child: Row(
+                  children: const [
+                    SizedBox(width: 12),
+                    QuestopiaLogoIcon(size: 26),
+                  ],
+                ),
               ),
             ),
           ),

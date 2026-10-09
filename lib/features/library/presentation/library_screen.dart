@@ -40,10 +40,19 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   bool _showFavoritesOnly = false;
   final FocusNode _searchFocusNode = FocusNode();
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _desktopSearchFocusNode = FocusNode();
+  bool _isDesktopSearchFocused = false;
 
   @override
   void initState() {
     super.initState();
+    _desktopSearchFocusNode.addListener(() {
+      if (mounted) {
+        setState(() {
+          _isDesktopSearchFocused = _desktopSearchFocusNode.hasFocus;
+        });
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _offerCrashReport();
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
@@ -59,6 +68,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   void dispose() {
     _searchFocusNode.dispose();
     _searchController.dispose();
+    _desktopSearchFocusNode.dispose();
     super.dispose();
   }
 
@@ -222,37 +232,50 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           if (isDesktop)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-              child: SearchBar(
-                elevation: WidgetStateProperty.all(0),
-                backgroundColor: WidgetStateProperty.all(
-                  colors.surfaceContainerHigh,
-                ),
-                padding: WidgetStateProperty.all(
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                ),
-                shape: WidgetStateProperty.all(
-                  RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(
+                    _isDesktopSearchFocused ? 8 : 28,
                   ),
                 ),
-                hintText:
-                    tabIndex == 0 ? l10n.search : 'Search online catalog...',
-                hintStyle: WidgetStateProperty.all(
-                  TextStyle(
-                    color: colors.onSurfaceVariant.withValues(alpha: 0.7),
+                child: SearchBar(
+                  focusNode: _desktopSearchFocusNode,
+                  elevation: WidgetStateProperty.all(0),
+                  backgroundColor: WidgetStateProperty.all(
+                    Colors.transparent,
                   ),
-                ),
-                leading: Icon(Icons.search_rounded, color: colors.primary),
-                trailing: [
-                  if (_searchQuery.isNotEmpty)
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 20),
-                      onPressed: () {
-                        setState(() => _searchQuery = '');
-                      },
+                  padding: WidgetStateProperty.all(
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                  ),
+                  shape: WidgetStateProperty.all(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        _isDesktopSearchFocused ? 8 : 28,
+                      ),
                     ),
-                ],
-                onChanged: (value) => setState(() => _searchQuery = value),
+                  ),
+                  hintText:
+                      tabIndex == 0 ? l10n.search : 'Search online catalog...',
+                  hintStyle: WidgetStateProperty.all(
+                    TextStyle(
+                      color: colors.onSurfaceVariant.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  leading: Icon(Icons.search_rounded, color: colors.primary),
+                  trailing: [
+                    if (_searchQuery.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        onPressed: () {
+                          setState(() => _searchQuery = '');
+                        },
+                      ),
+                  ],
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                ),
               ),
             ),
           Expanded(
@@ -469,6 +492,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         }
                       },
                       labelType: NavigationRailLabelType.all,
+                      selectedLabelTextStyle: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
                       backgroundColor: colors.surface,
                       indicatorColor: colors.secondaryContainer,
                       destinations: [
@@ -478,8 +504,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                           label: Text(l10n.library),
                         ),
                         NavigationRailDestination(
-                          icon: const Icon(Icons.explore_outlined),
-                          selectedIcon: const Icon(Icons.explore),
+                          icon: const Icon(Icons.storefront_outlined),
+                          selectedIcon: const Icon(Icons.storefront_rounded),
                           label: Text(l10n.catalog),
                         ),
                         NavigationRailDestination(
@@ -566,8 +592,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         label: l10n.library,
       ),
       (
-        icon: Icons.explore_outlined,
-        selectedIcon: Icons.explore,
+        icon: Icons.storefront_outlined,
+        selectedIcon: Icons.storefront_rounded,
         label: l10n.catalog,
       ),
       (

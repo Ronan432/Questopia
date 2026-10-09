@@ -248,12 +248,60 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           line-height: 1.6;
           padding: 12px;
           margin: 0;
+          user-select: text;
+          -webkit-user-select: text;
         }
-        img { max-width: 100%; height: auto; display: block; margin: 8px auto; border-radius: 4px; }
-        video { max-width: 100%; height: auto; display: block; margin: 8px auto; border-radius: 4px; background-color: transparent !important; object-fit: contain; }
+        img {
+          max-width: 100%;
+          height: auto;
+          display: block;
+          margin: 8px auto;
+          border-radius: 4px;
+        }
+        a img {
+          display: inline-block;
+          margin: 4px auto;
+          cursor: pointer;
+          pointer-events: auto;
+        }
+        video {
+          max-width: 100%;
+          height: auto;
+          display: block;
+          margin: 8px auto;
+          border-radius: 4px;
+          background-color: transparent !important;
+          object-fit: contain;
+        }
         video canvas { object-fit: contain !important; }
-        a { color: $linkColor; text-decoration: underline; }
+        a {
+          color: $linkColor;
+          text-decoration: underline;
+          cursor: pointer;
+        }
+        a:hover {
+          opacity: 0.85;
+        }
+        area, map {
+          cursor: pointer;
+        }
       </style>
+      <script>
+        document.addEventListener('click', function(e) {
+          var el = e.target;
+          while (el && el !== document.body) {
+            if (el.tagName === 'A' || el.tagName === 'AREA') {
+              var href = el.getAttribute('href') || '';
+              if (href.toLowerCase().indexOf('exec:') !== -1) {
+                e.preventDefault();
+                window.location.href = href;
+                return;
+              }
+            }
+            el = el.parentElement;
+          }
+        }, true);
+      </script>
     </head>
     <body>
       $processedHtml
@@ -798,7 +846,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               _updateMainWebViewContent(mainHtml, force: true);
             },
             onLoadStart: (controller, url) {
-              debugPrint('[GameScreen] Main onLoadStart: $url');
+              final urlStr = url?.toString() ?? '';
+              debugPrint('[GameScreen] Main onLoadStart: $urlStr');
+              final lower = urlStr.toLowerCase();
+              if (lower.startsWith('exec:') ||
+                  lower.contains('/exec:') ||
+                  lower.contains('exec%3a')) {
+                final code = HtmlProcessor.decodeExecUrl(urlStr);
+                debugPrint(
+                    '[GameScreen] Executing link code from onLoadStart: "$code"');
+                engineNotifier.execCode(code);
+              }
             },
             onLoadStop: (controller, url) {
               debugPrint('[GameScreen] Main onLoadStop: $url');
@@ -814,7 +872,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
             shouldOverrideUrlLoading: (controller, navigationAction) async {
               final url = navigationAction.request.url.toString();
               debugPrint('[GameScreen] Main shouldOverrideUrlLoading: $url');
-              if (url.startsWith('exec:')) {
+              final lower = url.toLowerCase();
+              if (lower.startsWith('exec:') ||
+                  lower.contains('/exec:') ||
+                  lower.contains('exec:') ||
+                  lower.contains('exec%3a')) {
                 final code = HtmlProcessor.decodeExecUrl(url);
                 debugPrint('[GameScreen] Executing link code: "$code"');
                 engineNotifier.execCode(code);
@@ -983,7 +1045,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         _updateVarsWebViewContent(varsHtml, force: true);
       },
       onLoadStart: (controller, url) {
-        debugPrint('[GameScreen] Vars onLoadStart: $url');
+        final urlStr = url?.toString() ?? '';
+        debugPrint('[GameScreen] Vars onLoadStart: $urlStr');
+        final lower = urlStr.toLowerCase();
+        if (lower.startsWith('exec:') ||
+            lower.contains('/exec:') ||
+            lower.contains('exec%3a')) {
+          final code = HtmlProcessor.decodeExecUrl(urlStr);
+          debugPrint(
+              '[GameScreen] Executing link code from Vars onLoadStart: "$code"');
+          ref.read(gameEngineProvider.notifier).execCode(code);
+        }
       },
       onLoadStop: (controller, url) {
         debugPrint('[GameScreen] Vars onLoadStop: $url');
@@ -999,7 +1071,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       shouldOverrideUrlLoading: (controller, navigationAction) async {
         final url = navigationAction.request.url.toString();
         debugPrint('[GameScreen] Vars shouldOverrideUrlLoading: $url');
-        if (url.startsWith('exec:')) {
+        final lower = url.toLowerCase();
+        if (lower.startsWith('exec:') ||
+            lower.contains('/exec:') ||
+            lower.contains('exec:') ||
+            lower.contains('exec%3a')) {
           final code = HtmlProcessor.decodeExecUrl(url);
           debugPrint('[GameScreen] Executing link code from Vars: "$code"');
           ref.read(gameEngineProvider.notifier).execCode(code);

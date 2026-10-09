@@ -337,6 +337,7 @@ class GameEngineNotifier extends StateNotifier<GameEngineState> {
     final game = state.activeGame;
     if (game == null) return path;
     final gameDir = Directory(p.dirname(game.gameFilePath));
+    final rootFolder = Directory(game.folderPath);
 
     var cleanPath = path.trim();
     if (cleanPath.isEmpty) return '';
@@ -352,6 +353,8 @@ class GameEngineNotifier extends StateNotifier<GameEngineState> {
 
     if (cleanPath.startsWith(gameDir.path)) {
       cleanPath = cleanPath.substring(gameDir.path.length);
+    } else if (cleanPath.startsWith(rootFolder.path)) {
+      cleanPath = cleanPath.substring(rootFolder.path.length);
     }
 
     while (cleanPath.startsWith('/') ||
@@ -365,18 +368,55 @@ class GameEngineNotifier extends StateNotifier<GameEngineState> {
     }
     cleanPath = cleanPath.replaceAll('\\', '/');
 
-    final file = _resolveCaseInsensitiveFile(gameDir, cleanPath);
-    if (file != null && file.existsSync()) {
-      return file.path;
+    // 1. Direct / case-insensitive match in gameDir
+    final fileInGameDir = _resolveCaseInsensitiveFile(gameDir, cleanPath);
+    if (fileInGameDir != null && fileInGameDir.existsSync()) {
+      return fileInGameDir.path;
     }
+
+    // 2. Direct / case-insensitive match in rootFolder
+    final fileInRoot = _resolveCaseInsensitiveFile(rootFolder, cleanPath);
+    if (fileInRoot != null && fileInRoot.existsSync()) {
+      return fileInRoot.path;
+    }
+
+    // 3. Fallback: recursive suffix search in both directories
+    final targetSuffix = cleanPath.toLowerCase();
+    final targetBase = p.basename(cleanPath).toLowerCase();
+
+    File? findRecursive(Directory dir) {
+      try {
+        if (!dir.existsSync()) return null;
+        for (final entity in dir.listSync(recursive: true, followLinks: false)) {
+          if (entity is File) {
+            final norm = entity.path.replaceAll('\\', '/').toLowerCase();
+            if (norm.endsWith('/$targetSuffix') || norm.endsWith(targetSuffix)) {
+              return entity;
+            }
+            if (p.basename(norm) == targetBase) {
+              return entity;
+            }
+          }
+        }
+      } catch (_) {}
+      return null;
+    }
+
+    final foundInGameDir = findRecursive(gameDir);
+    if (foundInGameDir != null) return foundInGameDir.path;
+
+    final foundInRoot = findRecursive(rootFolder);
+    if (foundInRoot != null) return foundInRoot.path;
+
     return p.join(gameDir.path, cleanPath);
   }
 
   File? _resolveCaseInsensitiveFile(Directory gameDir, String relativePath) {
+    if (!gameDir.existsSync()) return null;
     final directFile = File(p.join(gameDir.path, relativePath));
     if (directFile.existsSync()) return directFile;
 
-    final parts = p.split(relativePath);
+    final parts = p.split(relativePath.replaceAll('\\', '/'));
     FileSystemEntity current = gameDir;
 
     for (final part in parts) {
@@ -395,9 +435,10 @@ class GameEngineNotifier extends StateNotifier<GameEngineState> {
       }
 
       FileSystemEntity? match;
+      final partLower = part.toLowerCase();
       for (final child in children) {
         final name = p.basename(child.path);
-        if (name.toLowerCase() == part.toLowerCase()) {
+        if (name.toLowerCase() == partLower) {
           match = child;
           break;
         }
@@ -428,7 +469,6 @@ class GameEngineNotifier extends StateNotifier<GameEngineState> {
   }
 
   void _armTimer(int msecs) {
-    debugPrint('[GameEngineNotifier] Arming game loop timer: ${msecs}ms');
     _timer?.cancel();
     _timer = null;
     state = state.copyWith(timerIntervalMs: msecs);
@@ -442,7 +482,6 @@ class GameEngineNotifier extends StateNotifier<GameEngineState> {
   }
 
   void _stopTimer() {
-    debugPrint('[GameEngineNotifier] Stopping game loop timer.');
     _timer?.cancel();
     _timer = null;
     if (state.timerIntervalMs != 0) {
@@ -451,7 +490,6 @@ class GameEngineNotifier extends StateNotifier<GameEngineState> {
   }
 
   void execAction(int index) {
-    debugPrint('[GameEngineNotifier] Executing action #$index...');
     final ffi = _ffi;
     if (ffi != null) {
       ffi.executeAction(index);
@@ -461,7 +499,6 @@ class GameEngineNotifier extends StateNotifier<GameEngineState> {
   }
 
   void selectObject(int index) {
-    debugPrint('[GameEngineNotifier] Selecting object #$index...');
     final ffi = _ffi;
     if (ffi != null) {
       ffi.selectObject(index);
@@ -471,7 +508,6 @@ class GameEngineNotifier extends StateNotifier<GameEngineState> {
   }
 
   void execCode(String code) {
-    debugPrint('[GameEngineNotifier] Executing QSP code: "$code"');
     final ffi = _ffi;
     if (ffi != null) {
       ffi.execString(code);
@@ -645,6 +681,15 @@ class GameEngineNotifier extends StateNotifier<GameEngineState> {
   }
 
   List<QspObject> currentObjects() => state.gameState.objects;
+
+  List<String> getDiscoveredVarNames() {
+    final ffi = _ffi;
+    if (ffi == null) return [];
+    return ffi.getDiscoveredVarNames(
+      varsDesc: state.gameState.varsDesc,
+      mainDesc: state.gameState.mainDesc,
+    );
+  }
 }
 
 final gameEngineProvider =

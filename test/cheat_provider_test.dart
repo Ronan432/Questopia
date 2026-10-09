@@ -41,6 +41,9 @@ final class FakeVarBackend implements VarBackend {
   }
 
   @override
+  List<String> getDiscoveredVars() => [...nums.keys, ...strs.keys];
+
+  @override
   List<QspObject> objects() => const [];
 }
 

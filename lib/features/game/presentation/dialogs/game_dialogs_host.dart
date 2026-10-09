@@ -6,6 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/helpers/html_processor.dart';
 import '../../../../core/media/poster_menu_sheet.dart';
+import '../../../../core/media/qsp_media.dart';
+import '../../../../core/media/qsp_media_kind.dart';
+import '../../../../core/media/qsp_path_resolver.dart';
 import '../../../../core/native/qsp_models.dart';
 import '../../providers/game_engine_provider.dart';
 
@@ -218,47 +221,47 @@ class _MessageDialog extends StatelessWidget {
     return results;
   }
 
-  Widget _buildImageWidget(BuildContext context, String src) {
-    final colors = Theme.of(context).colorScheme;
-    Widget img;
+  File? _findAssetFile(String src) {
+    if (src.isEmpty) return null;
+    final direct = File(src);
+    if (direct.existsSync()) return direct;
 
-    if (src.startsWith('http://') || src.startsWith('https://')) {
-      img = Image.network(
-        src,
-        fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-      );
-    } else {
-      var resolved = src;
-      if (gameFolderPath != null && !File(src).isAbsolute) {
-        resolved = '${gameFolderPath!}/$src'.replaceAll(r'\', '/');
-      }
-      final file = File(resolved);
-      if (file.existsSync()) {
-        img = Image.file(
-          file,
-          fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-        );
-      } else {
-        img = const SizedBox.shrink();
-      }
+    var clean = src.replaceAll('\\', '/');
+    while (clean.startsWith('/') || clean.startsWith('./')) {
+      clean = clean.startsWith('./') ? clean.substring(2) : clean.substring(1);
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          constraints: const BoxConstraints(maxHeight: 240),
-          decoration: BoxDecoration(
-            color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: img,
-        ),
-      ),
-    );
+    if (gameFolderPath != null) {
+      final joined = File('$gameFolderPath/$clean');
+      if (joined.existsSync()) return joined;
+
+      final targetSuffix = clean.toLowerCase();
+      final targetBase = targetSuffix.split('/').last;
+
+      try {
+        final dir = Directory(gameFolderPath!);
+        if (dir.existsSync()) {
+          for (final entity
+              in dir.listSync(recursive: true, followLinks: false)) {
+            if (entity is File) {
+              final norm = entity.path.replaceAll('\\', '/').toLowerCase();
+              if (norm.endsWith('/$targetSuffix') ||
+                  norm.endsWith(targetSuffix) ||
+                  norm.endsWith('/$targetBase')) {
+                return entity;
+              }
+            }
+          }
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  Widget _buildImageWidget(BuildContext context, String src) {
+    final file = _findAssetFile(src);
+    final resolvedPath = file?.path ?? src;
+    return GameMediaViewer(mediaPath: resolvedPath, maxHeight: 240);
   }
 
   @override
@@ -500,6 +503,51 @@ class _ErrorDialog extends StatelessWidget {
   }
 }
 
+class GameMediaViewer extends ConsumerWidget {
+  const GameMediaViewer({
+    super.key,
+    required this.mediaPath,
+    this.gameFolderPath,
+    this.maxHeight = 260,
+  });
+
+  final String mediaPath;
+  final String? gameFolderPath;
+  final double maxHeight;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colors = Theme.of(context).colorScheme;
+    final folder = gameFolderPath ??
+        ref.watch(gameEngineProvider).activeGame?.folderPath;
+    final resolver = folder != null && folder.isNotEmpty
+        ? QspPathResolver([folder])
+        : null;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: QspMedia(
+            src: mediaPath,
+            resolver: resolver,
+            fit: BoxFit.contain,
+            autoplay: true,
+            loop: true,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ImagePreviewDialog extends StatelessWidget {
   const _ImagePreviewDialog({required this.imageUrl, required this.onClose});
 
@@ -509,9 +557,7 @@ class _ImagePreviewDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final isFile = imageUrl.isNotEmpty && File(imageUrl).existsSync();
-    final isRemote = imageUrl.toLowerCase().startsWith('http://') ||
-        imageUrl.toLowerCase().startsWith('https://');
+    final isVideo = detectMediaKind(imageUrl) == QspMediaKind.video;
 
     return Dialog(
       backgroundColor: colors.surfaceContainerHigh,
@@ -522,11 +568,14 @@ class _ImagePreviewDialog extends StatelessWidget {
           AppBar(
             automaticallyImplyLeading: false,
             backgroundColor: Colors.transparent,
-            title: Text('Image', style: TextStyle(color: colors.onSurface)),
+            title: Text(
+              isVideo ? 'Video Preview' : 'Image Preview',
+              style: TextStyle(color: colors.onSurface),
+            ),
             actions: [
               if (imageUrl.isNotEmpty)
                 IconButton(
-                  tooltip: 'Image options',
+                  tooltip: 'Options',
                   icon: const Icon(Icons.more_vert_rounded),
                   onPressed: () => showPosterMenuSheet(
                     context: context,
@@ -542,17 +591,11 @@ class _ImagePreviewDialog extends StatelessWidget {
           ),
           Flexible(
             child: SingleChildScrollView(
-              child: isFile
-                  ? Image.file(File(imageUrl))
-                  : isRemote
-                      ? Image.network(imageUrl)
-                      : Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(
-                            'Image not found: $imageUrl',
-                            style: TextStyle(color: colors.onSurfaceVariant),
-                          ),
-                        ),
+              padding: const EdgeInsets.all(12),
+              child: GameMediaViewer(
+                mediaPath: imageUrl,
+                maxHeight: 380,
+              ),
             ),
           ),
         ],

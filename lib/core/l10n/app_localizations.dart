@@ -260,6 +260,24 @@ abstract class AppLocalizations {
   /// **'Inventory'**
   String get inventory;
 
+  /// No description provided for @tabGame.
+  ///
+  /// In en, this message translates to:
+  /// **'Game'**
+  String get tabGame;
+
+  /// No description provided for @tabStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get tabStatus;
+
+  /// No description provided for @tabInventory.
+  ///
+  /// In en, this message translates to:
+  /// **'Inventory'**
+  String get tabInventory;
+
   /// No description provided for @console.
   ///
   /// In en, this message translates to:

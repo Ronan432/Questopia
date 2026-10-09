@@ -54,6 +54,9 @@ class SettingsState {
   final double navBarBlurPercent;
   final bool isExecStringEnabled;
   final int binaryPrefixes;
+  final bool isTranslationEnabled;
+  final String translationSourceLang;
+  final String translationTargetLang;
 
   const SettingsState({
     this.themeMode = ThemeModeOption.system,
@@ -75,13 +78,13 @@ class SettingsState {
     this.actionsHeightRatio = '1/3',
     this.language = 'system',
     this.gamesDirectory = '',
-    this.isImmersiveMode = true,
+    this.isImmersiveMode = false,
     this.isImagesInDialogEnabled = false,
-    this.useGameTextColor = true,
+    this.useGameTextColor = false,
     this.gameTextColor = 0xFF000000,
-    this.useGameBackgroundColor = true,
+    this.useGameBackgroundColor = false,
     this.gameBackColor = 0xFFE0E0E0,
-    this.useGameLinkColor = true,
+    this.useGameLinkColor = false,
     this.gameLinkColor = 0xFF0000FF,
     this.isAutoWidth = true,
     this.customWidthImage = 400,
@@ -91,6 +94,9 @@ class SettingsState {
     this.navBarBlurPercent = 70.0,
     this.isExecStringEnabled = false,
     this.binaryPrefixes = 1000,
+    this.isTranslationEnabled = false,
+    this.translationSourceLang = 'en',
+    this.translationTargetLang = 'ru',
   });
 
   SettingsState copyWith({
@@ -129,6 +135,9 @@ class SettingsState {
     double? navBarBlurPercent,
     bool? isExecStringEnabled,
     int? binaryPrefixes,
+    bool? isTranslationEnabled,
+    String? translationSourceLang,
+    String? translationTargetLang,
   }) {
     return SettingsState(
       themeMode: themeMode ?? this.themeMode,
@@ -168,6 +177,11 @@ class SettingsState {
       navBarBlurPercent: navBarBlurPercent ?? this.navBarBlurPercent,
       isExecStringEnabled: isExecStringEnabled ?? this.isExecStringEnabled,
       binaryPrefixes: binaryPrefixes ?? this.binaryPrefixes,
+      isTranslationEnabled: isTranslationEnabled ?? this.isTranslationEnabled,
+      translationSourceLang:
+          translationSourceLang ?? this.translationSourceLang,
+      translationTargetLang:
+          translationTargetLang ?? this.translationTargetLang,
     );
   }
 }
@@ -212,6 +226,9 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   static const _kNavBarBlurPercent = 'pref_nav_bar_blur_percent';
   static const _kExecString = 'pref_exec_string';
   static const _kBinaryPrefixes = 'pref_binary_prefixes';
+  static const _kIsTranslationEnabled = 'pref_is_translation_enabled';
+  static const _kTranslationSourceLang = 'pref_translation_source_lang';
+  static const _kTranslationTargetLang = 'pref_translation_target_lang';
   static const _kLegacyMigrated = 'pref_legacy_settings_migrated';
 
   static const _themeModes = [
@@ -290,25 +307,25 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       gamesDirectory: prefs.getString(_kGamesDir) ?? '',
       isImmersiveMode: prefs.getBool(_kImmersive) ??
           _legacyBool(prefs, 'immersiveMode') ??
-          true,
+          false,
       isImagesInDialogEnabled: prefs.getBool(_kImagesInDialog) ??
           _legacyBool(prefs, 'permImgDialog') ??
           false,
       useGameTextColor: prefs.getBool(_kUseGameTextColor) ??
           _legacyBool(prefs, 'useGameTextColor') ??
-          true,
+          false,
       gameTextColor: prefs.getInt(_kGameTextColor) ??
           _legacyInt(prefs, 'textColor') ??
           0xFF000000,
       useGameBackgroundColor: prefs.getBool(_kUseGameBackColor) ??
           _legacyBool(prefs, 'useGameBackgroundColor') ??
-          true,
+          false,
       gameBackColor: prefs.getInt(_kGameBackColor) ??
           _legacyInt(prefs, 'backColor') ??
           0xFFE0E0E0,
       useGameLinkColor: prefs.getBool(_kUseGameLinkColor) ??
           _legacyBool(prefs, 'useGameLinkColor') ??
-          true,
+          false,
       gameLinkColor: prefs.getInt(_kGameLinkColor) ??
           _legacyInt(prefs, 'linkColor') ??
           0xFF0000FF,
@@ -331,6 +348,9 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       binaryPrefixes: prefs.getInt(_kBinaryPrefixes) ??
           int.tryParse(_legacyString(prefs, 'binPref') ?? '') ??
           1000,
+      isTranslationEnabled: prefs.getBool(_kIsTranslationEnabled) ?? false,
+      translationSourceLang: prefs.getString(_kTranslationSourceLang) ?? 'en',
+      translationTargetLang: prefs.getString(_kTranslationTargetLang) ?? 'ru',
     );
   }
 
@@ -623,6 +643,20 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   Future<void> setBinaryPrefixes(int value) async {
     state = state.copyWith(binaryPrefixes: value);
     await _set(_kBinaryPrefixes, value);
+  }
+
+  Future<void> setTranslationEnabled(bool value) async {
+    state = state.copyWith(isTranslationEnabled: value);
+    await _set(_kIsTranslationEnabled, value);
+  }
+
+  Future<void> setTranslationLanguages(String source, String target) async {
+    state = state.copyWith(
+      translationSourceLang: source,
+      translationTargetLang: target,
+    );
+    await _set(_kTranslationSourceLang, source);
+    await _set(_kTranslationTargetLang, target);
   }
 }
 

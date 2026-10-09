@@ -73,6 +73,33 @@ abstract final class SettingsPickerSheets {
     };
   }
 
+  static Widget _buildSheetHeaderPill(
+    BuildContext context,
+    String title,
+    ColorScheme colors,
+  ) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.only(top: 4, bottom: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        decoration: BoxDecoration(
+          color: colors.secondaryContainer.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          title,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: colors.onSecondaryContainer,
+            letterSpacing: 0.2,
+          ),
+        ),
+      ),
+    );
+  }
+
   static Future<void> showThemeModePicker(
     BuildContext context,
     SettingsNotifier notifier,
@@ -88,18 +115,9 @@ abstract final class SettingsPickerSheets {
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 8, bottom: 12),
-                child: Text(
-                  l10n.themeModeTitle,
-                  style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colors.primary,
-                      ),
-                ),
-              ),
+              _buildSheetHeaderPill(ctx, l10n.themeModeTitle, colors),
               SegmentedListSection(
                 children: [
                   for (final mode in ThemeModeOption.values)
@@ -150,18 +168,9 @@ abstract final class SettingsPickerSheets {
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 8, bottom: 12),
-                child: Text(
-                  l10n.colorAccentTitle,
-                  style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colors.primary,
-                      ),
-                ),
-              ),
+              _buildSheetHeaderPill(ctx, l10n.colorAccentTitle, colors),
               SegmentedListSection(
                 children: [
                   for (final entry in labels.entries)
@@ -219,18 +228,9 @@ abstract final class SettingsPickerSheets {
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 8, bottom: 12),
-                child: Text(
-                  l10n.languageTitle,
-                  style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colors.primary,
-                      ),
-                ),
-              ),
+              _buildSheetHeaderPill(ctx, l10n.languageTitle, colors),
               SegmentedListSection(
                 children: [
                   for (final option in options)
@@ -299,18 +299,9 @@ abstract final class SettingsPickerSheets {
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8, bottom: 12),
-                    child: Text(
-                      l10n.typeface,
-                      style: Theme.of(sheetCtx).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colors.primary,
-                          ),
-                    ),
-                  ),
+                  _buildSheetHeaderPill(sheetCtx, l10n.typeface, colors),
 
                   // Live Text Preview Card
                   Card(
@@ -400,18 +391,9 @@ abstract final class SettingsPickerSheets {
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 8, bottom: 12),
-                child: Text(
-                  l10n.actionsHeightTitle,
-                  style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colors.primary,
-                      ),
-                ),
-              ),
+              _buildSheetHeaderPill(ctx, l10n.actionsHeightTitle, colors),
               SegmentedListSection(
                 children: [
                   for (final ratio in actionsHeightRatios)
@@ -455,18 +437,9 @@ abstract final class SettingsPickerSheets {
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 8, bottom: 12),
-                child: Text(
-                  l10n.binaryPrefixesTitle,
-                  style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colors.primary,
-                      ),
-                ),
-              ),
+              _buildSheetHeaderPill(ctx, l10n.binaryPrefixesTitle, colors),
               SegmentedListSection(
                 children: [
                   for (final value in const [1000, 1024])

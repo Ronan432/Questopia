@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 class HtmlProcessor {
   static final RegExp _execRegExp = RegExp(
@@ -28,6 +29,8 @@ class HtmlProcessor {
   static String processHtml(String html) {
     if (html.isEmpty) return html;
 
+    debugPrint('[HtmlProcessor] processHtml length: ${html.length} chars');
+
     var result = html;
 
     // Convert [img] tags
@@ -35,6 +38,7 @@ class HtmlProcessor {
       result = result.replaceAllMapped(_bbcodeImgRegExp, (match) {
         final raw = match.group(1)?.trim() ?? '';
         final clean = raw.replaceAll(r'\', '/');
+        debugPrint('[HtmlProcessor] Converted [img] tag: "$raw" -> "$clean"');
         return '<img src="$clean" />';
       });
     }
@@ -44,7 +48,9 @@ class HtmlProcessor {
       final before = match.group(1) ?? '';
       final src = match.group(2) ?? '';
       final after = match.group(3) ?? '';
-      return '<img$before src="${src.replaceAll(r'\', '/')}"$after>';
+      final normalized = src.replaceAll(r'\', '/');
+      debugPrint('[HtmlProcessor] Normalized unquoted image src: "$src" -> "$normalized"');
+      return '<img$before src="$normalized"$after>';
     });
 
     // Normalize backslashes inside quoted src="..."
@@ -53,7 +59,11 @@ class HtmlProcessor {
       final quote = match.group(2) ?? '"';
       final src = match.group(3) ?? '';
       final after = match.group(4) ?? '';
-      return '<img$before src=$quote${src.replaceAll(r'\', '/')}$quote$after>';
+      final normalized = src.replaceAll(r'\', '/');
+      if (src != normalized) {
+        debugPrint('[HtmlProcessor] Normalized quoted image src backslashes: "$src" -> "$normalized"');
+      }
+      return '<img$before src=$quote$normalized$quote$after>';
     });
 
     // Base64-encode multi-line exec links
@@ -108,7 +118,7 @@ class HtmlProcessor {
   }
 
   static final RegExp _videoImgRegExp = RegExp(
-    r'<img([^>]*?)\bsrc\s*=\s*["\x27]?([^"\x27\s>]*?\.(?:mp4|webm|ogv|ogg|m4v|mov))["\x27]?([^>]*?)>',
+    r'<img([^>]*?)\bsrc\s*=\s*["\x27]?([^"\x27\s>]*?\.(?:mp4|webm|ogv|ogg|m4v|mov|avi|mkv|3gp|flv))["\x27]?([^>]*?)>',
     caseSensitive: false,
   );
   static final RegExp _imgRegExp = RegExp(
@@ -120,10 +130,17 @@ class HtmlProcessor {
   /// into looping, muted, autoplaying `<video>` elements.
   static String wrapVideos(String html) {
     if (html.isEmpty) return html;
-    return html.replaceAllMapped(_videoImgRegExp, (match) {
+    var count = 0;
+    final wrapped = html.replaceAllMapped(_videoImgRegExp, (match) {
+      count++;
       final src = match.group(2) ?? '';
-      return '<video src="$src" autoplay loop muted playsinline webkit-playsinline preload="auto" style="max-width:100%;height:auto;display:block;margin:8px auto;border-radius:6px;object-fit:contain;background-color:transparent;"></video>';
+      debugPrint('[HtmlProcessor] Wrapping video file in img tag ($count): source "$src" converted to <video>');
+      return '<video src="$src" autoplay loop muted playsinline webkit-playsinline preload="auto" style="max-width:100%;height:auto;display:block;margin:8px auto;border-radius:6px;object-fit:contain;background-color:transparent;pointer-events:auto;"></video>';
     });
+    if (count > 0) {
+      debugPrint('[HtmlProcessor] Total video tags wrapped: $count');
+    }
+    return wrapped;
   }
 
   /// Backward-compatible alias for wrapVideos.
@@ -133,12 +150,60 @@ class HtmlProcessor {
   /// handles webview autoplay policies, and attaches OGV.js fallback for .ogv files.
   static String videoBootstrapScript() {
     return '''
+<script src="https://questopia.local/ogv/ogv-support.js"></script>
 <script src="https://questopia.local/ogv/ogv.js"></script>
 <script>
 (function() {
-  function setupVideos() {
+  window.OGVLoader = window.OGVLoader || {};
+  window.OGVLoader.base = 'https://questopia.local/ogv';
+
+  function hookVideos() {
     var videos = document.querySelectorAll('video');
     videos.forEach(function(v) {
+      if (v.dataset.videoProcessed) return;
+
+      var src = v.getAttribute('src') || v.src || '';
+      if (!src && v.querySelector('source')) {
+        src = v.querySelector('source').getAttribute('src') || '';
+      }
+
+      var isOgv = /\\.og[gv](\\?|#|\$)/i.test(src);
+
+      if (isOgv && typeof OGVPlayer !== 'undefined') {
+        try {
+          var canPlay = v.canPlayType && (v.canPlayType('video/ogg; codecs="theora"') || v.canPlayType('video/ogg'));
+          if (!canPlay || canPlay === '') {
+            v.dataset.videoProcessed = '1';
+            var player = new OGVPlayer({
+              base: 'https://questopia.local/ogv',
+              worker: false
+            });
+            player.src = src;
+            player.muted = true;
+            player.loop = true;
+            player.autoplay = true;
+
+            player.style.maxWidth = '100%';
+            player.style.width = '100%';
+            player.style.height = 'auto';
+            player.style.display = 'block';
+            player.style.margin = '8px auto';
+            player.style.borderRadius = '6px';
+            player.style.objectFit = 'contain';
+            player.style.pointerEvents = 'auto';
+
+            if (v.parentNode) {
+              v.parentNode.replaceChild(player, v);
+            }
+            player.play();
+            return;
+          }
+        } catch (e) {
+          console.error('[OGV.js] Failed to initialize OGVPlayer for', src, e);
+        }
+      }
+
+      v.dataset.videoProcessed = '1';
       v.autoplay = true;
       v.loop = true;
       v.muted = true;
@@ -148,14 +213,12 @@ class HtmlProcessor {
       v.setAttribute('autoplay', '');
       v.setAttribute('loop', '');
       v.setAttribute('muted', '');
-      
-      // Enforce loop restart
+
       v.onended = function() {
         v.currentTime = 0;
         v.play().catch(function(){});
       };
-      
-      // Auto play attempt
+
       var playPromise = v.play();
       if (playPromise !== undefined) {
         playPromise.catch(function() {
@@ -166,32 +229,16 @@ class HtmlProcessor {
           document.addEventListener('touchstart', resumeOnTouch, {once: true});
         });
       }
-
-      // OGV fallback
-      var src = v.getAttribute('src') || '';
-      if (/\\.og[gv](\\?|#|\$)/i.test(src) && !v.dataset.ogvHooked && typeof OGVPlayer !== 'undefined') {
-        try {
-          var canPlay = v.canPlayType('video/ogg; codecs="theora"');
-          if (!canPlay) {
-            v.dataset.ogvHooked = '1';
-            var player = new OGVPlayer({video: v});
-            player.loop = true;
-            player.muted = true;
-            player.play();
-          }
-        } catch (e) {}
-      }
     });
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupVideos);
+    document.addEventListener('DOMContentLoaded', hookVideos);
   } else {
-    setupVideos();
+    hookVideos();
   }
-  window.addEventListener('load', setupVideos);
-  setTimeout(setupVideos, 200);
-  setTimeout(setupVideos, 600);
+  window.addEventListener('load', hookVideos);
+  setInterval(hookVideos, 250);
 })();
 </script>''';
   }
@@ -202,6 +249,7 @@ class HtmlProcessor {
   /// Removes all image tags for text-only mode (`pref_disable_image`).
   static String stripImageTags(String html) {
     if (html.isEmpty) return html;
+    debugPrint('[HtmlProcessor] Stripping all image tags for text-only mode');
     return html.replaceAll(_imgRegExp, '');
   }
 
@@ -216,26 +264,54 @@ class HtmlProcessor {
   /// MIME type lookup for the local media proxy (`questopia.local`).
   static String mimeTypeForPath(String path) {
     final lower = path.toLowerCase();
-    if (lower.endsWith('.html') || lower.endsWith('.htm')) return 'text/html';
-    if (lower.endsWith('.css')) return 'text/css';
-    if (lower.endsWith('.js')) return 'application/javascript';
-    if (lower.endsWith('.wasm')) return 'application/wasm';
-    if (lower.endsWith('.json')) return 'application/json';
-    if (lower.endsWith('.png')) return 'image/png';
-    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
-    if (lower.endsWith('.gif')) return 'image/gif';
-    if (lower.endsWith('.webp')) return 'image/webp';
-    if (lower.endsWith('.bmp')) return 'image/bmp';
-    if (lower.endsWith('.svg')) return 'image/svg+xml';
-    if (lower.endsWith('.ogv') || lower.endsWith('.ogg')) return 'video/ogg';
-    if (lower.endsWith('.mp4')) return 'video/mp4';
-    if (lower.endsWith('.webm')) return 'video/webm';
-    if (lower.endsWith('.mp3')) return 'audio/mpeg';
-    if (lower.endsWith('.wav')) return 'audio/wav';
-    if (lower.endsWith('.mid') || lower.endsWith('.midi')) return 'audio/midi';
-    if (lower.endsWith('.qsp') || lower.endsWith('.gam')) {
-      return 'application/octet-stream';
+    String mime;
+    if (lower.endsWith('.html') || lower.endsWith('.htm')) {
+      mime = 'text/html';
+    } else if (lower.endsWith('.css')) {
+      mime = 'text/css';
+    } else if (lower.endsWith('.js')) {
+      mime = 'application/javascript';
+    } else if (lower.endsWith('.wasm')) {
+      mime = 'application/wasm';
+    } else if (lower.endsWith('.json')) {
+      mime = 'application/json';
+    } else if (lower.endsWith('.png')) {
+      mime = 'image/png';
+    } else if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
+      mime = 'image/jpeg';
+    } else if (lower.endsWith('.gif')) {
+      mime = 'image/gif';
+    } else if (lower.endsWith('.webp')) {
+      mime = 'image/webp';
+    } else if (lower.endsWith('.bmp')) {
+      mime = 'image/bmp';
+    } else if (lower.endsWith('.svg')) {
+      mime = 'image/svg+xml';
+    } else if (lower.endsWith('.ogv') || lower.endsWith('.ogg')) {
+      mime = 'video/ogg';
+    } else if (lower.endsWith('.mp4') || lower.endsWith('.m4v')) {
+      mime = 'video/mp4';
+    } else if (lower.endsWith('.webm')) {
+      mime = 'video/webm';
+    } else if (lower.endsWith('.mov')) {
+      mime = 'video/quicktime';
+    } else if (lower.endsWith('.avi')) {
+      mime = 'video/x-msvideo';
+    } else if (lower.endsWith('.mkv')) {
+      mime = 'video/x-matroska';
+    } else if (lower.endsWith('.mp3')) {
+      mime = 'audio/mpeg';
+    } else if (lower.endsWith('.wav')) {
+      mime = 'audio/wav';
+    } else if (lower.endsWith('.mid') || lower.endsWith('.midi')) {
+      mime = 'audio/midi';
+    } else if (lower.endsWith('.qsp') || lower.endsWith('.gam')) {
+      mime = 'application/octet-stream';
+    } else {
+      mime = 'application/octet-stream';
     }
-    return 'application/octet-stream';
+
+    debugPrint('[HtmlProcessor] mimeTypeForPath("$path") => $mime');
+    return mime;
   }
 }

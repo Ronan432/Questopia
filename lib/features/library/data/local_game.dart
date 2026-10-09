@@ -8,6 +8,7 @@ class LocalGame {
   final String posterPath;
   final int fileSize;
   final bool isFavorite;
+  final bool isFromRepo;
 
   const LocalGame({
     required this.id,
@@ -19,6 +20,7 @@ class LocalGame {
     this.posterPath = '',
     this.fileSize = 0,
     this.isFavorite = false,
+    this.isFromRepo = false,
   });
 
   LocalGame copyWith({
@@ -31,6 +33,7 @@ class LocalGame {
     String? posterPath,
     int? fileSize,
     bool? isFavorite,
+    bool? isFromRepo,
   }) {
     return LocalGame(
       id: id ?? this.id,
@@ -42,6 +45,7 @@ class LocalGame {
       posterPath: posterPath ?? this.posterPath,
       fileSize: fileSize ?? this.fileSize,
       isFavorite: isFavorite ?? this.isFavorite,
+      isFromRepo: isFromRepo ?? this.isFromRepo,
     );
   }
 
@@ -55,6 +59,7 @@ class LocalGame {
         'posterPath': posterPath,
         'fileSize': fileSize,
         'isFavorite': isFavorite,
+        'isFromRepo': isFromRepo,
       };
 
   factory LocalGame.fromJson(Map<String, dynamic> json) => LocalGame(
@@ -67,6 +72,7 @@ class LocalGame {
         posterPath: json['posterPath'] as String? ?? '',
         fileSize: json['fileSize'] as int? ?? 0,
         isFavorite: json['isFavorite'] as bool? ?? false,
+        isFromRepo: json['isFromRepo'] as bool? ?? false,
       );
 
   factory LocalGame.fromRegistry(Map<String, dynamic> json) => LocalGame(
@@ -80,6 +86,7 @@ class LocalGame {
         posterPath: json['posterPath'] as String? ?? '',
         fileSize: json['fileSize'] as int? ?? 0,
         isFavorite: json['isFavorite'] as bool? ?? false,
+        isFromRepo: json['isFromRepo'] as bool? ?? false,
       );
 
   Map<String, dynamic> toRegistry() => {
@@ -92,6 +99,7 @@ class LocalGame {
         'posterPath': posterPath,
         'fileSize': fileSize,
         'isFavorite': isFavorite,
+        'isFromRepo': isFromRepo,
         'importedAt': DateTime.now().toIso8601String(),
       };
 }

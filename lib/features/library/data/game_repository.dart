@@ -346,6 +346,23 @@ class GameRepository {
     await registry.remove(game.folderPath);
   }
 
+  /// Permanently deletes [game] folder and removes it from registry if it is from repo.
+  Future<void> deleteGame(LocalGame game) async {
+    final registry = await GameRegistry.open();
+    await registry.remove(game.id);
+    await registry.remove(game.folderPath);
+    if (game.isFromRepo) {
+      try {
+        final dir = Directory(game.folderPath);
+        if (await dir.exists()) {
+          await dir.delete(recursive: true);
+        }
+      } catch (e) {
+        debugPrint('[GameRepository] Error deleting game folder: $e');
+      }
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Tiered Import Pipeline (Tier A: Zero-Copy, Tier B: Isolate Copy, Tier C: Archive)
   // ---------------------------------------------------------------------------
@@ -656,13 +673,19 @@ class GameRepository {
     for (final m in matches) {
       final block = m.group(0)!;
 
-      final linkMatch = RegExp(r'href="(https://qsp\.org/games/(\d+)[^"]*)"')
-          .firstMatch(block);
+      final linkMatch = RegExp(
+        r'href="((?:https://qsp\.org)?/games/(\d+)[^"]*)"',
+        caseSensitive: false,
+      ).firstMatch(block);
       if (linkMatch == null) continue;
-      final gameUrl = linkMatch.group(1)!;
+      var gameUrl = linkMatch.group(1)!;
+      if (gameUrl.startsWith('/')) {
+        gameUrl = 'https://qsp.org$gameUrl';
+      }
       final gameId = linkMatch.group(2)!;
 
-      final imgMatch = RegExp(r'<img[^>]+src="([^"]+)"').firstMatch(block);
+      final imgMatch = RegExp(r'<img[^>]+src="([^"]+)"', caseSensitive: false)
+          .firstMatch(block);
       final posterUrl = _cleanPosterUrl(imgMatch?.group(1));
 
       final titleMatch = RegExp(
@@ -700,7 +723,31 @@ class GameRepository {
       ).firstMatch(block);
       final author = authorMatch?.group(1)?.trim() ?? '';
 
-      final downloadUrl = '$gameUrl/download';
+      final dlMatch = RegExp(
+        r'href="((?:https://qsp\.org)?/games/\d+[^"]*/download)"',
+        caseSensitive: false,
+      ).firstMatch(block);
+      var downloadUrl =
+          dlMatch != null ? dlMatch.group(1)! : '$gameUrl/download';
+      if (downloadUrl.startsWith('/')) {
+        downloadUrl = 'https://qsp.org$downloadUrl';
+      }
+
+      final descMatch = RegExp(
+        r'<div[^>]*class="[^"]*djot-content[^"]*"[^>]*>([\s\S]*?)</div>',
+        caseSensitive: false,
+      ).firstMatch(block);
+      final desc = descMatch != null
+          ? descMatch
+              .group(1)!
+              .replaceAll(RegExp(r'<[^>]*>'), '')
+              .replaceAll('&nbsp;', ' ')
+              .replaceAll('&amp;', '&')
+              .replaceAll('&quot;', '"')
+              .replaceAll('&lt;', '<')
+              .replaceAll('&gt;', '>')
+              .trim()
+          : '';
 
       if (title.isNotEmpty) {
         games.add(RemoteGame(
@@ -712,6 +759,7 @@ class GameRepository {
           icon: posterUrl,
           fileUrl: downloadUrl,
           descUrl: gameUrl,
+          descriptionText: desc,
         ));
       }
     }
@@ -972,6 +1020,7 @@ class GameRepository {
       gameFilePath: gameFile,
       posterPath: poster?.path ?? '',
       fileSize: fileSize,
+      isFromRepo: true,
     );
 
     final registry = await GameRegistry.open();
@@ -1026,30 +1075,41 @@ class GameRepository {
   }) async {
     final client = http.Client();
     try {
-      final request = http.Request('GET', Uri.parse(url))
-        ..headers['User-Agent'] =
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        ..headers['Referer'] = 'https://qsp.org/';
+      var currentUrl = url;
+      var redirects = 0;
+      http.StreamedResponse? finalResponse;
 
-      final response =
-          await client.send(request).timeout(const Duration(seconds: 45));
+      while (redirects < 6) {
+        final uri = Uri.tryParse(currentUrl);
+        if (uri == null) {
+          throw RepositoryException('Invalid download URI: $currentUrl');
+        }
 
-      var finalResponse = response;
-      if (finalResponse.isRedirect &&
-          finalResponse.headers.containsKey('location')) {
-        final redirectUrl = finalResponse.headers['location']!;
-        final redirectRequest = http.Request('GET', Uri.parse(redirectUrl))
+        final request = http.Request('GET', uri)
           ..headers['User-Agent'] =
               'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
           ..headers['Referer'] = 'https://qsp.org/';
-        finalResponse = await client
-            .send(redirectRequest)
-            .timeout(const Duration(seconds: 45));
+
+        final response =
+            await client.send(request).timeout(const Duration(seconds: 45));
+
+        if (response.isRedirect && response.headers.containsKey('location')) {
+          var redirectUrl = response.headers['location']!.trim();
+          if (redirectUrl.startsWith('/')) {
+            redirectUrl = '${uri.scheme}://${uri.host}$redirectUrl';
+          }
+          currentUrl = redirectUrl;
+          redirects++;
+          continue;
+        }
+
+        finalResponse = response;
+        break;
       }
 
-      if (finalResponse.statusCode != 200) {
+      if (finalResponse == null || finalResponse.statusCode != 200) {
         throw RepositoryException(
-            'Server returned HTTP ${finalResponse.statusCode}');
+            'Server returned HTTP ${finalResponse?.statusCode ?? 500}');
       }
 
       final totalBytes = finalResponse.contentLength ?? 0;

@@ -29,13 +29,14 @@ Questopia-RE is a high-performance cross-platform interpreter and library client
 4. **SANDBOX REGISTRY ISOLATION:** Never write metadata, registry entries, or hidden dot-files into external shared storage. All persistent game records must go through `GameRegistry` inside `getApplicationSupportDirectory()`.
 5. **MODULAR HELPER COHESION:** Utility and helper routines must be encapsulated in dedicated helper files under `lib/core/helpers/` (e.g. `sheet_helper.dart`, `path_picker_helper.dart`, `html_processor.dart`).
 6. **EFFECTIVE SETTINGS LINKAGE:** Every setting field in `SettingsState` must have an active consumer and observable effect in the UI or runtime engine (blur, haptics, action height ratio, immersive mode, square posters, font family, etc.).
-7. **STANDARDIZED COMMIT FORMAT & USER-FRIENDLY DESCRIPTIONS:** Commit subject lines must strictly adhere to standardized conventional prefix syntax (e.g. `Feat: <reason>`, `Fix: <reason>`, `Ci: <reason>`). Never put multi-line descriptions or markdown headers in commit titles. Commit descriptions/bodies must be written in plain, easily understandable user-facing English explaining what changed and why.
+7. **STANDARDIZED COMMIT FORMAT AND USER-FRIENDLY DESCRIPTIONS:** Commit subject lines must strictly adhere to standardized conventional prefix syntax (e.g. `Feat: <reason>`, `Fix: <reason>`, `Ci: <reason>`). Never put multi-line descriptions or markdown headers in commit titles. Commit descriptions/bodies must be written in plain, easily understandable user-facing English explaining what changed and why.
+8. **BAN ON `&` SYMBOL:** The ampersand character (`&`) is strictly forbidden across all user-facing UI strings, headers, button labels, documentation, and commit messages. Always use the full word "and" or "ve".
 
 ---
 
-## 3. Core Architecture & Active Subsystems
+## 3. Core Architecture and Active Subsystems
 
-### 3.1. Native QSP FFI Engine & Dual-Width Encoding
+### 3.1. Native QSP FFI Engine and Dual-Width Encoding
 - **Windows C-API DLL:** Uses official C-API `qsp.dll` with 50 exports (`QSPInit`, `QSPLoadGameWorldFromData`, `QSPRestartGame`, `QSPGetMainDesc`, `QSPGetActions`, etc.) with statically linked Oniguruma regex.
 - **Dynamic Dual-Width `wchar_t` (`QspUtf16` & `QspFfi`):** Automatically detects 2-byte (Windows MSVC) and 4-byte (Android/Linux Clang) `wchar_t` streams. Compilers configured with `-fshort-wchar` for cross-platform UTF-16 parity.
 - **Correct FFI Types:** `QSP_BOOL` mapped to `Int8`, `QSP_BIGINT` mapped to `Int32`, preventing bit corruption on 64-bit calling conventions.
@@ -52,33 +53,34 @@ Questopia-RE is a high-performance cross-platform interpreter and library client
 - **Isolate BFS Traversal & Deduplication:** Multi-threaded BFS search detects nested entry files (`.qsp` / `.gam`) up to depth 8. Prunes dead registry entries automatically and deduplicates across canonical absolute file paths and title+filesize signatures to eliminate duplicate entries.
 - **Execution Tracing:** Microsecond-precision `Stopwatch` metrics for all scans and imports.
 
-### 3.4. State Management & Generation Guard (`LibraryProvider`)
+### 3.4. State Management and Generation Guard (`LibraryProvider`)
 - **Generation-Guarded State:** `LibraryNotifier` uses a monotonic `_generation` counter to ensure background file scans never overwrite newly imported games.
 - **Immediate State Injection:** Imported games appear immediately at the head of the library state before background validation.
 - **Lifecycle Optimization:** Constructor runs zero eager network calls; catalog fetching is strictly on-demand.
 
-### 3.5. Game Player, WebView2 & Pre-Cached $O(1)$ Media Resolution (`GameScreen`)
+### 3.5. Game Player, WebView2 and Pre-Cached $O(1)$ Media Resolution (`GameScreen`)
 - **Edge-to-Edge Square Viewport:** WebView is rendered edge-to-edge without rounded card margins, filling the screen corners completely.
-- **Universal Video Playback & Seamless Looping:** Converts all video formats (`.mp4`, `.webm`, `.ogv`, `.ogg`, `.m4v`, `.mov`) in `<img>` tags to `<video autoplay loop muted playsinline>` backed by a self-recovering JS loop script and WASM OGVPlayer fallback, preserving fixed media boundaries without text shifting.
-- **Image-Aware Action Buttons & Interactive Links:** Dynamically detects and renders images inside action names (`<img src="...">`) or `act.image`. Handles `exec:` navigation across relative, base-encoded, and WebView2 embedded image links on desktop and mobile.
+- **Universal Video Playback and Seamless Looping:** Converts all video formats (`.mp4`, `.webm`, `.ogv`, `.ogg`, `.m4v`, `.mov`) in `<img>` tags to `<video autoplay loop muted playsinline>` backed by a self-recovering JS loop script and WASM OGVPlayer fallback, preserving fixed media boundaries without text shifting.
+- **Image-Aware Action Buttons and Interactive Links:** Dynamically detects and renders images inside action names (`<img src="...">`) or `act.image`. Handles `exec:` navigation across relative, base-encoded, and WebView2 embedded image links on desktop and mobile.
 - **Adaptive RPG Inventory Tab:** Renders objects with case-insensitive local asset image resolution. Pure-image inventory items render in a responsive square-tile grid (`childAspectRatio: 1.0`), while named items display in a structured list with 52x52 square image previews.
 - **High-Contrast Dialog Engine (`GameDialogsHost`):** Formatted with theme-aware `surfaceContainerHigh` surfaces, sanitized HTML text, safe embedded image extraction (`<img>` / `[img]`), error-safe asset fallbacks, and tonal overlay pill styling for Cancel actions.
 - **Pre-Cached Asset Index:** Builds a case-insensitive, backslash-normalized, Unicode-tolerant asset index (`_cachedAssetIndex`) in a background isolate upon game launch with zero-disk interception.
 - **3-Tab Navigation:** Story (`mainDesc`), Status (`varsDesc`), and Inventory (`objects`) tabs with real-time badges.
 
-### 3.6. UI / UX Design System & Active Morph Shaping
+### 3.6. UI / UX Design System and Active Morph Shaping
 - **Active Morph Shaping:** Dynamic radius transitions between compact Rounded Rectangles (`BorderRadius.circular(8)`) when unselected/focused, and full Stadium Pills (`BorderRadius.circular(24)` / `BorderRadius.circular(28)`) for category chips and desktop search bar.
-- **Frosted Glass Backdrop Sheets (`showQuestopiaSheet` & `_BlurredModalBottomSheetRoute`):** Modal bottom sheets feature `SafeArea` enforcement (never crossing or overlapping the status bar), full-screen background Gaussian blur (`sigma: 6.0`), translucent frosted surfaces, and reliable drag/barrier dismissal.
-- **Phone-Optimized Compact Grid & Contextual Game Menu:** Streamlined, compact 2-column game cards with direct Play buttons; tapping anywhere else on the card opens a Material Expressive segmented drawer sheet (Play, Favorite toggle, Delete).
-- **Right-Aligned Animated Search:** Search button positioned at the far right of the app bar with a smooth right-to-left expanding input animation.
+- **Frosted Glass Backdrop Sheets (`showQuestopiaSheet` and `_BlurredModalBottomSheetRoute`):** Modal bottom sheets feature `SafeArea` enforcement (never crossing or overlapping the status bar), full-screen background Gaussian blur (`sigma: 10.0`), translucent frosted surfaces, deep dark container backgrounds (`surfaceContainerLowest`) with elevated tonal tiles, centered title header pill styling, and reliable drag/barrier dismissal.
+- **Phone-Optimized Compact Grid and Contextual Game Menu:** Streamlined, compact 2-column game cards with direct Play buttons; tapping anywhere else on the card opens a Material Expressive segmented drawer sheet (Play, Favorite toggle, Delete).
+- **Smooth Animated Search and Pagination:** Mobile search box built into a dedicated full-width `AppBar` stack anchored to `Alignment.centerRight`, expanding smoothly across the entire toolbar from the right search icon without boundary clipping or abrupt jumps; smooth pagination controls with active loading spinner and minimal 2-stroke iOS-style navigation arrows (`Icons.arrow_back_ios_new_rounded` / `Icons.arrow_forward_ios_rounded`).
 - **Tactile Settings Feedback:** Universal light haptic feedback integrated across settings category chips, switch toggles, navigation tiles, color pickers, and picker sheets.
-- **Adjustable Navigation Bar Blur:** Navigation bar backdrop blur with configurable intensity slider (10% to 100%), real-time Gaussian filter, and `extendBody` scaffold integration.
-- **Desktop Title Bar & Navigation:** Custom title bar with right-click Windows system menu integration (`windowManager.popUpWindowMenu()`), MSVC `/MP` parallel compilation flags, and left-side borderless `NavigationRail` with bold active item text and storefront catalog branding.
-- **High-Performance Posters (`GamePoster`):** Memory-capped GPU texture caching via `extended_image` and native vector rendering via `flutter_svg`. Short-circuits missing/SVG covers to avoid network ANRs.
+- **Adjustable Navigation Bar Blur and Translucent Overlays:** Navigation bar backdrop blur with configurable intensity slider (10% to 100%), real-time Gaussian filter, translucent tinted active item pills allowing the backdrop blur to pass through unblocked, `SafeArea(bottom: !isNavBarBlur)` and `extendBody` scaffold integration allowing game cards to scroll seamlessly behind the frosted bar.
+- **Dark-Mode Game Status Bar and Multi-Folder Asset/Video Resolution:** Dynamic `SystemUiOverlayStyle` ensures status bar icons remain crisp and high-contrast in game dark mode; recursive multi-folder and suffix asset resolver finds all nested media formats (`.mp4`, `.webm`, `.ogv`, `.ogg`, `.avi`, `.mkv`, etc.) with automatic mock `favicon.ico` responses.
+- **Desktop Title Bar and Navigation:** Custom title bar with right-click Windows system menu integration (`windowManager.popUpWindowMenu()`), MSVC `/MP` parallel compilation flags, and left-side borderless `NavigationRail` with bold active item text and storefront catalog branding.
+- **High-Performance Posters (`GamePoster`):** Memory-capped GPU texture caching via `extended_image` with anti-hotlinking headers and native vector rendering via `flutter_svg`. Short-circuits missing/SVG covers to avoid network ANRs.
 
 ---
 
-## 4. Key Project Files & Responsibilities
+## 4. Key Project Files and Responsibilities
 
 | File Path | Description |
 | :--- | :--- |
@@ -92,12 +94,16 @@ Questopia-RE is a high-performance cross-platform interpreter and library client
 | `lib/features/library/providers/library_provider.dart` | Riverpod library state notifier with generation-guarded background refresh. |
 | `lib/features/library/presentation/library_screen.dart` | Responsive library/catalog UI with active morph filter chips, blur bottom bar, and search. |
 | `lib/features/library/presentation/widgets/game_poster.dart` | Memory-capped, ANR-free poster image loader with SVG vector fallback. |
-| `lib/features/game/presentation/game_screen.dart` | Game interpreter view, WebView runner, image action buttons, and RPG inventory grid. |
+| `lib/core/media/qsp_media.dart` | Unified media rendering widget combining native `media_kit` hardware video and image loaders. |
+| `lib/core/media/qsp_media_kind.dart` | Header sniffing and extension matching for image vs video discrimination. |
+| `lib/core/media/qsp_path_resolver.dart` | Fast relative path resolver with case-insensitive search and fallback mechanisms. |
+| `lib/core/media/qsp_html_view.dart` | Native HTML widget renderer with custom widget builder for video and image tags. |
+| `lib/features/game/presentation/game_screen.dart` | Game interpreter view, native HTML and media renderer, image action buttons, and RPG inventory grid. |
 | `lib/features/settings/presentation/settings_screen.dart` | Expressive M3E settings screen with morph category buttons and dynamic theming. |
 
 ---
 
-## 5. Verification & Quality Assurance
+## 5. Verification and Quality Assurance
 
 All features must maintain 0 static analysis issues before commit:
 
@@ -107,7 +113,7 @@ flutter analyze
 
 ---
 
-## 6. Git & Commit Message Standards
+## 6. Git and Commit Message Standards
 
 All commits in the repository must adhere to the following standards:
 
@@ -136,5 +142,3 @@ Fix: Improve bottom sheet display on mobile screens
 - Extended sheet background to cover the bottom edge of the screen.
 - Adjusted system navigation bar contrast for better readability.
 ```
-
-- Implemented 14 specific UI, engine, and icon tasks for Questopia-RE.

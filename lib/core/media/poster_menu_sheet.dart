@@ -45,13 +45,25 @@ Future<void> showPosterMenuSheet({
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 8, bottom: 12),
-              child: Text(
-                'Image Options',
-                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 4, bottom: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                decoration: BoxDecoration(
+                  color: colors.secondaryContainer.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Image Options',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSecondaryContainer,
+                    letterSpacing: 0.2,
+                  ),
+                ),
               ),
             ),
             ClipRRect(

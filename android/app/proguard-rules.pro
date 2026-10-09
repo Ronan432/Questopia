@@ -17,6 +17,10 @@
 # Audioplayers
 -keep class xyz.luan.audioplayers.** { *; }
 
+# MediaKit
+-keep class com.alexmercerind.** { *; }
+
 # General keep rules
 -dontwarn io.flutter.**
 -dontwarn com.pichillilorenzo.flutter_inappwebview_android.**
+-dontwarn com.alexmercerind.**

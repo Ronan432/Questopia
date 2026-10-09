@@ -64,12 +64,14 @@ class CheatState {
     final result = <VarDiff>[];
     for (final current in watchedVars) {
       final old = before[current.name];
-      if (old != null && old != current.displayValue) {
-        result.add(VarDiff(
-          name: current.name,
-          before: old,
-          after: current.displayValue,
-        ));
+      if (old != null) {
+        if (old != current.displayValue) {
+          result.add(VarDiff(
+            name: current.name,
+            before: old,
+            after: current.displayValue,
+          ));
+        }
       }
     }
     return result;
@@ -103,6 +105,7 @@ abstract interface class VarBackend {
   Uint8List? save();
   bool load(Uint8List data);
   List<QspObject> objects();
+  List<String> getDiscoveredVars();
 }
 
 final class EngineVarBackend implements VarBackend {
@@ -127,6 +130,9 @@ final class EngineVarBackend implements VarBackend {
 
   @override
   List<QspObject> objects() => _engine.currentObjects();
+
+  @override
+  List<String> getDiscoveredVars() => _engine.getDiscoveredVarNames();
 }
 
 class CheatNotifier extends StateNotifier<CheatState> {
@@ -137,6 +143,7 @@ class CheatNotifier extends StateNotifier<CheatState> {
         addWatch(name);
       }
     }
+    scanDiscoveredVariables();
     takeSnapshot();
   }
 
@@ -166,7 +173,26 @@ class CheatNotifier extends StateNotifier<CheatState> {
     return ok;
   }
 
+  void scanDiscoveredVariables() {
+    final discovered = _backend.getDiscoveredVars();
+    final currentNames = {for (final v in state.watchedVars) v.name.toLowerCase()};
+    final newVars = <CheatVar>[];
+    for (final name in discovered) {
+      if (!currentNames.contains(name.toLowerCase())) {
+        final v = _readVar(name);
+        newVars.add(v);
+        currentNames.add(name.toLowerCase());
+      }
+    }
+    if (newVars.isNotEmpty) {
+      state = state.copyWith(
+        watchedVars: [...state.watchedVars, ...newVars],
+      );
+    }
+  }
+
   void refresh() {
+    scanDiscoveredVariables();
     state = state.copyWith(
       watchedVars: [
         for (final v in state.watchedVars) _readVar(v.name),

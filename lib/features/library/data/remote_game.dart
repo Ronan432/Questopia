@@ -12,6 +12,7 @@ class RemoteGame {
   final int fileSize;
   final String fileExt;
   final String descUrl;
+  final String descriptionText;
   final String pubDate;
   final String modDate;
 
@@ -28,11 +29,13 @@ class RemoteGame {
     this.fileSize = 0,
     this.fileExt = '',
     this.descUrl = '',
+    this.descriptionText = '',
     this.pubDate = '',
     this.modDate = '',
   });
 
-  String get description => descUrl;
+  String get description =>
+      descriptionText.isNotEmpty ? descriptionText : descUrl;
 
   String get displayName => title.trim().isNotEmpty ? title : 'Game $id';
 

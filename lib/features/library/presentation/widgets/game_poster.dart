@@ -88,6 +88,11 @@ class GamePoster extends StatelessWidget {
       } else if (_isSvg(url)) {
         content = SvgPicture.network(
           url,
+          headers: const {
+            'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://qsp.org/',
+          },
           height: height,
           width: width,
           fit: BoxFit.cover,
@@ -96,6 +101,11 @@ class GamePoster extends StatelessWidget {
       } else {
         content = ExtendedImage.network(
           url,
+          headers: const {
+            'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://qsp.org/',
+          },
           height: height,
           width: width,
           fit: BoxFit.cover,

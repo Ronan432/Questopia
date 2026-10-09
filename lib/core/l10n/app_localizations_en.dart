@@ -90,6 +90,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inventory => 'Inventory';
 
   @override
+  String get tabGame => 'Game';
+
+  @override
+  String get tabStatus => 'Status';
+
+  @override
+  String get tabInventory => 'Inventory';
+
+  @override
   String get console => 'Console';
 
   @override

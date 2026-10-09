@@ -90,6 +90,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get inventory => 'Инвенварь';
 
   @override
+  String get tabGame => 'Игра';
+
+  @override
+  String get tabStatus => 'Статус';
+
+  @override
+  String get tabInventory => 'Инвентарь';
+
+  @override
   String get console => 'Консоль';
 
   @override

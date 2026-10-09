@@ -29,7 +29,7 @@ class GameCardFrame extends StatelessWidget {
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(16),
           topRight: Radius.circular(16),
-          bottomLeft: Radius.circular(6),
+          bottomLeft: Radius.circular(16),
           bottomRight: Radius.circular(16),
         ),
       ),

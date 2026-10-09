@@ -6,9 +6,15 @@ class WindowTitleBar extends StatefulWidget implements PreferredSizeWidget {
   const WindowTitleBar({
     super.key,
     this.title = 'Questopia',
+    this.leading,
+    this.titleWidget,
+    this.actions,
   });
 
   final String title;
+  final Widget? leading;
+  final Widget? titleWidget;
+  final List<Widget>? actions;
 
   @override
   Size get preferredSize => const Size.fromHeight(40);
@@ -66,6 +72,16 @@ class _WindowTitleBarState extends State<WindowTitleBar> with WindowListener {
       color: colors.surface,
       child: Row(
         children: [
+          if (widget.leading != null)
+            SizedBox(
+              height: 40,
+              width: 40,
+              child: Center(child: widget.leading),
+            )
+          else ...[
+            const SizedBox(width: 12),
+            const QuestopiaLogoIcon(size: 24),
+          ],
           Expanded(
             child: GestureDetector(
               behavior: HitTestBehavior.translucent,
@@ -73,15 +89,27 @@ class _WindowTitleBarState extends State<WindowTitleBar> with WindowListener {
                 windowManager.popUpWindowMenu();
               },
               child: DragToMoveArea(
-                child: Row(
-                  children: const [
-                    SizedBox(width: 12),
-                    QuestopiaLogoIcon(size: 26),
-                  ],
+                child: Container(
+                  height: 40,
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: widget.titleWidget ??
+                      (widget.title.isNotEmpty
+                          ? Text(
+                              widget.title,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: colors.onSurface.withValues(alpha: 0.85),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            )
+                          : const SizedBox.shrink()),
                 ),
               ),
             ),
           ),
+          if (widget.actions != null) ...widget.actions!,
           _WindowButtons(
             isMaximized: _isMaximized,
             onMaximizeToggle: () {

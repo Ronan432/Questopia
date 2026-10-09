@@ -149,23 +149,39 @@ class QspFfi {
           DartQSPGetNumVarValue>('QSPGetNumVarValue');
       _getStrVarValue = _library.lookupFunction<NativeQSPGetStrVarValue,
           DartQSPGetStrVarValue>('QSPGetStrVarValue');
-      debugPrint('[QSP FFI] QSPGetNumVarValue & QSPGetStrVarValue resolved.');
+      debugPrint('[QSP FFI] QSPGetNumVarValue and QSPGetStrVarValue resolved.');
     } catch (_) {
       debugPrint('[QSP FFI] Var lookup symbols unavailable.');
     }
 
     try {
+      _qspVarsPtr = _library.lookup<Void>('qspVars');
+      debugPrint('[QSP FFI] qspVars symbol resolved.');
+    } catch (_) {
+      debugPrint('[QSP FFI] qspVars symbol unavailable.');
+    }
+
+    try {
       final verStruct = _getVersion();
-      if (verStruct.str != nullptr &&
-          verStruct.end != nullptr &&
-          verStruct.end.address > verStruct.str.address) {
-        final byteLen = verStruct.end.address - verStruct.str.address;
-        final detectedSize = byteLen >= 20
-            ? 4
-            : (byteLen >= 10 && byteLen < 20 ? 2 : (byteLen % 4 == 0 ? 4 : 2));
-        QspUtf16.setWcharSize(detectedSize);
-        debugPrint(
-            '[QSP FFI] Detected native wchar_t size: ${QspUtf16.nativeWcharSize} bytes (byteLen: $byteLen)');
+      if (verStruct.str != nullptr) {
+        if (verStruct.end != nullptr) {
+          if (verStruct.end.address > verStruct.str.address) {
+            final byteLen = verStruct.end.address - verStruct.str.address;
+            var detectedSize = 2;
+            if (byteLen >= 20) {
+              detectedSize = 4;
+            } else if (byteLen >= 10) {
+              if (byteLen < 20) {
+                detectedSize = 2;
+              }
+            } else if (byteLen % 4 == 0) {
+              detectedSize = 4;
+            }
+            QspUtf16.setWcharSize(detectedSize);
+            debugPrint(
+                '[QSP FFI] Detected native wchar_t size: ${QspUtf16.nativeWcharSize} bytes (byteLen: $byteLen)');
+          }
+        }
       }
     } catch (e) {
       debugPrint('[QSP FFI] Calibration warning: $e');
@@ -197,6 +213,7 @@ class QspFfi {
 
   DartQSPGetNumVarValue? _getNumVarValue;
   DartQSPGetStrVarValue? _getStrVarValue;
+  Pointer<Void>? _qspVarsPtr;
 
   static QspFfi? instance;
 
@@ -437,5 +454,84 @@ class QspFfi {
       calloc.free(nameStruct);
       calloc.free(resStruct);
     }
+  }
+
+  List<String> getDiscoveredVarNames({String varsDesc = '', String mainDesc = ''}) {
+    final discovered = <String>{};
+
+    // 1. Direct memory scan from native qspVars bucket table if available
+    if (_qspVarsPtr != null) {
+      try {
+        final is64Bit = sizeOf<Pointer<Void>>() == 8;
+        final bucketSize = is64Bit ? 16 : 8;
+        final varSize = is64Bit ? 48 : 28;
+
+        for (var b = 0; b < 1024; b++) {
+          final bucket = _qspVarsPtr!.cast<Uint8>() + (b * bucketSize);
+          final varsAddress = bucket.cast<Pointer<Uint8>>().value;
+          final varsCount = is64Bit
+              ? (bucket + 8).cast<Int32>().value
+              : (bucket + 4).cast<Int32>().value;
+
+          if (varsAddress != nullptr) {
+            if (varsCount > 0) {
+              if (varsCount < 500) {
+                for (var v = 0; v < varsCount; v++) {
+                  final varEntry = varsAddress + (v * varSize);
+                  final strStruct = varEntry.cast<QSPStringStruct>().ref;
+                  final name = QspUtf16.fromStruct(strStruct).trim();
+                  if (name.isNotEmpty) {
+                    discovered.add(name);
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('[QSP FFI] Error scanning qspVars memory: $e');
+      }
+    }
+
+    // 2. Scan varsDesc and mainDesc for variable/stat tokens
+    final textCombined = '$varsDesc $mainDesc';
+    if (textCombined.trim().isNotEmpty) {
+      final matches = RegExp(r'\b([a-zA-Z_][a-zA-Z0-9_]{0,35})\b')
+          .allMatches(textCombined);
+      for (final m in matches) {
+        final token = m.group(1);
+        if (token != null) {
+          if (token.length >= 2) {
+            final numVal = getVarNum(token);
+            final strVal = getVarStr(token);
+            if (numVal != 0 || strVal.isNotEmpty) {
+              discovered.add(token);
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Proactive check of common QSP game variables
+    const commonVars = [
+      'money', 'gold', 'cash', 'rub', 'rubles', 'coins', 'hp', 'health',
+      'maxhp', 'mana', 'mp', 'energy', 'stamina', 'exp', 'level', 'lvl',
+      'stat', 'points', 'str', 'agi', 'dex', 'int', 'vit', 'cha', 'luc',
+      'day', 'hour', 'min', 'sec', 'month', 'year', 'score', 'age',
+      'mood', 'hunger', 'thirst', 'sleep', 'hygiene', 'reputation', 'fame',
+      'lust', 'arousal', 'stress', 'weight', 'height', 'curloc', 'loc',
+      'caller', 'args', 'result'
+    ];
+    for (final v in commonVars) {
+      final numVal = getVarNum(v);
+      final strVal = getVarStr(v);
+      if (numVal != 0 || strVal.isNotEmpty) {
+        discovered.add(v);
+      }
+    }
+
+    final list = discovered.toList();
+    list.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return list;
   }
 }

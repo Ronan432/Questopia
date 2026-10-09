@@ -135,12 +135,14 @@ class LocalGameCard extends StatelessWidget {
                   ),
                   SegmentedListTile(
                     leading: Icon(
-                      Icons.delete_outline_rounded,
+                      game.isFromRepo
+                          ? Icons.delete_forever_rounded
+                          : Icons.delete_outline_rounded,
                       color: colors.error,
                       size: 24,
                     ),
                     title: Text(
-                      'Remove from library',
+                      game.isFromRepo ? 'Delete game' : 'Remove from library',
                       style: TextStyle(
                         fontSize: 16,
                         color: colors.error,
@@ -150,6 +152,7 @@ class LocalGameCard extends StatelessWidget {
                     onTap: () async {
                       HapticFeedback.lightImpact();
                       Navigator.pop(sheetCtx);
+                      final isRepo = game.isFromRepo;
                       final confirmed = await showDialog<bool>(
                         context: context,
                         builder: (ctx) => M3ETheme(
@@ -158,9 +161,15 @@ class LocalGameCard extends StatelessWidget {
                                 QuestopiaTheme.m3eColorSchemeFrom(colors),
                           ),
                           child: AlertDialog(
-                            title: const Text('Remove from library'),
+                            actionsPadding:
+                                const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                            title: Text(
+                              isRepo ? 'Delete Game' : 'Remove from library',
+                            ),
                             content: Text(
-                              'Remove "${game.title}" from your library?\n\nNote: Game files on your device will NOT be deleted.',
+                              isRepo
+                                  ? 'Permanently delete "${game.title}" and all its files from your device?\n\nThis action cannot be undone.'
+                                  : 'Remove "${game.title}" from your library?\n\nNote: Game files on your device will NOT be deleted.',
                             ),
                             actions: [
                               M3EButton.icon(
@@ -171,12 +180,16 @@ class LocalGameCard extends StatelessWidget {
                                 size: M3EButtonSize.sm,
                                 shape: M3EButtonShape.round,
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 4),
                               M3EButton.icon(
                                 onPressed: () => Navigator.pop(ctx, true),
-                                icon: const Icon(Icons.delete_outline_rounded,
-                                    size: 16),
-                                label: const Text('Remove'),
+                                icon: Icon(
+                                  isRepo
+                                      ? Icons.delete_forever_rounded
+                                      : Icons.delete_outline_rounded,
+                                  size: 16,
+                                ),
+                                label: Text(isRepo ? 'Delete' : 'Remove'),
                                 style: M3EButtonStyle.filled,
                                 size: M3EButtonSize.sm,
                                 shape: M3EButtonShape.round,
@@ -209,7 +222,6 @@ class LocalGameCard extends StatelessWidget {
           ? const EdgeInsets.fromLTRB(8, 6, 8, 6)
           : const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       onTap: () => _showMenuSheet(context),
-      onLongPress: () => _showMenuSheet(context),
       posterWidget: GamePoster(
         localPath: game.posterPath,
         isLocal: true,

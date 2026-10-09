@@ -107,18 +107,40 @@ class LibraryMobileBottomBar extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOutCubic,
+              padding: EdgeInsets.symmetric(
+                horizontal: isSelected ? 20 : 12,
+                vertical: 4,
+              ),
               decoration: BoxDecoration(
                 color: isSelected
                     ? colors.secondaryContainer
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(
-                isSelected ? selectedIcon : icon,
-                size: 24,
-                color: isSelected ? colors.onSecondaryContainer : inactiveColor,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) {
+                  return ScaleTransition(
+                    scale: Tween<double>(begin: 0.82, end: 1.0)
+                        .animate(animation),
+                    child: FadeTransition(
+                      opacity: animation,
+                      child: child,
+                    ),
+                  );
+                },
+                child: Icon(
+                  isSelected ? selectedIcon : icon,
+                  key: ValueKey<bool>(isSelected),
+                  size: 24,
+                  color:
+                      isSelected ? colors.onSecondaryContainer : inactiveColor,
+                ),
               ),
             ),
             const SizedBox(height: 2),

@@ -13,54 +13,140 @@ class CatalogFilterBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(libraryProvider);
     final notifier = ref.read(libraryProvider.notifier);
+    final colors = Theme.of(context).colorScheme;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
       child: Row(
         children: [
-          ChoiceChip(
-            showCheckmark: false,
-            avatar: const Icon(Icons.sort_rounded, size: 18),
-            label: Text(state.catalogSort.label),
-            selected: true,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
+          GestureDetector(
+            onTap: () => _showSortPickerSheet(context, ref, state),
+            behavior: HitTestBehavior.opaque,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOutCubic,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: colors.secondaryContainer,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: colors.primary.withValues(alpha: 0.2),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.sort_rounded,
+                    size: 18,
+                    color: colors.onSecondaryContainer,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    state.catalogSort.label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: colors.onSecondaryContainer,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            onSelected: (_) => _showSortPickerSheet(context, ref, state),
           ),
           const SizedBox(width: 8),
           for (final lang in const ['', 'ru', 'en']) ...[
-            ChoiceChip(
-              showCheckmark: false,
-              label: Text(lang.isEmpty ? 'All Languages' : lang.toUpperCase()),
-              selected: state.catalogLanguage == lang,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+            GestureDetector(
+              onTap: () => notifier.setCatalogFilter(language: lang),
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: state.catalogLanguage == lang
+                      ? colors.secondaryContainer
+                      : colors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(
+                    state.catalogLanguage == lang ? 24 : 8,
+                  ),
+                  border: Border.all(
+                    color: state.catalogLanguage == lang
+                        ? colors.primary.withValues(alpha: 0.2)
+                        : colors.outlineVariant.withValues(alpha: 0.4),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  lang.isEmpty ? 'All Languages' : lang.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: state.catalogLanguage == lang
+                        ? FontWeight.w600
+                        : FontWeight.w500,
+                    color: state.catalogLanguage == lang
+                        ? colors.onSecondaryContainer
+                        : colors.onSurfaceVariant,
+                  ),
+                ),
               ),
-              onSelected: (_) {
-                notifier.setCatalogFilter(language: lang);
-              },
             ),
             const SizedBox(width: 8),
           ],
-          ChoiceChip(
-            showCheckmark: false,
-            avatar: Icon(
-              state.catalogFeaturedOnly
-                  ? Icons.star_rounded
-                  : Icons.star_border_rounded,
-              size: 18,
-              color: state.catalogFeaturedOnly ? Colors.amber : null,
+          GestureDetector(
+            onTap: () => notifier.setCatalogFilter(
+              featuredOnly: !state.catalogFeaturedOnly,
             ),
-            label: const Text('Featured'),
-            selected: state.catalogFeaturedOnly,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+            behavior: HitTestBehavior.opaque,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOutCubic,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: state.catalogFeaturedOnly
+                    ? colors.secondaryContainer
+                    : colors.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(
+                  state.catalogFeaturedOnly ? 24 : 8,
+                ),
+                border: Border.all(
+                  color: state.catalogFeaturedOnly
+                      ? colors.primary.withValues(alpha: 0.2)
+                      : colors.outlineVariant.withValues(alpha: 0.4),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    state.catalogFeaturedOnly
+                        ? Icons.star_rounded
+                        : Icons.star_border_rounded,
+                    size: 18,
+                    color: state.catalogFeaturedOnly
+                        ? Colors.amber
+                        : colors.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Featured',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: state.catalogFeaturedOnly
+                        ? FontWeight.w600
+                        : FontWeight.w500,
+                      color: state.catalogFeaturedOnly
+                          ? colors.onSecondaryContainer
+                          : colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            onSelected: (selected) {
-              notifier.setCatalogFilter(featuredOnly: selected);
-            },
           ),
         ],
       ),

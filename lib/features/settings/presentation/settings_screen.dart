@@ -149,6 +149,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildCategoryButtons(BuildContext context, List<String> sections) {
+    final colors = Theme.of(context).colorScheme;
+
     return SingleChildScrollView(
       controller: _categoryScrollController,
       scrollDirection: Axis.horizontal,
@@ -157,15 +159,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           for (var i = 0; i < sections.length; i++) ...[
             if (i > 0) const SizedBox(width: 8),
-            ChoiceChip(
-              showCheckmark: false,
-              avatar: Icon(_sectionIcons[i], size: 18),
-              label: Text(sections[i]),
-              selected: _selectedSection == i,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              onSelected: (_) {
+            GestureDetector(
+              onTap: () {
                 HapticFeedback.lightImpact();
                 setState(() => _selectedSection = i);
                 if (_pageController.hasClients) {
@@ -177,6 +172,51 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 }
                 _scrollToCategory(i);
               },
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _selectedSection == i
+                      ? colors.secondaryContainer
+                      : colors.surfaceContainerLow,
+                  borderRadius:
+                      BorderRadius.circular(_selectedSection == i ? 24 : 8),
+                  border: Border.all(
+                    color: _selectedSection == i
+                        ? colors.primary.withValues(alpha: 0.2)
+                        : colors.outlineVariant.withValues(alpha: 0.4),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _sectionIcons[i],
+                      size: 18,
+                      color: _selectedSection == i
+                          ? colors.onSecondaryContainer
+                          : colors.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      sections[i],
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: _selectedSection == i
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                        color: _selectedSection == i
+                            ? colors.onSecondaryContainer
+                            : colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ],

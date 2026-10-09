@@ -18,7 +18,7 @@ Future<T?> showQuestopiaDialog<T>({
     barrierLabel: 'Dismiss',
     barrierColor: Colors.black.withValues(alpha: 0.60),
     useRootNavigator: useRootNavigator,
-    transitionDuration: const Duration(milliseconds: 280),
+    transitionDuration: const Duration(milliseconds: 260),
     pageBuilder: (dialogContext, animation, secondaryAnimation) {
       return capturedThemes.wrap(builder(dialogContext));
     },
@@ -29,35 +29,26 @@ Future<T?> showQuestopiaDialog<T>({
         reverseCurve: Curves.easeInCubic,
       );
 
-      // Morph shaping from a tighter pill/rounded shape to standard dialog curvature
-      final radius = Tween<double>(begin: 40.0, end: 28.0).evaluate(curvedAnimation);
-      final scale = Tween<double>(begin: 0.88, end: 1.0).evaluate(curvedAnimation);
-      final opacity = Tween<double>(begin: 0.0, end: 1.0).evaluate(curvedAnimation);
+      return AnimatedBuilder(
+        animation: curvedAnimation,
+        builder: (context, _) {
+          final t = curvedAnimation.value;
+          final sigma = t * 10.0;
 
-      return FadeTransition(
-        opacity: curvedAnimation,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: opacity * 10.0,
-            sigmaY: opacity * 10.0,
-          ),
-          child: ScaleTransition(
-            scale: curvedAnimation,
-            child: Transform.scale(
-              scale: scale,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(radius),
-                child: child,
-              ),
+          return FadeTransition(
+            opacity: curvedAnimation,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+              child: child,
             ),
-          ),
-        ),
+          );
+        },
       );
     },
   );
 }
 
-/// Unified modal dialog frame with Material 3 Expressive styling, icon, title, and action buttons.
+/// Unified modal dialog frame with morph-shaping animation, icon, title, and compact actions.
 class QuestopiaDialog extends StatelessWidget {
   const QuestopiaDialog({
     super.key,
@@ -65,7 +56,7 @@ class QuestopiaDialog extends StatelessWidget {
     this.title,
     required this.content,
     this.actions,
-    this.maxWidth = 440,
+    this.maxWidth = 340,
   });
 
   final Widget? icon;
@@ -77,23 +68,28 @@ class QuestopiaDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final anim = ModalRoute.of(context)?.animation;
 
-    return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth),
+    Widget buildCard(double radius) {
+      return ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: maxWidth,
+          minWidth: 280,
+        ),
         child: Material(
           color: colors.surfaceContainer,
+          elevation: 6,
+          shadowColor: Colors.black.withValues(alpha: 0.35),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(radius),
             side: BorderSide(
               color: colors.outlineVariant.withValues(alpha: 0.35),
               width: 0.5,
             ),
           ),
-          elevation: 6,
-          shadowColor: Colors.black.withValues(alpha: 0.3),
+          clipBehavior: Clip.antiAlias,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -103,24 +99,26 @@ class QuestopiaDialog extends StatelessWidget {
                     alignment: Alignment.center,
                     child: IconTheme(
                       data: IconThemeData(
-                        size: 32,
+                        size: 26,
                         color: colors.primary,
                       ),
                       child: icon!,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                 ],
                 if (title != null) ...[
                   DefaultTextStyle(
-                    style: Theme.of(context).textTheme.headlineSmall!.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colors.onSurface,
-                        ),
-                    textAlign: icon != null ? TextAlign.center : TextAlign.start,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: colors.onSurface,
+                    ),
+                    textAlign:
+                        icon != null ? TextAlign.center : TextAlign.start,
                     child: title!,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                 ],
                 Flexible(
                   child: SingleChildScrollView(
@@ -128,7 +126,7 @@ class QuestopiaDialog extends StatelessWidget {
                   ),
                 ),
                 if (actions != null && actions!.isNotEmpty) ...[
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 18),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -143,7 +141,28 @@ class QuestopiaDialog extends StatelessWidget {
             ),
           ),
         ),
-      ),
+      );
+    }
+
+    return Center(
+      child: anim != null
+          ? AnimatedBuilder(
+              animation: anim,
+              builder: (context, _) {
+                final curved = CurvedAnimation(
+                  parent: anim,
+                  curve: Curves.easeOutCubic,
+                  reverseCurve: Curves.easeInCubic,
+                );
+                final radius = lerpDouble(56.0, 24.0, curved.value) ?? 24.0;
+                final scale = lerpDouble(0.84, 1.0, curved.value) ?? 1.0;
+                return Transform.scale(
+                  scale: scale,
+                  child: buildCard(radius),
+                );
+              },
+            )
+          : buildCard(24.0),
     );
   }
 }

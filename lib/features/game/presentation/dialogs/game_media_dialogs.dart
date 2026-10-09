@@ -21,7 +21,7 @@ class GameImagePreviewDialog extends StatelessWidget {
     final isVideo = detectMediaKind(imageUrl) == QspMediaKind.video;
 
     return QuestopiaDialog(
-      maxWidth: 540,
+      maxWidth: 380,
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -39,7 +39,7 @@ class GameImagePreviewDialog extends StatelessWidget {
       ),
       content: GameMediaViewer(
         mediaPath: imageUrl,
-        maxHeight: 380,
+        maxHeight: 320,
       ),
       actions: [
         FilledButton(
@@ -113,7 +113,7 @@ class _GameExecutorDialogState extends State<GameExecutorDialog> {
     final colors = Theme.of(context).colorScheme;
 
     return QuestopiaDialog(
-      maxWidth: 520,
+      maxWidth: 360,
       icon: const Icon(Icons.terminal_rounded),
       title: const Text('QSP Console'),
       content: SizedBox(

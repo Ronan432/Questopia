@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:material_segmented_list/material_segmented_list.dart';
 
 import '../../../../core/l10n/app_localizations.dart';
@@ -117,6 +118,7 @@ abstract final class SettingsPickerSheets {
                           ? Icon(Icons.check_circle_rounded, color: colors.primary)
                           : null,
                       onTap: () async {
+                        HapticFeedback.lightImpact();
                         await notifier.setThemeMode(mode);
                         if (ctx.mounted) Navigator.pop(ctx);
                       },
@@ -184,6 +186,7 @@ abstract final class SettingsPickerSheets {
                           ? Icon(Icons.check_circle_rounded, color: colors.primary)
                           : null,
                       onTap: () async {
+                        HapticFeedback.lightImpact();
                         await notifier.setThemeColor(entry.key);
                         if (ctx.mounted) Navigator.pop(ctx);
                       },
@@ -257,6 +260,7 @@ abstract final class SettingsPickerSheets {
                           ? Icon(Icons.check_circle_rounded, color: colors.primary)
                           : null,
                       onTap: () async {
+                        HapticFeedback.lightImpact();
                         await notifier.setLanguage(option.$1);
                         if (ctx.mounted) Navigator.pop(ctx);
                       },
@@ -360,6 +364,7 @@ abstract final class SettingsPickerSheets {
                                   color: colors.primary)
                               : null,
                           onTap: () async {
+                            HapticFeedback.lightImpact();
                             setSheetState(() {});
                             await notifier.setTypefaceIndex(i);
                             if (sheetCtx.mounted) Navigator.pop(sheetCtx);
@@ -417,6 +422,7 @@ abstract final class SettingsPickerSheets {
                               color: colors.primary)
                           : null,
                       onTap: () async {
+                        HapticFeedback.lightImpact();
                         await notifier.setActionsHeightRatio(ratio);
                         if (ctx.mounted) Navigator.pop(ctx);
                       },
@@ -471,6 +477,7 @@ abstract final class SettingsPickerSheets {
                               color: colors.primary)
                           : null,
                       onTap: () async {
+                        HapticFeedback.lightImpact();
                         await notifier.setBinaryPrefixes(value);
                         if (ctx.mounted) Navigator.pop(ctx);
                       },

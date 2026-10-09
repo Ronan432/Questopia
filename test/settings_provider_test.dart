@@ -34,7 +34,6 @@ void main() {
     expect(settings.isAutoHeight, isTrue);
     expect(settings.customHeightImage, 400);
     expect(settings.isNavBarBlur, isFalse);
-    expect(settings.isEdgeFeedback, isTrue);
     expect(notifier, isNotNull);
   });
 
@@ -53,7 +52,6 @@ void main() {
     await notifier.setAutoHeight(false);
     await notifier.setCustomHeightImage(600);
     await notifier.setNavBarBlur(true);
-    await notifier.setEdgeFeedback(false);
 
     final settings = container.read(settingsProvider);
     expect(settings.useGameBackgroundColor, isFalse);
@@ -65,7 +63,6 @@ void main() {
     expect(settings.isAutoHeight, isFalse);
     expect(settings.customHeightImage, 600);
     expect(settings.isNavBarBlur, isTrue);
-    expect(settings.isEdgeFeedback, isFalse);
 
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getBool('pref_use_game_back_color'), isFalse);

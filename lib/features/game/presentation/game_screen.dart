@@ -643,9 +643,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       .withValues(alpha: 0.70),
                   selectedIndex: _activeTab,
                   onDestinationSelected: (index) {
-                    if (settings.isEdgeFeedback) {
-                      HapticFeedback.lightImpact();
-                    }
+                    HapticFeedback.lightImpact();
                     debugPrint('[GameScreen] Switching tab to $index');
                     setState(() {
                       _activeTab = index;
@@ -688,9 +686,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           : NavigationBar(
               selectedIndex: _activeTab,
               onDestinationSelected: (index) {
-                if (settings.isEdgeFeedback) {
-                  HapticFeedback.lightImpact();
-                }
+                HapticFeedback.lightImpact();
                 debugPrint('[GameScreen] Switching tab to $index');
                 setState(() {
                   _activeTab = index;

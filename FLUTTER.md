@@ -69,7 +69,9 @@ Questopia-RE is a high-performance cross-platform interpreter and library client
 ### 3.6. UI / UX Design System & Active Morph Shaping
 - **Active Morph Shaping:** Dynamic radius transitions between compact Rounded Rectangles (`BorderRadius.circular(8)`) when unselected, and full Stadium Pills (`BorderRadius.circular(24)`) when selected.
 - **Frosted Glass Backdrop Sheets (`showQuestopiaSheet` & `_openGameSheet`):** Modal bottom sheets feature `SafeArea` enforcement (never crossing or overlapping the status bar), real-time background Gaussian blur (`sigma: 20`), translucent frosted surfaces, and reliable drag/barrier dismissal.
-- **Phone-Optimized Compact Grid:** Responsive 2-column grid layout on mobile screens (`< 600dp`) with downscaled posters (90dp), tightened typography, and compact actions, while preserving full-size cards on desktop/tablets.
+- **Phone-Optimized Compact Grid & Contextual Game Menu:** Streamlined, compact 2-column game cards with direct Play buttons; tapping anywhere else on the card opens a Material Expressive segmented drawer sheet (Play, Favorite toggle, Delete).
+- **Right-Aligned Animated Search:** Search button positioned at the far right of the app bar with a smooth right-to-left expanding input animation.
+- **Tactile Settings Feedback:** Universal light haptic feedback integrated across settings category chips, switch toggles, navigation tiles, color pickers, and picker sheets.
 - **Adjustable Navigation Bar Blur:** Navigation bar backdrop blur with configurable intensity slider (10% to 100%), real-time Gaussian filter, and `extendBody` scaffold integration.
 - **Desktop Navigation:** Left-side borderless `NavigationRail` with instant inline settings.
 - **High-Performance Posters (`GamePoster`):** Memory-capped GPU texture caching via `extended_image` and native vector rendering via `flutter_svg`. Short-circuits missing/SVG covers to avoid network ANRs.

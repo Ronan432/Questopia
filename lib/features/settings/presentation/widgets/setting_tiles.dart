@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class ColorRow extends StatelessWidget {
   const ColorRow({
@@ -41,7 +42,10 @@ class ColorRow extends StatelessWidget {
           children: [
             for (final preset in _presets)
               InkWell(
-                onTap: () => onPick(preset),
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  onPick(preset);
+                },
                 borderRadius: BorderRadius.circular(24),
                 child: Container(
                   width: 44,

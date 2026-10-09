@@ -52,7 +52,6 @@ class SettingsState {
   final int customHeightImage;
   final bool isNavBarBlur;
   final double navBarBlurPercent;
-  final bool isEdgeFeedback;
   final bool isExecStringEnabled;
   final int binaryPrefixes;
 
@@ -90,7 +89,6 @@ class SettingsState {
     this.customHeightImage = 400,
     this.isNavBarBlur = false,
     this.navBarBlurPercent = 70.0,
-    this.isEdgeFeedback = true,
     this.isExecStringEnabled = false,
     this.binaryPrefixes = 1000,
   });
@@ -129,7 +127,6 @@ class SettingsState {
     int? customHeightImage,
     bool? isNavBarBlur,
     double? navBarBlurPercent,
-    bool? isEdgeFeedback,
     bool? isExecStringEnabled,
     int? binaryPrefixes,
   }) {
@@ -169,7 +166,6 @@ class SettingsState {
       customHeightImage: customHeightImage ?? this.customHeightImage,
       isNavBarBlur: isNavBarBlur ?? this.isNavBarBlur,
       navBarBlurPercent: navBarBlurPercent ?? this.navBarBlurPercent,
-      isEdgeFeedback: isEdgeFeedback ?? this.isEdgeFeedback,
       isExecStringEnabled: isExecStringEnabled ?? this.isExecStringEnabled,
       binaryPrefixes: binaryPrefixes ?? this.binaryPrefixes,
     );
@@ -214,7 +210,6 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   static const _kCustomHeightImage = 'pref_custom_height_image';
   static const _kNavBarBlur = 'pref_nav_bar_blur';
   static const _kNavBarBlurPercent = 'pref_nav_bar_blur_percent';
-  static const _kEdgeFeedback = 'pref_edge_feedback';
   static const _kExecString = 'pref_exec_string';
   static const _kBinaryPrefixes = 'pref_binary_prefixes';
   static const _kLegacyMigrated = 'pref_legacy_settings_migrated';
@@ -330,8 +325,6 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
           prefs.getBool(_kNavBarBlur) ?? false,
       navBarBlurPercent:
           prefs.getDouble(_kNavBarBlurPercent) ?? 70.0,
-      isEdgeFeedback:
-          prefs.getBool(_kEdgeFeedback) ?? true,
       isExecStringEnabled: prefs.getBool(_kExecString) ??
           _legacyBool(prefs, 'execString') ??
           false,
@@ -620,11 +613,6 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     final clamped = percent.clamp(10.0, 100.0);
     state = state.copyWith(navBarBlurPercent: clamped);
     await _set(_kNavBarBlurPercent, clamped);
-  }
-
-  Future<void> setEdgeFeedback(bool value) async {
-    state = state.copyWith(isEdgeFeedback: value);
-    await _set(_kEdgeFeedback, value);
   }
 
   Future<void> setExecStringEnabled(bool value) async {

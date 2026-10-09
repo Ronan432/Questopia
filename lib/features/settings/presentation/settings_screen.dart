@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:material_segmented_list/material_segmented_list.dart';
@@ -133,7 +134,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(_selectedSection == i ? 24 : 8),
               ),
-              onSelected: (_) => setState(() => _selectedSection = i),
+              onSelected: (_) {
+                HapticFeedback.lightImpact();
+                setState(() => _selectedSection = i);
+              },
             ),
           ],
         ],
@@ -227,12 +231,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: l10n.separatorLine,
             value: settings.isUseSeparator,
             onChanged: notifier.setSeparator,
-          ),
-          _switchTile(
-            icon: Icons.vibration_outlined,
-            title: l10n.edgeFeedback,
-            value: settings.isEdgeFeedback,
-            onChanged: notifier.setEdgeFeedback,
           ),
           if (defaultTargetPlatform == TargetPlatform.android) ...[
             _switchTile(
@@ -558,7 +556,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
       minVerticalPadding: 18,
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
     );
   }
 
@@ -577,10 +578,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       trailing: M3ESwitch(
         value: value,
         selectedIcon: const Icon(Icons.check, size: 16),
-        onChanged: onChanged,
+        onChanged: (val) {
+          HapticFeedback.lightImpact();
+          onChanged(val);
+        },
       ),
       minVerticalPadding: 18,
-      onTap: () => onChanged(!value),
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onChanged(!value);
+      },
     );
   }
 

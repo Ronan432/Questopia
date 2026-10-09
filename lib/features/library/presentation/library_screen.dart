@@ -278,7 +278,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 switchOutCurve: Curves.easeInCubic,
                 layoutBuilder: (currentChild, previousChildren) {
                   return Stack(
-                    alignment: Alignment.centerLeft,
+                    alignment: Alignment.centerRight,
                     children: <Widget>[
                       ...previousChildren,
                       if (currentChild != null) currentChild,
@@ -291,7 +291,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     child: SizeTransition(
                       sizeFactor: animation,
                       axis: Axis.horizontal,
-                      alignment: Alignment.centerLeft,
+                      alignment: Alignment.centerRight,
                       child: child,
                     ),
                   );
@@ -390,9 +390,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 : [
                     if (_selectedTab == 0) ...[
                       IconButton(
-                        tooltip: l10n.search,
-                        icon: const Icon(Icons.search_rounded),
-                        onPressed: _openSearch,
+                        tooltip: 'Import game',
+                        icon: const Icon(Icons.folder_open_rounded),
+                        onPressed: _importGameFolder,
                       ),
                       const SizedBox(width: 4),
                       IconButton(
@@ -413,23 +413,23 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                       ),
                       const SizedBox(width: 4),
                       IconButton(
-                        tooltip: 'Import game',
-                        icon: const Icon(Icons.folder_open_rounded),
-                        onPressed: _importGameFolder,
-                      ),
-                    ] else if (_selectedTab == 1) ...[
-                      IconButton(
                         tooltip: l10n.search,
                         icon: const Icon(Icons.search_rounded),
                         onPressed: _openSearch,
                       ),
-                      const SizedBox(width: 4),
+                    ] else if (_selectedTab == 1) ...[
                       IconButton(
                         tooltip: 'Refresh catalog',
                         icon: const Icon(Icons.refresh_rounded),
                         onPressed: () => ref
                             .read(libraryProvider.notifier)
                             .refreshRemoteCatalog(force: true),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        tooltip: l10n.search,
+                        icon: const Icon(Icons.search_rounded),
+                        onPressed: _openSearch,
                       ),
                     ],
                     const SizedBox(width: 8),
@@ -552,9 +552,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
           return GestureDetector(
             onTap: () {
-              if (settings.isEdgeFeedback) {
-                HapticFeedback.lightImpact();
-              }
+              HapticFeedback.lightImpact();
               _closeSearch();
               setState(() => _selectedTab = index);
               if (index == 1) {
@@ -831,7 +829,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       ),
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: isCompact ? 200 : 320,
-        mainAxisExtent: isCompact ? 208 : 245,
+        mainAxisExtent: isCompact ? 195 : 235,
         crossAxisSpacing: isCompact ? 10 : 14,
         mainAxisSpacing: isCompact ? 10 : 14,
       ),

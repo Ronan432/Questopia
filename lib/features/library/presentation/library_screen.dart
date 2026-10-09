@@ -7,12 +7,13 @@ import 'package:material_3_expressive/material_3_expressive.dart';
 import '../../../core/helpers/path_picker_helper.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/theme/questopia_theme.dart';
+import '../../../core/widgets/questopia_scaffold.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../providers/library_provider.dart';
 import 'helpers/crash_dialog_helper.dart';
 import 'views/catalog_games_view.dart';
 import 'views/local_games_view.dart';
-import 'widgets/library_desktop_header.dart';
+import 'widgets/library_desktop_view.dart';
 import 'widgets/library_mobile_app_bar.dart';
 import 'widgets/library_mobile_bottom_bar.dart';
 
@@ -194,8 +195,48 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
             _onTabChanged(0);
           }
         },
-        child: Scaffold(
-          appBar: isDesktop
+        child: QuestopiaScaffold(
+          title: 'Questopia',
+          leading: isDesktop
+              ? Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 24,
+                      height: 24,
+                    ),
+                  ),
+                )
+              : null,
+          actions: isDesktop
+              ? [
+                  IconButton(
+                    tooltip: _showFavoritesOnly
+                        ? 'Show all games'
+                        : 'Show favorites only',
+                    icon: Icon(
+                      _showFavoritesOnly
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      color: _showFavoritesOnly ? colors.error : null,
+                    ),
+                    onPressed: () => setState(
+                        () => _showFavoritesOnly = !_showFavoritesOnly),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    tooltip: 'Refresh catalog',
+                    icon: const Icon(Icons.refresh_rounded),
+                    onPressed: () => ref
+                        .read(libraryProvider.notifier)
+                        .refreshRemoteCatalog(force: true),
+                  ),
+                  const SizedBox(width: 8),
+                ]
+              : null,
+          customAppBar: isDesktop
               ? null
               : LibraryMobileAppBar(
                   selectedTab: _selectedTab,
@@ -212,23 +253,15 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                   onImportGame: _importGameFolder,
                 ),
           body: isDesktop
-              ? Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Column(
-                    children: [
-                      LibraryDesktopHeader(
-                        selectedTab: _selectedTab,
-                        searchQuery: _searchQuery,
-                        isSearchFocused: _isDesktopSearchFocused,
-                        searchFocusNode: _desktopSearchFocusNode,
-                        onTabChanged: _onTabChanged,
-                        onSearchChanged: (val) =>
-                            setState(() => _searchQuery = val),
-                        onImportGame: _importGameFolder,
-                      ),
-                      Expanded(child: pageViews),
-                    ],
-                  ),
+              ? LibraryDesktopView(
+                  selectedTab: _selectedTab,
+                  searchQuery: _searchQuery,
+                  isSearchFocused: _isDesktopSearchFocused,
+                  searchFocusNode: _desktopSearchFocusNode,
+                  onTabChanged: _onTabChanged,
+                  onSearchChanged: (val) => setState(() => _searchQuery = val),
+                  onImportGame: _importGameFolder,
+                  child: mainContentFor(_selectedTab),
                 )
               : SafeArea(
                   bottom: !ref.watch(settingsProvider).isNavBarBlur,

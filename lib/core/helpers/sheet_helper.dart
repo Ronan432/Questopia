@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Shows a Modal Bottom Sheet with backdrop blur, constrained so its maximum
 /// height stops right at the status bar and custom desktop titlebar.
@@ -22,6 +23,8 @@ Future<T?> showQuestopiaSheet<T>({
   final titleBarHeight = showCustomTitleBar ? 40.0 : 0.0;
   final maxSheetHeight = mediaQuery.size.height - statusBarHeight - titleBarHeight;
   final colors = Theme.of(context).colorScheme;
+  final sheetBgColor = backgroundColor ?? colors.surfaceContainerHigh;
+  final isDark = ThemeData.estimateBrightnessForColor(sheetBgColor) == Brightness.dark;
 
   return showModalBottomSheet<T>(
     context: context,
@@ -36,20 +39,30 @@ Future<T?> showQuestopiaSheet<T>({
       maxHeight: maxSheetHeight,
     ),
     builder: (sheetContext) {
-      return Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-              child: const SizedBox.expand(),
+      final overlayStyle = SystemUiOverlayStyle(
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarDividerColor: Colors.transparent,
+        systemNavigationBarIconBrightness:
+            isDark ? Brightness.light : Brightness.dark,
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness:
+            colors.brightness == Brightness.dark ? Brightness.light : Brightness.dark,
+      );
+
+      return AnnotatedRegion<SystemUiOverlayStyle>(
+        value: overlayStyle,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                child: const SizedBox.expand(),
+              ),
             ),
-          ),
-          SafeArea(
-            top: false,
-            child: Container(
+            Container(
               decoration: BoxDecoration(
-                color: backgroundColor ?? colors.surfaceContainerHigh,
+                color: sheetBgColor,
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(28)),
                 boxShadow: [
@@ -60,31 +73,37 @@ Future<T?> showQuestopiaSheet<T>({
                   ),
                 ],
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (showDragHandle) ...[
-                    Center(
-                      child: Container(
-                        margin: const EdgeInsets.only(top: 10, bottom: 6),
-                        width: 36,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: colors.onSurfaceVariant.withValues(alpha: 0.4),
-                          borderRadius: BorderRadius.circular(2),
+              child: SafeArea(
+                top: false,
+                left: false,
+                right: false,
+                bottom: true,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (showDragHandle) ...[
+                      Center(
+                        child: Container(
+                          margin: const EdgeInsets.only(top: 10, bottom: 6),
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: colors.onSurfaceVariant.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                       ),
+                    ],
+                    Flexible(
+                      child: builder(sheetContext),
                     ),
                   ],
-                  Flexible(
-                    child: builder(sheetContext),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     },
   );

@@ -1,8 +1,6 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:material_3_expressive/components/buttons/enums/m3e_button_enums.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 /// Shows a unified Questopia modal dialog with morph-shaping scale transition and backdrop blur.
 Future<T?> showQuestopiaDialog<T>({
@@ -189,16 +187,28 @@ class QuestopiaConfirmationDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        M3EButton(
+        OutlinedButton(
           onPressed: () => Navigator.of(context).pop(false),
-          style: M3EButtonStyle.text,
-          size: M3EButtonSize.md,
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            minimumSize: const Size(64, 36),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
           child: Text(cancelLabel),
         ),
-        M3EButton(
+        FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
-          style: isDestructive ? M3EButtonStyle.filled : M3EButtonStyle.tonal,
-          size: M3EButtonSize.md,
+          style: FilledButton.styleFrom(
+            backgroundColor: isDestructive ? colors.error : colors.primary,
+            foregroundColor: isDestructive ? colors.onError : colors.onPrimary,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            minimumSize: const Size(64, 36),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
           child: Text(confirmLabel),
         ),
       ],

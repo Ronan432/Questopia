@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:material_3_expressive/components/buttons/enums/m3e_button_enums.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import '../../../../core/helpers/dialog_helper.dart';
 import '../../../../core/helpers/sheet_helper.dart';
@@ -157,13 +155,18 @@ class _CheatModesSheetState extends ConsumerState<CheatModesSheet> {
           ),
         ),
         actions: [
-          M3EButton(
+          OutlinedButton(
             onPressed: () => Navigator.pop(ctx),
-            style: M3EButtonStyle.text,
-            size: M3EButtonSize.md,
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              minimumSize: const Size(64, 36),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
             child: const Text('Cancel'),
           ),
-          M3EButton(
+          FilledButton(
             onPressed: () {
               final ok = ref
                   .read(cheatProvider.notifier)
@@ -171,8 +174,13 @@ class _CheatModesSheetState extends ConsumerState<CheatModesSheet> {
               Navigator.pop(ctx);
               if (!ok) showSheetSnackBar(context, 'Engine rejected the value');
             },
-            style: M3EButtonStyle.filled,
-            size: M3EButtonSize.md,
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              minimumSize: const Size(64, 36),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
             child: const Text('Apply'),
           ),
         ],

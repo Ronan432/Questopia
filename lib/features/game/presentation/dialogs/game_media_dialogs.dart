@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_3_expressive/components/buttons/enums/m3e_button_enums.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import '../../../../core/helpers/dialog_helper.dart';
 import '../../../../core/media/poster_menu_sheet.dart';
@@ -44,10 +42,15 @@ class GameImagePreviewDialog extends StatelessWidget {
         maxHeight: 380,
       ),
       actions: [
-        M3EButton(
+        FilledButton(
           onPressed: onClose,
-          style: M3EButtonStyle.tonal,
-          size: M3EButtonSize.md,
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            minimumSize: const Size(64, 36),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
           child: const Text('Close'),
         ),
       ],
@@ -162,21 +165,31 @@ class _GameExecutorDialogState extends State<GameExecutorDialog> {
         ),
       ),
       actions: [
-        M3EButton(
+        OutlinedButton(
           onPressed: widget.onClose,
-          style: M3EButtonStyle.text,
-          size: M3EButtonSize.md,
-          child: const Text('Close'),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            minimumSize: const Size(64, 36),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          child: const Text('Cancel'),
         ),
-        M3EButton(
+        FilledButton(
           onPressed: () {
             if (_controller.text.trim().isNotEmpty) {
               widget.onRun(_controller.text.trim());
               _controller.clear();
             }
           },
-          style: M3EButtonStyle.filled,
-          size: M3EButtonSize.md,
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            minimumSize: const Size(64, 36),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
           child: const Text('Run'),
         ),
       ],

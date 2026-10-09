@@ -1,8 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:material_3_expressive/components/buttons/enums/m3e_button_enums.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import '../../../../core/helpers/dialog_helper.dart';
 import '../../../../core/helpers/html_processor.dart';
@@ -119,10 +117,15 @@ class GameMessageDialog extends StatelessWidget {
         ],
       ),
       actions: [
-        M3EButton(
+        FilledButton(
           onPressed: onClose,
-          style: M3EButtonStyle.filled,
-          size: M3EButtonSize.md,
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            minimumSize: const Size(64, 36),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
           child: const Text('OK'),
         ),
       ],

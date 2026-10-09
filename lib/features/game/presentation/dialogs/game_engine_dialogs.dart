@@ -1,7 +1,5 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:material_3_expressive/components/buttons/enums/m3e_button_enums.dart';
-import 'package:material_3_expressive/material_3_expressive.dart';
 
 import '../../../../core/helpers/dialog_helper.dart';
 import '../../../../core/native/qsp_models.dart';
@@ -66,16 +64,26 @@ class _GameInputDialogState extends State<GameInputDialog> {
         onSubmitted: widget.onSubmit,
       ),
       actions: [
-        M3EButton(
+        OutlinedButton(
           onPressed: widget.onCancel,
-          style: M3EButtonStyle.text,
-          size: M3EButtonSize.md,
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            minimumSize: const Size(64, 36),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
           child: const Text('Cancel'),
         ),
-        M3EButton(
+        FilledButton(
           onPressed: () => widget.onSubmit(_controller.text),
-          style: M3EButtonStyle.filled,
-          size: M3EButtonSize.md,
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            minimumSize: const Size(64, 36),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
           child: const Text('OK'),
         ),
       ],
@@ -142,10 +150,15 @@ class GameMenuDialog extends StatelessWidget {
               ),
       ),
       actions: [
-        M3EButton(
+        OutlinedButton(
           onPressed: onCancel,
-          style: M3EButtonStyle.text,
-          size: M3EButtonSize.md,
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            minimumSize: const Size(64, 36),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
           child: const Text('Cancel'),
         ),
       ],
@@ -185,10 +198,15 @@ class GameErrorDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        M3EButton(
+        FilledButton(
           onPressed: onClose,
-          style: M3EButtonStyle.filled,
-          size: M3EButtonSize.md,
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            minimumSize: const Size(64, 36),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
           child: const Text('OK'),
         ),
       ],
@@ -215,13 +233,18 @@ class GameFileLoadDialog extends StatelessWidget {
         style: TextStyle(color: colors.onSurfaceVariant, fontSize: 15),
       ),
       actions: [
-        M3EButton(
+        OutlinedButton(
           onPressed: onClose,
-          style: M3EButtonStyle.text,
-          size: M3EButtonSize.md,
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            minimumSize: const Size(64, 36),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
           child: const Text('Cancel'),
         ),
-        M3EButton(
+        FilledButton(
           onPressed: () async {
             final result = await FilePicker.platform.pickFiles(
               type: FileType.custom,
@@ -230,8 +253,13 @@ class GameFileLoadDialog extends StatelessWidget {
             final path = result?.files.singleOrNull?.path;
             if (path != null && path.isNotEmpty) onPick(path);
           },
-          style: M3EButtonStyle.filled,
-          size: M3EButtonSize.md,
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            minimumSize: const Size(64, 36),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
           child: const Text('Pick File'),
         ),
       ],

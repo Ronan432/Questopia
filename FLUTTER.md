@@ -29,6 +29,7 @@ Questopia-RE is a high-performance cross-platform interpreter and library client
 4. **SANDBOX REGISTRY ISOLATION:** Never write metadata, registry entries, or hidden dot-files into external shared storage. All persistent game records must go through `GameRegistry` inside `getApplicationSupportDirectory()`.
 5. **MODULAR HELPER COHESION:** Utility and helper routines must be encapsulated in dedicated helper files under `lib/core/helpers/` (e.g. `sheet_helper.dart`, `path_picker_helper.dart`, `html_processor.dart`).
 6. **EFFECTIVE SETTINGS LINKAGE:** Every setting field in `SettingsState` must have an active consumer and observable effect in the UI or runtime engine (blur, haptics, action height ratio, immersive mode, square posters, font family, etc.).
+7. **STANDARDIZED COMMIT FORMAT & USER-FRIENDLY DESCRIPTIONS:** Commit subject lines must strictly adhere to standardized conventional prefix syntax (e.g. `Feat: <reason>`, `Fix: <reason>`, `Ci: <reason>`). Never put multi-line descriptions or markdown headers in commit titles. Commit descriptions/bodies must be written in plain, easily understandable user-facing English explaining what changed and why.
 
 ---
 
@@ -101,3 +102,36 @@ All features must maintain 0 static analysis issues before commit:
 ```powershell
 flutter analyze
 ```
+
+---
+
+## 6. Git & Commit Message Standards
+
+All commits in the repository must adhere to the following standards:
+
+### 6.1. Subject Line Format
+The first line (subject) must be concise and use standard conventional prefixes:
+- `Feat: <short summary of new feature/capability>`
+- `Fix: <short summary of bug fix or issue resolution>`
+- `Ci: <short summary of CI/CD or workflow adjustments>`
+- `Refactor: <short summary of code refactoring without feature changes>`
+- `Docs: <short summary of documentation updates>`
+- `Chore: <short summary of maintenance tasks or dependency bumps>`
+
+> **Rule:** Never use markdown headers, hashes, or multi-line paragraphs in the commit subject line.
+
+### 6.2. Commit Description / Body
+- Must be separated from the subject line by a single blank line.
+- Written strictly in **simple, accessible, plain English** using clear user-facing language.
+- Use concise bullet points to explain what was changed and the user-facing benefit or reason.
+- Avoid overcomplicated technical jargon where simple explanations suffice.
+
+#### Example:
+```text
+Fix: Improve bottom sheet display on mobile screens
+
+- Fixed navigation bar overlap when opening menu sheets.
+- Extended sheet background to cover the bottom edge of the screen.
+- Adjusted system navigation bar contrast for better readability.
+```
+

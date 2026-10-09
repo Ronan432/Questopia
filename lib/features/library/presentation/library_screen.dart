@@ -492,6 +492,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                     ? const SettingsScreen(isInline: true)
                     : mainContent,
               ),
+        extendBody: !isDesktop && ref.watch(settingsProvider).isNavBarBlur,
         bottomNavigationBar: isDesktop
             ? null
             : _buildMobileBottomBar(context, l10n, colors),
@@ -506,6 +507,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   ) {
     final settings = ref.watch(settingsProvider);
     final isBlur = settings.isNavBarBlur;
+    final blurPercent = settings.navBarBlurPercent.clamp(10.0, 100.0);
+    final sigma = (blurPercent / 100.0) * 24.0;
 
     final items = [
       (
@@ -527,7 +530,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
     Widget barContent = Container(
       decoration: BoxDecoration(
-        color: isBlur ? colors.surface.withValues(alpha: 0.78) : colors.surface,
+        color: isBlur ? colors.surface.withValues(alpha: 0.70) : colors.surface,
         border: Border(
           top: BorderSide(
             color: colors.outlineVariant.withValues(alpha: isBlur ? 0.2 : 0.35),
@@ -607,7 +610,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     if (isBlur) {
       return ClipRect(
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
           child: barContent,
         ),
       );

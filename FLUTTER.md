@@ -62,15 +62,15 @@ Questopia-RE is a high-performance cross-platform interpreter and library client
 - **Universal Video Playback & Seamless Looping:** Converts all video formats (`.mp4`, `.webm`, `.ogv`, `.ogg`, `.m4v`, `.mov`) in `<img>` tags to `<video autoplay loop muted playsinline>` backed by a self-recovering JS loop script and WASM OGVPlayer fallback, preserving fixed media boundaries without text shifting.
 - **Image-Aware Action Buttons:** Dynamically detects and renders images inside action names (`<img src="...">`) or `act.image` with dedicated sleek icon-tile styling for pure-image actions and leading thumbnails for text actions.
 - **Adaptive RPG Inventory Tab:** Renders objects with case-insensitive local asset image resolution. Pure-image inventory items render in a responsive square-tile grid (`childAspectRatio: 1.0`), while named items display in a structured list with 52x52 square image previews.
-- **High-Contrast Dialog Engine (`GameDialogsHost`):** Formatted with theme-aware `surfaceContainerHigh` surfaces, sanitized HTML text, and explicit high-contrast typography across all QSP dialogs (Message, Input, Menu, Error, Restart).
+- **High-Contrast Dialog Engine (`GameDialogsHost`):** Formatted with theme-aware `surfaceContainerHigh` surfaces, sanitized HTML text, safe embedded image extraction (`<img>` / `[img]`), error-safe asset fallbacks, and tonal overlay pill styling for Cancel actions.
 - **Pre-Cached Asset Index:** Builds a case-insensitive, backslash-normalized, Unicode-tolerant asset index (`_cachedAssetIndex`) in a background isolate upon game launch with zero-disk interception.
 - **3-Tab Navigation:** Story (`mainDesc`), Status (`varsDesc`), and Inventory (`objects`) tabs with real-time badges.
 
 ### 3.6. UI / UX Design System & Active Morph Shaping
 - **Active Morph Shaping:** Dynamic radius transitions between compact Rounded Rectangles (`BorderRadius.circular(8)`) when unselected, and full Stadium Pills (`BorderRadius.circular(24)`) when selected.
-- **Blurred Backdrop Sheets (`showQuestopiaSheet` & `_openGameSheet`):** Bottom sheets and drawer menus utilize root navigator coverage, `BackdropFilter` Gaussian blur (`sigma: 8`), and synchronized dynamic CSS WebView blur (`filter: blur(10px)`) to seamlessly dim and blur both Flutter overlays and native game viewport content.
+- **Frosted Glass Backdrop Sheets (`showQuestopiaSheet` & `_openGameSheet`):** Modal bottom sheets feature `SafeArea` enforcement (never crossing or overlapping the status bar), real-time background Gaussian blur (`sigma: 20`), translucent frosted surfaces, and reliable drag/barrier dismissal.
 - **Phone-Optimized Compact Grid:** Responsive 2-column grid layout on mobile screens (`< 600dp`) with downscaled posters (90dp), tightened typography, and compact actions, while preserving full-size cards on desktop/tablets.
-- **Mobile Navigation:** Integrated reactive bubble navigation (`_buildMobileBottomBar`) with active selection bubble morphing, optional backdrop blur (`isNavBarBlur`), zero-latency reactive viewport, and haptic feedback.
+- **Adjustable Navigation Bar Blur:** Navigation bar backdrop blur with configurable intensity slider (10% to 100%), real-time Gaussian filter, and `extendBody` scaffold integration.
 - **Desktop Navigation:** Left-side borderless `NavigationRail` with instant inline settings.
 - **High-Performance Posters (`GamePoster`):** Memory-capped GPU texture caching via `extended_image` and native vector rendering via `flutter_svg`. Short-circuits missing/SVG covers to avoid network ANRs.
 

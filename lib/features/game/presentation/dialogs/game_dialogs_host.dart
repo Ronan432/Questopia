@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/helpers/html_processor.dart';
 import '../../../../core/media/poster_menu_sheet.dart';
 import '../../../../core/native/qsp_models.dart';
 import '../../providers/game_engine_provider.dart';
@@ -27,6 +28,7 @@ class GameDialogsHost extends ConsumerWidget {
       case GameDialogType.message:
         return _MessageDialog(
           text: engineState.messageText,
+          gameFolderPath: engineState.activeGame?.folderPath,
           onClose: dismiss,
         );
       case GameDialogType.input:
@@ -123,10 +125,10 @@ class _GameMorphButtonState extends State<GameMorphButton> {
 
     final bg = widget.filled
         ? theme.colorScheme.primary
-        : Colors.transparent;
+        : theme.colorScheme.surfaceContainerHighest;
     final fg = widget.filled
         ? theme.colorScheme.onPrimary
-        : theme.colorScheme.primary;
+        : theme.colorScheme.onSurface;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 150),
@@ -165,10 +167,15 @@ class _GameMorphButtonState extends State<GameMorphButton> {
 }
 
 class _MessageDialog extends StatelessWidget {
-  const _MessageDialog({required this.text, required this.onClose});
+  const _MessageDialog({
+    required this.text,
+    required this.onClose,
+    this.gameFolderPath,
+  });
 
   final String text;
   final VoidCallback onClose;
+  final String? gameFolderPath;
 
   String _cleanText(String input) {
     if (input.isEmpty) return input;
@@ -184,9 +191,70 @@ class _MessageDialog extends StatelessWidget {
         .trim();
   }
 
+  List<String> _extractImageSources(String input) {
+    if (input.isEmpty) return const [];
+    final processed = HtmlProcessor.processHtml(input);
+    final results = <String>[];
+    final regExp = RegExp(
+      r'<img[^>]+src=["\x27]?([^"\x27\s>]+)["\x27]?[^>]*>',
+      caseSensitive: false,
+    );
+    for (final match in regExp.allMatches(processed)) {
+      final src = match.group(1);
+      if (src != null && src.isNotEmpty) {
+        results.add(src);
+      }
+    }
+    return results;
+  }
+
+  Widget _buildImageWidget(BuildContext context, String src) {
+    final colors = Theme.of(context).colorScheme;
+    Widget img;
+
+    if (src.startsWith('http://') || src.startsWith('https://')) {
+      img = Image.network(
+        src,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      );
+    } else {
+      var resolved = src;
+      if (gameFolderPath != null && !File(src).isAbsolute) {
+        resolved = '${gameFolderPath!}/$src'.replaceAll(r'\', '/');
+      }
+      final file = File(resolved);
+      if (file.existsSync()) {
+        img = Image.file(
+          file,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+        );
+      } else {
+        img = const SizedBox.shrink();
+      }
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          constraints: const BoxConstraints(maxHeight: 240),
+          decoration: BoxDecoration(
+            color: colors.surfaceContainerHighest.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: img,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final images = _extractImageSources(text);
     final clean = _cleanText(text);
 
     return AlertDialog(
@@ -201,13 +269,21 @@ class _MessageDialog extends StatelessWidget {
         ),
       ),
       content: SingleChildScrollView(
-        child: Text(
-          clean.isNotEmpty ? clean : text,
-          style: TextStyle(
-            color: colors.onSurface,
-            fontSize: 15,
-            height: 1.5,
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final src in images) _buildImageWidget(context, src),
+            if (clean.isNotEmpty)
+              Text(
+                clean,
+                style: TextStyle(
+                  color: colors.onSurface,
+                  fontSize: 15,
+                  height: 1.5,
+                ),
+              ),
+          ],
         ),
       ),
       actions: [

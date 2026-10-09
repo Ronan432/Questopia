@@ -628,15 +628,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 ],
               ),
       ),
+      extendBody: settings.isNavBarBlur,
       bottomNavigationBar: settings.isNavBarBlur
           ? ClipRect(
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                filter: ImageFilter.blur(
+                  sigmaX: (settings.navBarBlurPercent.clamp(10.0, 100.0) / 100.0) * 24.0,
+                  sigmaY: (settings.navBarBlurPercent.clamp(10.0, 100.0) / 100.0) * 24.0,
+                ),
                 child: NavigationBar(
                   backgroundColor: Theme.of(context)
                       .colorScheme
                       .surface
-                      .withValues(alpha: 0.78),
+                      .withValues(alpha: 0.70),
                   selectedIndex: _activeTab,
                   onDestinationSelected: (index) {
                     if (settings.isEdgeFeedback) {

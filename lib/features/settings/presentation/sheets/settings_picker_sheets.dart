@@ -111,8 +111,7 @@ abstract final class SettingsPickerSheets {
                       ),
                       title: Text(
                         themeLabel(context, mode),
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600),
+                        style: const TextStyle(fontSize: 16),
                       ),
                       trailing: mode == settings.themeMode
                           ? Icon(Icons.check_circle_rounded, color: colors.primary)
@@ -179,8 +178,7 @@ abstract final class SettingsPickerSheets {
                       ),
                       title: Text(
                         entry.value,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600),
+                        style: const TextStyle(fontSize: 16),
                       ),
                       trailing: entry.key == settings.themeColor
                           ? Icon(Icons.check_circle_rounded, color: colors.primary)
@@ -253,8 +251,7 @@ abstract final class SettingsPickerSheets {
                       ),
                       title: Text(
                         option.$2,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600),
+                        style: const TextStyle(fontSize: 16),
                       ),
                       trailing: option.$1 == settings.language
                           ? Icon(Icons.check_circle_rounded, color: colors.primary)
@@ -355,7 +352,6 @@ abstract final class SettingsPickerSheets {
                             fonts[i],
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.w600,
                               color: i == activeIndex ? colors.primary : null,
                             ),
                           ),
@@ -414,8 +410,7 @@ abstract final class SettingsPickerSheets {
                       leading: const Icon(Icons.height_outlined),
                       title: Text(
                         ratio,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600),
+                        style: const TextStyle(fontSize: 16),
                       ),
                       trailing: ratio == settings.actionsHeightRatio
                           ? Icon(Icons.check_circle_rounded,
@@ -469,8 +464,7 @@ abstract final class SettingsPickerSheets {
                       leading: const Icon(Icons.memory_outlined),
                       title: Text(
                         '$value (${value == 1024 ? l10n.binaryKiB : l10n.decimalKB})',
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600),
+                        style: const TextStyle(fontSize: 16),
                       ),
                       trailing: value == settings.binaryPrefixes
                           ? Icon(Icons.check_circle_rounded,

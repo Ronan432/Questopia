@@ -11,6 +11,7 @@ class QuestopiaScaffold extends StatelessWidget {
     this.titleWidget,
     this.actions,
     this.bottomNavigationBar,
+    this.extendBody = false,
   });
 
   const QuestopiaScaffold.simple({
@@ -19,13 +20,15 @@ class QuestopiaScaffold extends StatelessWidget {
     required this.body,
     this.titleWidget,
     this.actions,
-  }) : bottomNavigationBar = null;
+  })  : bottomNavigationBar = null,
+        extendBody = false;
 
   final String title;
   final Widget? titleWidget;
   final Widget body;
   final List<Widget>? actions;
   final Widget? bottomNavigationBar;
+  final bool extendBody;
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +53,7 @@ class QuestopiaScaffold extends StatelessWidget {
               ),
       ),
       body: body,
+      extendBody: extendBody,
       bottomNavigationBar: bottomNavigationBar,
     );
   }

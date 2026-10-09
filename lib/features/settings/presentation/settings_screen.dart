@@ -234,13 +234,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             value: settings.isEdgeFeedback,
             onChanged: notifier.setEdgeFeedback,
           ),
-          if (defaultTargetPlatform == TargetPlatform.android)
+          if (defaultTargetPlatform == TargetPlatform.android) ...[
             _switchTile(
               icon: Icons.blur_on_outlined,
               title: l10n.navBarBlur,
               value: settings.isNavBarBlur,
               onChanged: notifier.setNavBarBlur,
             ),
+            if (settings.isNavBarBlur)
+              _sliderTile(
+                icon: Icons.blur_linear_outlined,
+                label: '${l10n.navBarBlur}: ${settings.navBarBlurPercent.round()}%',
+                value: settings.navBarBlurPercent,
+                min: 10,
+                max: 100,
+                divisions: 18,
+                onChanged: notifier.setNavBarBlurPercent,
+              ),
+          ],
           _switchTile(
             icon: Icons.save_outlined,
             title: l10n.autoSave,
@@ -367,12 +378,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _sectionHeader(context, l10n.sectionMedia),
       SegmentedListSection(
         children: [
-          _switchTile(
-            icon: Icons.aspect_ratio_outlined,
-            title: l10n.squarePosters,
-            value: settings.isSquarePosters,
-            onChanged: notifier.setSquarePosters,
-          ),
           _switchTile(
             icon: Icons.hide_image_outlined,
             title: l10n.disableImages,
@@ -522,7 +527,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       leading: Icon(icon, size: 24),
       title: Text(
         title,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        style: const TextStyle(fontSize: 16),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
@@ -567,7 +572,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       leading: Icon(icon, size: 24),
       title: Text(
         title,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        style: const TextStyle(fontSize: 16),
       ),
       trailing: M3ESwitch(
         value: value,
@@ -598,7 +603,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         children: [
           Text(
             label,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: 16),
           ),
           const SizedBox(height: 6),
           SliderTheme(

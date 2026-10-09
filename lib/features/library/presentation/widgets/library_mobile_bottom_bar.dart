@@ -28,8 +28,8 @@ class LibraryMobileBottomBar extends ConsumerWidget {
 
     final items = [
       (
-        icon: Icons.library_books_outlined,
-        selectedIcon: Icons.library_books,
+        icon: Icons.home_outlined,
+        selectedIcon: Icons.home_rounded,
         label: l10n.library,
       ),
       (

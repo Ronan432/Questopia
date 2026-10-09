@@ -8,6 +8,7 @@ import '../../../core/helpers/path_picker_helper.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/theme/questopia_theme.dart';
 import '../../../core/widgets/questopia_scaffold.dart';
+import '../../../core/widgets/window_title_bar.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../providers/library_provider.dart';
 import 'helpers/crash_dialog_helper.dart';
@@ -198,41 +199,35 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
         child: QuestopiaScaffold(
           title: 'Questopia',
           leading: isDesktop
-              ? Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: Image.asset(
-                      'assets/images/logo.png',
-                      width: 24,
-                      height: 24,
-                    ),
-                  ),
+              ? const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: QuestopiaLogoIcon(size: 24),
                 )
               : null,
           actions: isDesktop
               ? [
-                  IconButton(
-                    tooltip: _showFavoritesOnly
-                        ? 'Show all games'
-                        : 'Show favorites only',
-                    icon: Icon(
-                      _showFavoritesOnly
-                          ? Icons.favorite_rounded
-                          : Icons.favorite_border_rounded,
-                      color: _showFavoritesOnly ? colors.error : null,
+                  if (_selectedTab == 0)
+                    IconButton(
+                      tooltip: _showFavoritesOnly
+                          ? 'Show all games'
+                          : 'Show favorites only',
+                      icon: Icon(
+                        _showFavoritesOnly
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        color: _showFavoritesOnly ? colors.error : null,
+                      ),
+                      onPressed: () => setState(
+                          () => _showFavoritesOnly = !_showFavoritesOnly),
                     ),
-                    onPressed: () => setState(
-                        () => _showFavoritesOnly = !_showFavoritesOnly),
-                  ),
-                  const SizedBox(width: 4),
-                  IconButton(
-                    tooltip: 'Refresh catalog',
-                    icon: const Icon(Icons.refresh_rounded),
-                    onPressed: () => ref
-                        .read(libraryProvider.notifier)
-                        .refreshRemoteCatalog(force: true),
-                  ),
+                  if (_selectedTab == 1)
+                    IconButton(
+                      tooltip: 'Refresh catalog',
+                      icon: const Icon(Icons.refresh_rounded),
+                      onPressed: () => ref
+                          .read(libraryProvider.notifier)
+                          .refreshRemoteCatalog(force: true),
+                    ),
                   const SizedBox(width: 8),
                 ]
               : null,

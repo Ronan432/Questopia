@@ -58,8 +58,8 @@ class LibraryDesktopView extends ConsumerWidget {
             indicatorColor: colors.secondaryContainer,
             destinations: [
               NavigationRailDestination(
-                icon: const Icon(Icons.library_books_outlined),
-                selectedIcon: const Icon(Icons.library_books),
+                icon: const Icon(Icons.home_outlined),
+                selectedIcon: const Icon(Icons.home_rounded),
                 label: Text(l10n.library),
               ),
               NavigationRailDestination(

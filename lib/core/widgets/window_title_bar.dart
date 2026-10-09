@@ -135,20 +135,31 @@ class QuestopiaLogoIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: colors.primaryContainer,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.auto_stories_rounded,
-          size: size * 0.62,
-          color: colors.onPrimaryContainer,
-        ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(size * 0.22),
+      child: Image.asset(
+        'assets/images/app_logo.png',
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          final colors = Theme.of(context).colorScheme;
+          return Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: colors.primaryContainer,
+              borderRadius: BorderRadius.circular(size * 0.22),
+            ),
+            child: Center(
+              child: Icon(
+                Icons.sports_esports_rounded,
+                size: size * 0.62,
+                color: colors.onPrimaryContainer,
+              ),
+            ),
+          );
+        },
       ),
     );
   }

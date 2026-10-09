@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:gal/gal.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'package:image/image.dart' as img;
 import 'package:url_launcher/url_launcher.dart';
 
 const String kYandexFallbackUrl = 'https://yandex.com/images/';
@@ -63,23 +62,7 @@ bool isRemoteUrl(String value) {
 }
 
 Uint8List prepareUploadBytes(Uint8List rawBytes) {
-  if (rawBytes.lengthInBytes <= 80 * 1024) return rawBytes;
-  try {
-    final decoded = img.decodeImage(rawBytes);
-    if (decoded == null) return rawBytes;
-    final maxDim =
-        decoded.width > decoded.height ? decoded.width : decoded.height;
-    if (maxDim <= 600) return rawBytes;
-    final scale = 600 / maxDim;
-    final resized = img.copyResize(
-      decoded,
-      width: (decoded.width * scale).round(),
-      height: (decoded.height * scale).round(),
-    );
-    return Uint8List.fromList(img.encodeJpg(resized, quality: 75));
-  } catch (_) {
-    return rawBytes;
-  }
+  return rawBytes;
 }
 
 typedef ImageBytesReader = Future<Uint8List?> Function(String imagePathOrUrl);

@@ -1,20 +1,22 @@
-# Questopia R8 / Proguard Rules for Minimized Release Build
+# Flutter ProGuard Rules
+-keep class io.flutter.app.** { *; }
+-keep class io.flutter.plugin.**  { *; }
+-keep class io.flutter.util.**  { *; }
+-keep class io.flutter.view.**  { *; }
+-keep class io.flutter.**  { *; }
+-keep class io.flutter.plugins.**  { *; }
 
-# Keep Flutter Engine & FFI bindings
--keep class io.flutter.** { *; }
--keep class com.questopia.re.** { *; }
-
-# Keep Native JNI and C FFI entry points
+# Native QSP and JNI / FFI bindings
 -keepclasseswithmembernames class * {
     native <methods>;
 }
 
-# Keep Background Downloader & WorkManager classes
--keep class com.bbflight.background_downloader.** { *; }
--keep class androidx.work.** { *; }
+# Flutter InAppWebView
+-keep class com.pichillilorenzo.flutter_inappwebview_android.** { *; }
 
-# Keep WebView and InAppWebView classes
--keep class com.pichillilorenzo.flutter_inappwebview.** { *; }
+# Audioplayers
+-keep class xyz.luan.audioplayers.** { *; }
 
-# Suppress warnings from unused dependencies
--dontwarn **
+# General keep rules
+-dontwarn io.flutter.**
+-dontwarn com.pichillilorenzo.flutter_inappwebview_android.**

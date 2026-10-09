@@ -68,7 +68,7 @@ Questopia-RE is a high-performance cross-platform interpreter and library client
 
 ### 3.6. UI / UX Design System & Active Morph Shaping
 - **Active Morph Shaping:** Dynamic radius transitions between compact Rounded Rectangles (`BorderRadius.circular(8)`) when unselected, and full Stadium Pills (`BorderRadius.circular(24)`) when selected.
-- **Blurred Backdrop Sheets (`showQuestopiaSheet`):** Bottom sheets and drawer menus utilize root navigator coverage and `BackdropFilter` Gaussian blur (`sigma: 8`) to smoothly dim and blur the entire scaffold, including the top app bar header and background content.
+- **Blurred Backdrop Sheets (`showQuestopiaSheet` & `_openGameSheet`):** Bottom sheets and drawer menus utilize root navigator coverage, `BackdropFilter` Gaussian blur (`sigma: 8`), and synchronized dynamic CSS WebView blur (`filter: blur(10px)`) to seamlessly dim and blur both Flutter overlays and native game viewport content.
 - **Phone-Optimized Compact Grid:** Responsive 2-column grid layout on mobile screens (`< 600dp`) with downscaled posters (90dp), tightened typography, and compact actions, while preserving full-size cards on desktop/tablets.
 - **Mobile Navigation:** Integrated reactive bubble navigation (`_buildMobileBottomBar`) with active selection bubble morphing, optional backdrop blur (`isNavBarBlur`), zero-latency reactive viewport, and haptic feedback.
 - **Desktop Navigation:** Left-side borderless `NavigationRail` with instant inline settings.

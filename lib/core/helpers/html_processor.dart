@@ -2,17 +2,62 @@ import 'dart:convert';
 
 class HtmlProcessor {
   static final RegExp _execRegExp = RegExp(
-    'href\\s*=\\s*["\']exec:(.*?)["\']',
+    r'href\s*=\s*["\x27]exec:(.*?)["\x27]',
     caseSensitive: false,
     dotAll: true,
   );
 
-  /// Pre-processes QSP HTML content by base64-encoding multi-line exec: links
-  /// to ensure safe rendering in WebViews and custom handlers.
+  static final RegExp _imgQuotedSrcRegExp = RegExp(
+    r'<img([^>]*?)\bsrc\s*=\s*(["\x27])([^"\x27]*?)\2([^>]*?)>',
+    caseSensitive: false,
+  );
+  static final RegExp _imgUnquotedSrcRegExp = RegExp(
+    r'<img([^>]*?)\bsrc\s*=\s*([^\s"\x27><]+)([^>]*?)>',
+    caseSensitive: false,
+  );
+  static final RegExp _bbcodeImgRegExp = RegExp(
+    r'\[img\](.*?)\[/img\]',
+    caseSensitive: false,
+  );
+
+  /// Pre-processes QSP HTML content:
+  /// - Base64-encodes multi-line exec: links for safe WebView dispatch
+  /// - Normalizes Windows backslashes in image src paths
+  /// - Enforces valid quotes on unquoted src attributes
+  /// - Converts [img]...[/img] BBCode to standard <img> tags
   static String processHtml(String html) {
     if (html.isEmpty) return html;
 
-    return html.replaceAllMapped(_execRegExp, (match) {
+    var result = html;
+
+    // Convert [img] tags
+    if (result.contains('[img]') || result.contains('[IMG]')) {
+      result = result.replaceAllMapped(_bbcodeImgRegExp, (match) {
+        final raw = match.group(1)?.trim() ?? '';
+        final clean = raw.replaceAll(r'\', '/');
+        return '<img src="$clean" />';
+      });
+    }
+
+    // Normalize unquoted src=path to src="path"
+    result = result.replaceAllMapped(_imgUnquotedSrcRegExp, (match) {
+      final before = match.group(1) ?? '';
+      final src = match.group(2) ?? '';
+      final after = match.group(3) ?? '';
+      return '<img$before src="${src.replaceAll(r'\', '/')}"$after>';
+    });
+
+    // Normalize backslashes inside quoted src="..."
+    result = result.replaceAllMapped(_imgQuotedSrcRegExp, (match) {
+      final before = match.group(1) ?? '';
+      final quote = match.group(2) ?? '"';
+      final src = match.group(3) ?? '';
+      final after = match.group(4) ?? '';
+      return '<img$before src=$quote${src.replaceAll(r'\', '/')}$quote$after>';
+    });
+
+    // Base64-encode multi-line exec links
+    result = result.replaceAllMapped(_execRegExp, (match) {
       final code = match.group(1) ?? '';
       if (code.contains('\n') || code.contains('\r') || code.contains('<br')) {
         final cleanCode = code
@@ -23,6 +68,8 @@ class HtmlProcessor {
       }
       return match.group(0)!;
     });
+
+    return result;
   }
 
   /// Decodes exec: URL payloads received from WebView link intercepts.
@@ -52,7 +99,7 @@ class HtmlProcessor {
   }
 
   static final RegExp _videoImgRegExp = RegExp(
-    '<img([^>]*?)src\\s*=\\s*["\']([^"\']*?\\.(?:mp4|webm|ogv|ogg|m4v|mov))(["\'][^>]*?)>',
+    r'<img([^>]*?)\bsrc\s*=\s*["\x27]?([^"\x27\s>]*?\.(?:mp4|webm|ogv|ogg|m4v|mov))["\x27]?([^>]*?)>',
     caseSensitive: false,
   );
   static final RegExp _imgRegExp = RegExp(

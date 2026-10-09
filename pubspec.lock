@@ -81,22 +81,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.4.1"
-  auto_route:
-    dependency: transitive
-    description:
-      name: auto_route
-      sha256: "538d8eb2ffc48de30abb30d4545a90405b5f8a29248b82d5e4b2977a79bfd229"
-      url: "https://pub.dev"
-    source: hosted
-    version: "11.2.0"
-  background_downloader:
-    dependency: "direct main"
-    description:
-      name: background_downloader
-      sha256: ae55e127f87397b372578fc9474568b879fa78326103c342e00160558d08e527
-      url: "https://pub.dev"
-    source: hosted
-    version: "9.5.9"
   boolean_selector:
     dependency: transitive
     description:
@@ -105,14 +89,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.2"
-  bottom_shell_nav:
-    dependency: "direct main"
-    description:
-      name: bottom_shell_nav
-      sha256: b9240183424b907e6ccd9b44e7f0bb4f53880c3b32e049b6f5c04030f5de1de3
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.4.4"
   characters:
     dependency: transitive
     description:
@@ -233,14 +209,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "8.3.7"
-  filesystem_picker:
-    dependency: "direct main"
-    description:
-      name: filesystem_picker
-      sha256: cc2bfe7e5a4ce21afd5b1b03824c0e6e5386a981ed6cce7bda062b1af805cf62
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.1.0"
   fixnum:
     dependency: transitive
     description:
@@ -373,14 +341,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.3"
-  go_router:
-    dependency: transitive
-    description:
-      name: go_router
-      sha256: d7a3576cb312649eaa51f2356450aed686085fb58fcdebda5b359aa951eef7ea
-      url: "https://pub.dev"
-    source: hosted
-    version: "17.5.0"
   hooks:
     dependency: transitive
     description:
@@ -413,14 +373,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
-  image:
-    dependency: "direct main"
-    description:
-      name: image
-      sha256: f31d52537dc417fdcde36088fdf11d191026fd5e4fae742491ebd40e5a8bea7d
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.3.0"
   intl:
     dependency: transitive
     description:
@@ -565,14 +517,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.19.0"
-  mime:
-    dependency: transitive
-    description:
-      name: mime
-      sha256: bd47de35f07e27267e69c8c8b22edf9473bfee170a60d60fcc93730c5144b7f6
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.1.0"
   motor:
     dependency: transitive
     description:
@@ -882,14 +826,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.10.2"
-  split_pane:
-    dependency: "direct main"
-    description:
-      name: split_pane
-      sha256: e8c2df7190dbbaed7ef64f86f4acb0d2d6b06394461434dfb00d883a0f710bb6
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.2.0"
   stack_trace:
     dependency: transitive
     description:

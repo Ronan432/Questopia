@@ -103,12 +103,35 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   GameDialogType _lastDialogShown = GameDialogType.none;
 
+  Future<T?> _openGameSheet<T>(WidgetBuilder builder) async {
+    _mainWebViewController?.evaluateJavascript(
+      source:
+          "document.body.style.filter = 'blur(10px)'; document.body.style.transition = 'filter 0.25s ease';",
+    );
+    _varsWebViewController?.evaluateJavascript(
+      source:
+          "document.body.style.filter = 'blur(10px)'; document.body.style.transition = 'filter 0.25s ease';",
+    );
+    try {
+      return await showQuestopiaSheet<T>(
+        context: context,
+        builder: builder,
+      );
+    } finally {
+      _mainWebViewController?.evaluateJavascript(
+        source: "document.body.style.filter = 'none';",
+      );
+      _varsWebViewController?.evaluateJavascript(
+        source: "document.body.style.filter = 'none';",
+      );
+    }
+  }
+
   Future<void> _showOptionsMenu() async {
     debugPrint('[GameScreen] Opening options menu sheet...');
     final colors = Theme.of(context).colorScheme;
-    await showQuestopiaSheet<void>(
-      context: context,
-      builder: (sheetContext) => SingleChildScrollView(
+    await _openGameSheet<void>(
+      (sheetContext) => SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -131,9 +154,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   title: const Text('Save & Load'),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    showQuestopiaSheet<void>(
-                      context: context,
-                      builder: (_) => const SaveSlotsSheet(),
+                    _openGameSheet<void>(
+                      (_) => const SaveSlotsSheet(),
                     );
                   },
                 ),
@@ -142,9 +164,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   title: const Text('Cheat Engine'),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    showQuestopiaSheet<void>(
-                      context: context,
-                      builder: (_) => const CheatModesSheet(),
+                    _openGameSheet<void>(
+                      (_) => const CheatModesSheet(),
                     );
                   },
                 ),
@@ -334,20 +355,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         cleanPath = Uri.decodeFull(cleanPath);
       } catch (_) {}
 
-      // Clean the relative path: strip leading slashes, backslashes, or './'
-      while (cleanPath.startsWith('/') ||
-          cleanPath.startsWith('\\') ||
-          cleanPath.startsWith('./')) {
-        if (cleanPath.startsWith('./')) {
-          cleanPath = cleanPath.substring(2);
+      // Clean the relative path: convert all backslashes to forward slashes
+      var normalizedRel = cleanPath.replaceAll('\\', '/');
+      while (normalizedRel.startsWith('/') || normalizedRel.startsWith('./')) {
+        if (normalizedRel.startsWith('./')) {
+          normalizedRel = normalizedRel.substring(2);
         } else {
-          cleanPath = cleanPath.substring(1);
+          normalizedRel = normalizedRel.substring(1);
         }
       }
 
       File? file;
       if (_cachedAssetIndex != null) {
-        final cleanLower = cleanPath.replaceAll('\\', '/').toLowerCase();
+        final cleanLower = normalizedRel.toLowerCase();
         final indexedPath = _cachedAssetIndex![cleanLower] ??
             _cachedAssetIndex![p.basename(cleanLower)];
         if (indexedPath != null) {
@@ -355,19 +375,19 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         }
       }
 
-      file ??= _resolveCaseInsensitiveFile(gameDir, cleanPath) ??
-          _resolveCaseInsensitiveFile(rootFolder, cleanPath);
+      file ??= _resolveCaseInsensitiveFile(gameDir, normalizedRel) ??
+          _resolveCaseInsensitiveFile(rootFolder, normalizedRel);
 
       if (file == null || !await file.exists()) {
         debugPrint(
-            '[GameScreen] Media file not found: "$cleanPath" in ${gameDir.path} or ${rootFolder.path}');
+            '[GameScreen] Media file not found: "$normalizedRel" in ${gameDir.path} or ${rootFolder.path}');
         return null;
       }
 
-      final mime = HtmlProcessor.mimeTypeForPath(cleanPath);
+      final mime = HtmlProcessor.mimeTypeForPath(normalizedRel);
       final bytes = await file.readAsBytes();
       debugPrint(
-          '[GameScreen] Serving local media file "$cleanPath" (${bytes.length} bytes, mime: $mime)');
+          '[GameScreen] Serving local media file "$normalizedRel" (${bytes.length} bytes, mime: $mime)');
       return WebResourceResponse(
         contentType: mime,
         data: bytes,
@@ -379,6 +399,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Expose-Headers':
               'Content-Range, Content-Length, Accept-Ranges',
+          'Cache-Control': 'no-cache',
         },
       );
     } catch (error) {
@@ -391,14 +412,14 @@ class _GameScreenState extends ConsumerState<GameScreen> {
   File? _resolveCaseInsensitiveFile(Directory gameDir, String relativePath) {
     if (!gameDir.existsSync()) return null;
 
-    final directFile = File(p.join(gameDir.path, relativePath));
+    final cleanRel = relativePath.replaceAll('\\', '/');
+    final directFile = File(p.join(gameDir.path, cleanRel.replaceAll('/', p.separator)));
     if (directFile.existsSync()) return directFile;
 
     final normalized = File(p.normalize(
-        p.join(gameDir.path, relativePath.replaceAll('/', p.separator))));
+        p.join(gameDir.path, cleanRel.replaceAll('/', p.separator))));
     if (normalized.existsSync()) return normalized;
 
-    final cleanRel = relativePath.replaceAll('\\', '/');
     final parts = cleanRel.split('/');
     FileSystemEntity current = gameDir;
 
@@ -452,18 +473,17 @@ class _GameScreenState extends ConsumerState<GameScreen> {
       cleanPath = Uri.decodeFull(cleanPath);
     } catch (_) {}
 
-    while (cleanPath.startsWith('/') ||
-        cleanPath.startsWith('\\') ||
-        cleanPath.startsWith('./')) {
-      if (cleanPath.startsWith('./')) {
-        cleanPath = cleanPath.substring(2);
+    var normalizedRel = cleanPath.replaceAll('\\', '/');
+    while (normalizedRel.startsWith('/') || normalizedRel.startsWith('./')) {
+      if (normalizedRel.startsWith('./')) {
+        normalizedRel = normalizedRel.substring(2);
       } else {
-        cleanPath = cleanPath.substring(1);
+        normalizedRel = normalizedRel.substring(1);
       }
     }
 
     if (_cachedAssetIndex != null) {
-      final cleanLower = cleanPath.replaceAll('\\', '/').toLowerCase();
+      final cleanLower = normalizedRel.toLowerCase();
       final indexedPath = _cachedAssetIndex![cleanLower] ??
           _cachedAssetIndex![p.basename(cleanLower)];
       if (indexedPath != null) {
@@ -474,8 +494,8 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
     final gameDir = Directory(p.dirname(game.gameFilePath));
     final rootFolder = Directory(game.folderPath);
-    return _resolveCaseInsensitiveFile(gameDir, cleanPath) ??
-        _resolveCaseInsensitiveFile(rootFolder, cleanPath);
+    return _resolveCaseInsensitiveFile(gameDir, normalizedRel) ??
+        _resolveCaseInsensitiveFile(rootFolder, normalizedRel);
   }
 
   /// Extracts image paths (from image property or embedded <img> tag) and sanitized text.

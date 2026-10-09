@@ -3,8 +3,12 @@ name: Flutter CI
 on:
   push:
     branches: [ master, flutter, main ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ master, flutter, main ]
+
+permissions:
+  contents: write
 
 jobs:
   analyze:
@@ -90,3 +94,51 @@ jobs:
           name: questopia-windows-x64
           path: Questopia-Windows-x64.zip
           retention-days: 14
+
+  release:
+    name: Publish GitHub Pre-Release
+    needs: [build-android, build-windows]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Android Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: questopia-android-apks
+          path: release-assets
+
+      - name: Download Windows Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: questopia-windows-x64
+          path: release-assets
+
+      - name: Prepare Release Tag & Metadata
+        id: release_info
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG_NAME="${{ github.ref_name }}"
+            RELEASE_NAME="Questopia-RE ${{ github.ref_name }}"
+          else
+            VERSION=$(grep "^version:" pubspec.yaml | head -n 1 | cut -d ' ' -f 2 | cut -d '+' -f 1)
+            TAG_NAME="v${VERSION}-pre${{ github.run_number }}"
+            RELEASE_NAME="Questopia-RE v${VERSION} (Pre-Release #${{ github.run_number }})"
+          fi
+          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "release_name=${RELEASE_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Create or Update GitHub Pre-Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_info.outputs.tag_name }}
+          name: ${{ steps.release_info.outputs.release_name }}
+          prerelease: true
+          generate_release_notes: true
+          files: |
+            release-assets/*.apk
+            release-assets/Questopia-Windows-x64.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -42,15 +42,8 @@ class GameImagePreviewDialog extends StatelessWidget {
         maxHeight: 320,
       ),
       actions: [
-        FilledButton(
+        QuestopiaMorphButton.filled(
           onPressed: onClose,
-          style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            minimumSize: const Size(64, 36),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
           child: const Text('Close'),
         ),
       ],
@@ -167,31 +160,17 @@ class _GameExecutorDialogState extends State<GameExecutorDialog> {
         ),
       ),
       actions: [
-        OutlinedButton(
+        QuestopiaMorphButton.outlined(
           onPressed: widget.onClose,
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            minimumSize: const Size(64, 36),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
           child: const Text('Cancel'),
         ),
-        FilledButton(
+        QuestopiaMorphButton.filled(
           onPressed: () {
             if (_controller.text.trim().isNotEmpty) {
               widget.onRun(_controller.text.trim());
               _controller.clear();
             }
           },
-          style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            minimumSize: const Size(64, 36),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
           child: const Text('Run'),
         ),
       ],

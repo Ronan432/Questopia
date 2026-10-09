@@ -64,26 +64,12 @@ class _GameInputDialogState extends State<GameInputDialog> {
         onSubmitted: widget.onSubmit,
       ),
       actions: [
-        OutlinedButton(
+        QuestopiaMorphButton.outlined(
           onPressed: widget.onCancel,
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            minimumSize: const Size(64, 36),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
           child: const Text('Cancel'),
         ),
-        FilledButton(
+        QuestopiaMorphButton.filled(
           onPressed: () => widget.onSubmit(_controller.text),
-          style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            minimumSize: const Size(64, 36),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
           child: const Text('OK'),
         ),
       ],
@@ -150,15 +136,8 @@ class GameMenuDialog extends StatelessWidget {
               ),
       ),
       actions: [
-        OutlinedButton(
+        QuestopiaMorphButton.outlined(
           onPressed: onCancel,
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            minimumSize: const Size(64, 36),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
           child: const Text('Cancel'),
         ),
       ],
@@ -198,15 +177,8 @@ class GameErrorDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        FilledButton(
+        QuestopiaMorphButton.filled(
           onPressed: onClose,
-          style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            minimumSize: const Size(64, 36),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
           child: const Text('OK'),
         ),
       ],
@@ -233,18 +205,11 @@ class GameFileLoadDialog extends StatelessWidget {
         style: TextStyle(color: colors.onSurfaceVariant, fontSize: 15),
       ),
       actions: [
-        OutlinedButton(
+        QuestopiaMorphButton.outlined(
           onPressed: onClose,
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            minimumSize: const Size(64, 36),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
           child: const Text('Cancel'),
         ),
-        FilledButton(
+        QuestopiaMorphButton.filled(
           onPressed: () async {
             final result = await FilePicker.platform.pickFiles(
               type: FileType.custom,
@@ -253,13 +218,6 @@ class GameFileLoadDialog extends StatelessWidget {
             final path = result?.files.singleOrNull?.path;
             if (path != null && path.isNotEmpty) onPick(path);
           },
-          style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            minimumSize: const Size(64, 36),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
           child: const Text('Pick File'),
         ),
       ],

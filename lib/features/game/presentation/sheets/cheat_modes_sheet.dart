@@ -155,18 +155,11 @@ class _CheatModesSheetState extends ConsumerState<CheatModesSheet> {
           ),
         ),
         actions: [
-          OutlinedButton(
+          QuestopiaMorphButton.outlined(
             onPressed: () => Navigator.pop(ctx),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              minimumSize: const Size(64, 36),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
             child: const Text('Cancel'),
           ),
-          FilledButton(
+          QuestopiaMorphButton.filled(
             onPressed: () {
               final ok = ref
                   .read(cheatProvider.notifier)
@@ -174,13 +167,6 @@ class _CheatModesSheetState extends ConsumerState<CheatModesSheet> {
               Navigator.pop(ctx);
               if (!ok) showSheetSnackBar(context, 'Engine rejected the value');
             },
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              minimumSize: const Size(64, 36),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
             child: const Text('Apply'),
           ),
         ],

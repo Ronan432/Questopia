@@ -47,34 +47,22 @@ class CrashDialogHelper {
             ],
           ),
           actions: [
-            OutlinedButton(
+            QuestopiaMorphButton.outlined(
               onPressed: () => Navigator.of(ctx).pop(),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                minimumSize: const Size(64, 36),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
               child: const Text('Cancel'),
             ),
-            FilledButton.icon(
+            QuestopiaMorphButton.filled(
               onPressed: () {
                 Clipboard.setData(ClipboardData(text: report));
                 Navigator.of(ctx).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Crash log copied to clipboard')),
+                  const SnackBar(
+                    content: Text('Crash log copied to clipboard'),
+                  ),
                 );
               },
-              icon: const Icon(Icons.copy_rounded, size: 16),
-              label: const Text('Copy Details'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                minimumSize: const Size(64, 36),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-              ),
+              icon: const Icon(Icons.copy_rounded),
+              child: const Text('Copy Details'),
             ),
           ],
         );

@@ -2,7 +2,11 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
-/// Shows a unified Questopia modal dialog with morph-shaping scale transition and backdrop blur.
+import '../widgets/questopia_morph_button.dart';
+
+export '../widgets/questopia_morph_button.dart';
+
+/// Shows a unified Questopia modal dialog with clean fade, scale, and backdrop blur.
 Future<T?> showQuestopiaDialog<T>({
   required BuildContext context,
   required WidgetBuilder builder,
@@ -18,52 +22,43 @@ Future<T?> showQuestopiaDialog<T>({
     barrierLabel: 'Dismiss',
     barrierColor: Colors.black.withValues(alpha: 0.60),
     useRootNavigator: useRootNavigator,
-    transitionDuration: const Duration(milliseconds: 280),
+    transitionDuration: const Duration(milliseconds: 220),
     pageBuilder: (dialogContext, animation, secondaryAnimation) {
       return capturedThemes.wrap(builder(dialogContext));
     },
     transitionBuilder: (dialogContext, animation, secondaryAnimation, child) {
       final curvedAnimation = CurvedAnimation(
         parent: animation,
-        curve: Curves.easeOutBack,
+        curve: Curves.easeOutCubic,
         reverseCurve: Curves.easeInCubic,
       );
 
-      final fadeAnimation = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-      );
+      return FadeTransition(
+        opacity: curvedAnimation,
+        child: AnimatedBuilder(
+          animation: curvedAnimation,
+          builder: (context, _) {
+            final scale =
+                lerpDouble(0.92, 1.0, curvedAnimation.value) ?? 1.0;
+            final sigma = curvedAnimation.value * 10.0;
 
-      return AnimatedBuilder(
-        animation: animation,
-        builder: (context, _) {
-          final t = curvedAnimation.value.clamp(0.0, 1.0);
-          final radius = lerpDouble(64.0, 20.0, t) ?? 20.0;
-          final scale = lerpDouble(0.72, 1.0, curvedAnimation.value) ?? 1.0;
-          final sigma = fadeAnimation.value * 12.0;
-
-          return FadeTransition(
-            opacity: fadeAnimation,
-            child: BackdropFilter(
+            return BackdropFilter(
               filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
               child: Center(
                 child: Transform.scale(
                   scale: scale,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(radius),
-                    child: child,
-                  ),
+                  child: child,
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       );
     },
   );
 }
 
-/// Unified modal dialog frame with morph-shaping animation, icon, title, and compact actions.
+/// Unified modal dialog frame with static Material You geometry and compact padding.
 class QuestopiaDialog extends StatelessWidget {
   const QuestopiaDialog({
     super.key,
@@ -94,7 +89,7 @@ class QuestopiaDialog extends StatelessWidget {
         elevation: 8,
         shadowColor: Colors.black.withValues(alpha: 0.4),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           side: BorderSide(
             color: colors.outlineVariant.withValues(alpha: 0.35),
             width: 0.5,
@@ -201,7 +196,7 @@ class QuestopiaConfirmationDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        OutlinedButton(
+        QuestopiaMorphButton.outlined(
           onPressed: () {
             if (onCancel != null) {
               onCancel!();
@@ -209,16 +204,9 @@ class QuestopiaConfirmationDialog extends StatelessWidget {
               Navigator.of(context).pop(false);
             }
           },
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            minimumSize: const Size(64, 36),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
           child: Text(cancelLabel),
         ),
-        FilledButton(
+        QuestopiaMorphButton.filled(
           onPressed: () {
             if (onConfirm != null) {
               onConfirm!();
@@ -226,15 +214,7 @@ class QuestopiaConfirmationDialog extends StatelessWidget {
               Navigator.of(context).pop(true);
             }
           },
-          style: FilledButton.styleFrom(
-            backgroundColor: isDestructive ? colors.error : colors.primary,
-            foregroundColor: isDestructive ? colors.onError : colors.onPrimary,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            minimumSize: const Size(64, 36),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-          ),
+          isDestructive: isDestructive,
           child: Text(confirmLabel),
         ),
       ],

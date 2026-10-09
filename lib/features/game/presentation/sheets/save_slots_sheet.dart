@@ -46,7 +46,7 @@ class _SaveSlotsSheetState extends ConsumerState<SaveSlotsSheet> {
                       ? M3EButtonStyle.filled
                       : M3EButtonStyle.outlined,
                   icon: const Icon(Icons.save_outlined, size: 18),
-                  label: const Text('Save Game'),
+                  label: const Text('Save'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -58,7 +58,7 @@ class _SaveSlotsSheetState extends ConsumerState<SaveSlotsSheet> {
                       ? M3EButtonStyle.filled
                       : M3EButtonStyle.outlined,
                   icon: const Icon(Icons.download_rounded, size: 18),
-                  label: const Text('Load Game'),
+                  label: const Text('Load'),
                 ),
               ),
             ],

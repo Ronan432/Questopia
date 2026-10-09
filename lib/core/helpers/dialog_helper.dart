@@ -18,7 +18,7 @@ Future<T?> showQuestopiaDialog<T>({
     context: context,
     barrierDismissible: barrierDismissible,
     barrierLabel: 'Dismiss',
-    barrierColor: Colors.black.withValues(alpha: 0.45),
+    barrierColor: Colors.black.withValues(alpha: 0.60),
     useRootNavigator: useRootNavigator,
     transitionDuration: const Duration(milliseconds: 280),
     pageBuilder: (dialogContext, animation, secondaryAnimation) {
@@ -40,8 +40,8 @@ Future<T?> showQuestopiaDialog<T>({
         opacity: curvedAnimation,
         child: BackdropFilter(
           filter: ImageFilter.blur(
-            sigmaX: opacity * 8.0,
-            sigmaY: opacity * 8.0,
+            sigmaX: opacity * 10.0,
+            sigmaY: opacity * 10.0,
           ),
           child: ScaleTransition(
             scale: curvedAnimation,
@@ -84,7 +84,7 @@ class QuestopiaDialog extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: Material(
-          color: colors.surfaceContainerHigh,
+          color: colors.surfaceContainer,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
             side: BorderSide(

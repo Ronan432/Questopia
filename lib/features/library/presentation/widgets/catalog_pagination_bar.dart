@@ -26,7 +26,7 @@ class CatalogPaginationBar extends ConsumerWidget {
 
     final bottomPadding = isDesktop
         ? 10.0
-        : (isBlur ? (MediaQuery.paddingOf(context).bottom + 64.0) : 10.0);
+        : (isBlur ? (MediaQuery.paddingOf(context).bottom + 4.0) : 10.0);
 
     return Container(
       padding: EdgeInsets.fromLTRB(20, 10, 20, bottomPadding),

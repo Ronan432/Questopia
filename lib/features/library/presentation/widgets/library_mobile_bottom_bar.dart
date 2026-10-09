@@ -99,17 +99,15 @@ class LibraryMobileBottomBar extends ConsumerWidget {
     final activeColor = colors.primary;
     final inactiveColor = colors.onSurfaceVariant;
 
-    return InkWell(
+    return GestureDetector(
       onTap: () => onTabSelected(index),
-      borderRadius: BorderRadius.circular(16),
+      behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOutCubic,
+            Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               decoration: BoxDecoration(
                 color: isSelected

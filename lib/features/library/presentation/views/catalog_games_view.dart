@@ -103,6 +103,10 @@ class CatalogGamesView extends ConsumerWidget {
             defaultTargetPlatform == TargetPlatform.macOS ||
             defaultTargetPlatform == TargetPlatform.linux);
     final isNavBarBlur = !isDesktop && ref.watch(settingsProvider).isNavBarBlur;
+    final hasPagination = state.totalPages > 1;
+    final bottomGridPadding = hasPagination
+        ? 8.0
+        : (isNavBarBlur ? 90.0 : (isCompact ? 20.0 : 24.0));
 
     return GridView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -110,7 +114,7 @@ class CatalogGamesView extends ConsumerWidget {
         isCompact ? 12 : 20,
         4,
         isCompact ? 12 : 20,
-        isNavBarBlur ? 90 : (isCompact ? 20 : 24),
+        bottomGridPadding,
       ),
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: isCompact ? 200 : 320,

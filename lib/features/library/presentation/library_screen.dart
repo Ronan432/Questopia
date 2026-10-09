@@ -160,6 +160,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
     final pageViews = PageView(
       controller: _libraryPageController,
+      physics: const ClampingScrollPhysics(),
       onPageChanged: (value) {
         _closeSearch();
         setState(() => _selectedTab = value);

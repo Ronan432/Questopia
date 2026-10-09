@@ -36,9 +36,7 @@ class CatalogFilterBar extends ConsumerWidget {
               label: Text(lang.isEmpty ? 'All Languages' : lang.toUpperCase()),
               selected: state.catalogLanguage == lang,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(
-                  state.catalogLanguage == lang ? 24 : 8,
-                ),
+                borderRadius: BorderRadius.circular(20),
               ),
               onSelected: (_) {
                 notifier.setCatalogFilter(language: lang);
@@ -58,8 +56,7 @@ class CatalogFilterBar extends ConsumerWidget {
             label: const Text('Featured'),
             selected: state.catalogFeaturedOnly,
             shape: RoundedRectangleBorder(
-              borderRadius:
-                  BorderRadius.circular(state.catalogFeaturedOnly ? 24 : 8),
+              borderRadius: BorderRadius.circular(20),
             ),
             onSelected: (selected) {
               notifier.setCatalogFilter(featuredOnly: selected);

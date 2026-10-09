@@ -163,8 +163,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               label: Text(sections[i]),
               selected: _selectedSection == i,
               shape: RoundedRectangleBorder(
-                borderRadius:
-                    BorderRadius.circular(_selectedSection == i ? 24 : 8),
+                borderRadius: BorderRadius.circular(20),
               ),
               onSelected: (_) {
                 HapticFeedback.lightImpact();

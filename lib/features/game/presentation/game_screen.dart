@@ -14,6 +14,7 @@ import '../../../core/media/qsp_html_view.dart';
 import '../../../core/media/qsp_path_resolver.dart';
 import '../../../core/native/qsp_models.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/helpers/dialog_helper.dart';
 import '../../../core/helpers/html_processor.dart';
 import '../../../core/helpers/sheet_helper.dart';
 import '../../../core/widgets/questopia_scaffold.dart';
@@ -268,7 +269,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     _lastDialogShown = dialog;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      showDialog<void>(
+      showQuestopiaDialog<void>(
         context: context,
         barrierDismissible: dialog != GameDialogType.error,
         builder: (_) => const GameDialogsHost(),

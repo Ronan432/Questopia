@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_3_expressive/components/buttons/enums/m3e_button_enums.dart';
 import 'package:material_3_expressive/material_3_expressive.dart';
 
+import '../../../../core/helpers/dialog_helper.dart';
 import '../../../../core/helpers/sheet_helper.dart';
 import '../../../../core/helpers/sheet_ui_helper.dart';
-import '../../../../core/theme/questopia_theme.dart';
 import '../../providers/cheat_provider.dart';
 import '../../providers/game_engine_provider.dart';
 import 'helpers/cheat_sheet_actions.dart';
@@ -139,53 +139,43 @@ class _CheatModesSheetState extends ConsumerState<CheatModesSheet> {
     final controller = TextEditingController(text: currentValue);
     final colors = Theme.of(context).colorScheme;
 
-    showDialog<void>(
+    showQuestopiaDialog<void>(
       context: context,
-      builder: (ctx) => M3ETheme(
-        data: M3EThemeData(
-          colorScheme: QuestopiaTheme.m3eColorSchemeFrom(colors),
-        ),
-        child: AlertDialog(
-          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          title: Text('Edit $varName'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: InputDecoration(
-              labelText: 'New Value',
-              filled: true,
-              fillColor: colors.surfaceContainerHighest.withValues(alpha: 0.5),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+      builder: (ctx) => QuestopiaDialog(
+        icon: const Icon(Icons.edit_note_rounded),
+        title: Text('Edit $varName'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: 'New Value',
+            filled: true,
+            fillColor: colors.surfaceContainerHighest.withValues(alpha: 0.5),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
           ),
-          actions: [
-            M3EButton.icon(
-              onPressed: () => Navigator.pop(ctx),
-              icon: const Icon(Icons.close_rounded, size: 16),
-              label: const Text('Cancel'),
-              style: M3EButtonStyle.outlined,
-              size: M3EButtonSize.sm,
-              shape: M3EButtonShape.round,
-            ),
-            const SizedBox(width: 4),
-            M3EButton.icon(
-              onPressed: () {
-                final ok = ref
-                    .read(cheatProvider.notifier)
-                    .setVar(varName, controller.text);
-                Navigator.pop(ctx);
-                if (!ok) showSheetSnackBar(context, 'Engine rejected the value');
-              },
-              icon: const Icon(Icons.check_rounded, size: 16),
-              label: const Text('Apply'),
-              style: M3EButtonStyle.filled,
-              size: M3EButtonSize.sm,
-              shape: M3EButtonShape.round,
-            ),
-          ],
         ),
+        actions: [
+          M3EButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: M3EButtonStyle.text,
+            size: M3EButtonSize.md,
+            child: const Text('Cancel'),
+          ),
+          M3EButton(
+            onPressed: () {
+              final ok = ref
+                  .read(cheatProvider.notifier)
+                  .setVar(varName, controller.text);
+              Navigator.pop(ctx);
+              if (!ok) showSheetSnackBar(context, 'Engine rejected the value');
+            },
+            style: M3EButtonStyle.filled,
+            size: M3EButtonSize.md,
+            child: const Text('Apply'),
+          ),
+        ],
       ),
     );
   }

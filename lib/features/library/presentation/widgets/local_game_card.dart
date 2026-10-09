@@ -4,9 +4,9 @@ import 'package:material_3_expressive/components/buttons/enums/m3e_button_enums.
 import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:material_segmented_list/material_segmented_list.dart';
 
+import '../../../../core/helpers/dialog_helper.dart';
 import '../../../../core/helpers/sheet_helper.dart';
 import '../../../../core/l10n/app_localizations.dart';
-import '../../../../core/theme/questopia_theme.dart';
 import '../../data/local_game.dart';
 import 'game_card_frame.dart';
 import 'game_poster.dart';
@@ -153,49 +153,19 @@ class LocalGameCard extends StatelessWidget {
                       HapticFeedback.lightImpact();
                       Navigator.pop(sheetCtx);
                       final isRepo = game.isFromRepo;
-                      final confirmed = await showDialog<bool>(
+                      final confirmed = await showQuestopiaDialog<bool>(
                         context: context,
-                        builder: (ctx) => M3ETheme(
-                          data: M3EThemeData(
-                            colorScheme:
-                                QuestopiaTheme.m3eColorSchemeFrom(colors),
-                          ),
-                          child: AlertDialog(
-                            actionsPadding:
-                                const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                            title: Text(
-                              isRepo ? 'Delete Game' : 'Remove from library',
-                            ),
-                            content: Text(
-                              isRepo
-                                  ? 'Permanently delete "${game.title}" and all its files from your device?\n\nThis action cannot be undone.'
-                                  : 'Remove "${game.title}" from your library?\n\nNote: Game files on your device will NOT be deleted.',
-                            ),
-                            actions: [
-                              M3EButton.icon(
-                                onPressed: () => Navigator.pop(ctx, false),
-                                icon: const Icon(Icons.close_rounded, size: 16),
-                                label: const Text('Cancel'),
-                                style: M3EButtonStyle.outlined,
-                                size: M3EButtonSize.sm,
-                                shape: M3EButtonShape.round,
-                              ),
-                              const SizedBox(width: 4),
-                              M3EButton.icon(
-                                onPressed: () => Navigator.pop(ctx, true),
-                                icon: Icon(
-                                  isRepo
-                                      ? Icons.delete_forever_rounded
-                                      : Icons.delete_outline_rounded,
-                                  size: 16,
-                                ),
-                                label: Text(isRepo ? 'Delete' : 'Remove'),
-                                style: M3EButtonStyle.filled,
-                                size: M3EButtonSize.sm,
-                                shape: M3EButtonShape.round,
-                              ),
-                            ],
-                          ),
+                        builder: (ctx) => QuestopiaConfirmationDialog(
+                          icon: isRepo
+                              ? Icons.delete_forever_rounded
+                              : Icons.delete_outline_rounded,
+                          isDestructive: true,
+                          title: isRepo ? 'Delete Game' : 'Remove from library',
+                          message: isRepo
+                              ? 'Permanently delete "${game.title}" and all its files from your device?\n\nThis action cannot be undone.'
+                              : 'Remove "${game.title}" from your library?\n\nNote: Game files on your device will NOT be deleted.',
+                          confirmLabel: isRepo ? 'Delete' : 'Remove',
+                          cancelLabel: 'Cancel',
                         ),
                       );
                       if (confirmed == true) {

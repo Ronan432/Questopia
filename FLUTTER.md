@@ -1,6 +1,6 @@
 # FLUTTER.md — Questopia Flutter Architecture & Handover Documentation
 
-> **Last Update:** October 9, 2026  
+> **Last Update:** October 10, 2026  
 > **Target Framework:** Flutter 3.44.6 / Dart 3.12.2  
 > **Branch:** `master`  
 > **`flutter analyze`:** CLEAN (0 issues)  
@@ -26,11 +26,14 @@ Questopia-RE is a high-performance cross-platform interpreter and library client
 1. **PROHIBITION OF `flutter test`:** Executing `flutter test` is strictly prohibited in all automated and manual workflows.
 2. **ZERO STATIC STRINGS / HARDCODED TEXTS:** All UI labels, buttons, headers, dialogs, and messages must reside in `app_en.arb` and `app_ru.arb`, accessed exclusively via `AppLocalizations.of(context)!`.
 3. **ENGLISH-ONLY CODE COMMENTS:** All code comments across Dart, C++, C, Rust, and Kotlin source files must be written strictly in English.
-4. **SANDBOX REGISTRY ISOLATION:** Never write metadata, registry entries, or hidden dot-files into external shared storage. All persistent game records must go through `GameRegistry` inside `getApplicationSupportDirectory()`.
-5. **MODULAR HELPER COHESION:** Utility and helper routines must be encapsulated in dedicated helper files under `lib/core/helpers/` (e.g. `sheet_helper.dart`, `path_picker_helper.dart`, `html_processor.dart`).
-6. **EFFECTIVE SETTINGS LINKAGE:** Every setting field in `SettingsState` must have an active consumer and observable effect in the UI or runtime engine (blur, haptics, action height ratio, immersive mode, square posters, font family, etc.).
-7. **STANDARDIZED COMMIT FORMAT AND USER-FRIENDLY DESCRIPTIONS:** Commit subject lines must strictly adhere to standardized conventional prefix syntax (e.g. `Feat: <reason>`, `Fix: <reason>`, `Ci: <reason>`). Never put multi-line descriptions or markdown headers in commit titles. Commit descriptions/bodies must be written in plain, easily understandable user-facing English explaining what changed and why.
-8. **BAN ON `&` SYMBOL:** The ampersand character (`&`) is strictly forbidden across all user-facing UI strings, headers, button labels, documentation, and commit messages. Always use the full word "and" or "ve".
+4. **FILE LENGTH LIMIT (< 300 LINES):** Every source file in the project must be strictly maintained under 300 lines. When a widget or helper exceeds 300 lines, it must be decomposed into dedicated sub-components, views, or section files.
+5. **DRY & REUSABLE ARCHITECTURE:** Eliminate duplicate implementations across screens and sheets. Shared features (dialogs, sheets, bottom navigation bars, header search bars, settings tile builders) must be encapsulated in reusable helper or widget files under `lib/core/helpers/` or dedicated feature widgets.
+6. **UNIFIED CONTEXT DIALOG ARCHITECTURE:** All modal pop-ups, confirmation dialogs, input prompts, error alerts, and crash reports must utilize `showQuestopiaDialog` and `QuestopiaDialog` / `QuestopiaConfirmationDialog` with morph-shaping animations and backdrop blur, eliminating raw disparate `AlertDialog` implementations.
+7. **SANDBOX REGISTRY ISOLATION:** Never write metadata, registry entries, or hidden dot-files into external shared storage. All persistent game records must go through `GameRegistry` inside `getApplicationSupportDirectory()`.
+8. **MODULAR HELPER COHESION:** Utility and helper routines must be encapsulated in dedicated helper files under `lib/core/helpers/` (e.g. `sheet_helper.dart`, `dialog_helper.dart`, `path_picker_helper.dart`, `html_processor.dart`).
+9. **EFFECTIVE SETTINGS LINKAGE:** Every setting field in `SettingsState` must have an active consumer and observable effect in the UI or runtime engine (blur, haptics, action height ratio, immersive mode, square posters, font family, etc.).
+10. **STANDARDIZED COMMIT FORMAT AND USER-FRIENDLY DESCRIPTIONS:** Commit subject lines must strictly adhere to standardized conventional prefix syntax (e.g. `Feat: <reason>`, `Fix: <reason>`, `Ci: <reason>`). Never put multi-line descriptions or markdown headers in commit titles. Commit descriptions/bodies must be written in plain, easily understandable user-facing English explaining what changed and why.
+11. **BAN ON `&` SYMBOL:** The ampersand character (`&`) is strictly forbidden across all user-facing UI strings, headers, button labels, documentation, and commit messages. Always use the full word "and" or "ve".
 
 ---
 
@@ -51,32 +54,22 @@ Questopia-RE is a high-performance cross-platform interpreter and library client
 - **Tier B (Isolate Copy Fallback):** Asynchronous background isolate directory copy when direct reading is restricted on Android 11+ Scoped Storage.
 - **Tier C (Archive Extraction):** Fast extraction for `.zip`, `.aqsp`, `.rar`, `.7z`, `.tar`, `.gz` using Rust FFI decoders, system `bsdtar` (Windows/Linux/macOS), and Dart fallback streams with Zip Slip protection.
 - **Isolate BFS Traversal & Deduplication:** Multi-threaded BFS search detects nested entry files (`.qsp` / `.gam`) up to depth 8. Prunes dead registry entries automatically and deduplicates across canonical absolute file paths and title+filesize signatures to eliminate duplicate entries.
-- **Execution Tracing:** Microsecond-precision `Stopwatch` metrics for all scans and imports.
 
 ### 3.4. State Management and Generation Guard (`LibraryProvider`)
 - **Generation-Guarded State:** `LibraryNotifier` uses a monotonic `_generation` counter to ensure background file scans never overwrite newly imported games.
 - **Immediate State Injection:** Imported games appear immediately at the head of the library state before background validation.
 - **Lifecycle Optimization:** Constructor runs zero eager network calls; catalog fetching is strictly on-demand.
 
-### 3.5. Game Player, WebView2 and Pre-Cached $O(1)$ Media Resolution (`GameScreen`)
-- **Edge-to-Edge Square Viewport:** WebView is rendered edge-to-edge without rounded card margins, filling the screen corners completely.
-- **Universal Video Playback and Seamless Looping:** Converts all video formats (`.mp4`, `.webm`, `.ogv`, `.ogg`, `.m4v`, `.mov`) in `<img>` tags to `<video autoplay loop muted playsinline>` backed by a self-recovering JS loop script and WASM OGVPlayer fallback, preserving fixed media boundaries without text shifting.
-- **Image-Aware Action Buttons and Interactive Links:** Dynamically detects and renders images inside action names (`<img src="...">`) or `act.image`. Handles `exec:` navigation across relative, base-encoded, and WebView2 embedded image links on desktop and mobile.
-- **Adaptive RPG Inventory Tab:** Renders objects with case-insensitive local asset image resolution. Pure-image inventory items render in a responsive square-tile grid (`childAspectRatio: 1.0`), while named items display in a structured list with 52x52 square image previews.
-- **High-Contrast Dialog Engine (`GameDialogsHost`):** Formatted with theme-aware `surfaceContainerHigh` surfaces, sanitized HTML text, safe embedded image extraction (`<img>` / `[img]`), error-safe asset fallbacks, and tonal overlay pill styling for Cancel actions.
-- **Pre-Cached Asset Index:** Builds a case-insensitive, backslash-normalized, Unicode-tolerant asset index (`_cachedAssetIndex`) in a background isolate upon game launch with zero-disk interception.
-- **3-Tab Navigation:** Story (`mainDesc`), Status (`varsDesc`), and Inventory (`objects`) tabs with real-time badges.
+### 3.5. Game Player, Media Pipeline, and Modal Dialogs (`GameScreen`)
+- **Native Video Decoding & Hardware Acceleration:** Powered by `media_kit` hardware decoders via `QspMedia` and `QspVideo`, replacing fragile webviews with smooth looping playback.
+- **High-Performance HTML Rendering (`QspHtmlView`):** Native flutter HTML parser rendering rich typography, custom styled interactive links, and embedded asset image/video elements.
+- **Unified Engine Dialog System (`GameDialogsHost`):** Message (`GameMessageDialog`), prompt input (`GameInputDialog`), interactive choice menus (`GameMenuDialog`), runtime error diagnostics (`GameErrorDialog`), image/video preview (`GameImagePreviewDialog`), and QSP console execution (`GameExecutorDialog`) all presented through `showQuestopiaDialog`.
 
-### 3.6. UI / UX Design System and Active Morph Shaping
-- **Active Morph Shaping:** Dynamic radius transitions between compact Rounded Rectangles (`BorderRadius.circular(8)`) when unselected/focused, and full Stadium Pills (`BorderRadius.circular(24)` / `BorderRadius.circular(28)`) for category chips and desktop search bar.
-- **Frosted Glass Backdrop Sheets (`showQuestopiaSheet` and `_BlurredModalBottomSheetRoute`):** Modal bottom sheets feature `SafeArea` enforcement (never crossing or overlapping the status bar), full-screen background Gaussian blur (`sigma: 10.0`), translucent frosted surfaces, deep dark container backgrounds (`surfaceContainerLowest`) with elevated tonal tiles, centered title header pill styling, and reliable drag/barrier dismissal.
-- **Phone-Optimized Compact Grid and Contextual Game Menu:** Streamlined, compact 2-column game cards with direct Play buttons; tapping anywhere else on the card opens a Material Expressive segmented drawer sheet (Play, Favorite toggle, Delete).
-- **Smooth Animated Search and Pagination:** Mobile search box built into a dedicated full-width `AppBar` stack anchored to `Alignment.centerRight`, expanding smoothly across the entire toolbar from the right search icon without boundary clipping or abrupt jumps; smooth pagination controls with active loading spinner and minimal 2-stroke iOS-style navigation arrows (`Icons.arrow_back_ios_new_rounded` / `Icons.arrow_forward_ios_rounded`).
-- **Tactile Settings Feedback:** Universal light haptic feedback integrated across settings category chips, switch toggles, navigation tiles, color pickers, and picker sheets.
-- **Adjustable Navigation Bar Blur and Translucent Overlays:** Navigation bar backdrop blur with configurable intensity slider (10% to 100%), real-time Gaussian filter, translucent tinted active item pills allowing the backdrop blur to pass through unblocked, `SafeArea(bottom: !isNavBarBlur)` and `extendBody` scaffold integration allowing game cards to scroll seamlessly behind the frosted bar.
-- **Dark-Mode Game Status Bar and Multi-Folder Asset/Video Resolution:** Dynamic `SystemUiOverlayStyle` ensures status bar icons remain crisp and high-contrast in game dark mode; recursive multi-folder and suffix asset resolver finds all nested media formats (`.mp4`, `.webm`, `.ogv`, `.ogg`, `.avi`, `.mkv`, etc.) with automatic mock `favicon.ico` responses.
-- **Desktop Title Bar and Navigation:** Custom title bar with right-click Windows system menu integration (`windowManager.popUpWindowMenu()`), MSVC `/MP` parallel compilation flags, and left-side borderless `NavigationRail` with bold active item text and storefront catalog branding.
-- **High-Performance Posters (`GamePoster`):** Memory-capped GPU texture caching via `extended_image` with anti-hotlinking headers and native vector rendering via `flutter_svg`. Short-circuits missing/SVG covers to avoid network ANRs.
+### 3.6. UI / UX Design System, Morph Shaping, and Modularity
+- **Unified Modal Dialog Morph Shaping (`showQuestopiaDialog` & `QuestopiaDialog`):** Dialogs enter with a dynamic curved morph transition interpolating from 40px radius down to 28px standard curvature, combined with scale tweening, and animated Gaussian backdrop blur (`sigma: 8.0`).
+- **Frosted Glass Bottom Sheets (`showQuestopiaSheet`):** Modal bottom sheets feature `SafeArea` enforcement, full-screen background Gaussian blur (`sigma: 10.0`), translucent frosted surfaces, elevated drag handles with animated scaling upon interaction, and centered header pills.
+- **Swipeable Horizontal Navigation:** Both `LibraryScreen` (Local Library, Remote Catalog, Settings) and `SettingsScreen` (Appearance, General, Typography, Media, Sound, Storage, About) feature horizontal swipeable `PageView` animations coordinated with category chips and bottom bars.
+- **Strict File Modularity:** Heavy controllers are broken into clean sub-views (e.g. `LocalGamesView`, `CatalogGamesView`, `AppearanceSection`, `TypographyMediaSection`, `SoundStorageAboutSection`), ensuring all files remain under 300 lines with zero code duplication.
 
 ---
 
@@ -86,20 +79,18 @@ Questopia-RE is a high-performance cross-platform interpreter and library client
 | :--- | :--- |
 | `lib/core/native/qsp_ffi.dart` | Low-level Dart FFI bindings to QSP C-API with verified struct layouts and type signatures. |
 | `lib/core/native/qsp_utf16.dart` | Memory-safe UTF-16 / UTF-32 dual-width string converter and native struct populator. |
-| `lib/core/helpers/sheet_helper.dart` | Root-navigator modal bottom sheet engine with Gaussian backdrop blur. |
-| `lib/core/helpers/html_processor.dart` | Sanitizer, video tag converter, and OGV/WASM injector for QSP HTML output. |
-| `lib/core/helpers/path_picker_helper.dart` | Platform-aware native folder picker and Android Scoped Storage directory resolver. |
-| `lib/features/library/data/game_registry.dart` | Thread-safe, atomic, file-locked JSON registry stored in internal sandbox directory. |
-| `lib/features/library/data/game_repository.dart` | 3-Tier import pipeline (zero-copy, isolate copy, archive unpacker) and isolate BFS scanner. |
-| `lib/features/library/providers/library_provider.dart` | Riverpod library state notifier with generation-guarded background refresh. |
-| `lib/features/library/presentation/library_screen.dart` | Responsive library/catalog UI with active morph filter chips, blur bottom bar, and search. |
-| `lib/features/library/presentation/widgets/game_poster.dart` | Memory-capped, ANR-free poster image loader with SVG vector fallback. |
+| `lib/core/helpers/sheet_helper.dart` | Root-navigator modal bottom sheet engine with Gaussian backdrop blur and interactive drag handle. |
+| `lib/core/helpers/dialog_helper.dart` | Unified modal dialog engine featuring active morph shaping, scale transitions, and Gaussian backdrop blur. |
+| `lib/core/helpers/html_processor.dart` | Sanitizer, video tag converter, and entity decoder for QSP HTML output. |
+| `lib/core/helpers/path_picker_helper.dart` | Platform-aware native file/folder picker and Android Scoped Storage directory resolver. |
 | `lib/core/media/qsp_media.dart` | Unified media rendering widget combining native `media_kit` hardware video and image loaders. |
-| `lib/core/media/qsp_media_kind.dart` | Header sniffing and extension matching for image vs video discrimination. |
-| `lib/core/media/qsp_path_resolver.dart` | Fast relative path resolver with case-insensitive search and fallback mechanisms. |
 | `lib/core/media/qsp_html_view.dart` | Native HTML widget renderer with custom widget builder for video and image tags. |
-| `lib/features/game/presentation/game_screen.dart` | Game interpreter view, native HTML and media renderer, image action buttons, and RPG inventory grid. |
-| `lib/features/settings/presentation/settings_screen.dart` | Expressive M3E settings screen with morph category buttons and dynamic theming. |
+| `lib/features/library/data/game_repository.dart` | 3-Tier import pipeline (zero-copy, isolate copy, archive unpacker) and isolate BFS scanner. |
+| `lib/features/library/presentation/library_screen.dart` | Modular hub with swipeable PageView navigation connecting library, catalog, and inline settings. |
+| `lib/features/library/presentation/views/local_games_view.dart` | Grid view for installed local games with instant play and context actions. |
+| `lib/features/library/presentation/views/catalog_games_view.dart` | Remote catalog view with sort chips, search filter, and page bar. |
+| `lib/features/settings/presentation/settings_screen.dart` | Expressive M3E settings container with horizontal category chips and swipeable section pages. |
+| `lib/features/game/presentation/dialogs/game_dialogs_host.dart` | Central host dispatcher rendering engine dialogs via `QuestopiaDialog`. |
 
 ---
 
@@ -136,9 +127,10 @@ The first line (subject) must be concise and use standard conventional prefixes:
 
 #### Example:
 ```text
-Fix: Improve bottom sheet display on mobile screens
+Refactor: Unified context dialogs and morph-shaping animations
 
-- Fixed navigation bar overlap when opening menu sheets.
-- Extended sheet background to cover the bottom edge of the screen.
-- Adjusted system navigation bar contrast for better readability.
+- Replaced scattered raw dialogs with showQuestopiaDialog and QuestopiaDialog.
+- Added animated morph-shaping transition and backdrop blur to all dialogs.
+- Modularized game dialog components to keep all files under 300 lines.
+- Updated FLUTTER.md architecture documentation.
 ```

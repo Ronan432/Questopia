@@ -71,13 +71,15 @@ class GameRestartConfirmationDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const QuestopiaConfirmationDialog(
+    return QuestopiaConfirmationDialog(
       icon: Icons.restart_alt_rounded,
       isDestructive: true,
       title: 'Restart game?',
       message: 'Unsaved progress will be lost.',
       confirmLabel: 'Restart',
       cancelLabel: 'Cancel',
+      onConfirm: onConfirm,
+      onCancel: onCancel,
     );
   }
 }

@@ -18,28 +18,43 @@ Future<T?> showQuestopiaDialog<T>({
     barrierLabel: 'Dismiss',
     barrierColor: Colors.black.withValues(alpha: 0.60),
     useRootNavigator: useRootNavigator,
-    transitionDuration: const Duration(milliseconds: 260),
+    transitionDuration: const Duration(milliseconds: 280),
     pageBuilder: (dialogContext, animation, secondaryAnimation) {
       return capturedThemes.wrap(builder(dialogContext));
     },
     transitionBuilder: (dialogContext, animation, secondaryAnimation, child) {
       final curvedAnimation = CurvedAnimation(
         parent: animation,
-        curve: Curves.easeOutCubic,
+        curve: Curves.easeOutBack,
         reverseCurve: Curves.easeInCubic,
       );
 
+      final fadeAnimation = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      );
+
       return AnimatedBuilder(
-        animation: curvedAnimation,
+        animation: animation,
         builder: (context, _) {
-          final t = curvedAnimation.value;
-          final sigma = t * 10.0;
+          final t = curvedAnimation.value.clamp(0.0, 1.0);
+          final radius = lerpDouble(64.0, 20.0, t) ?? 20.0;
+          final scale = lerpDouble(0.72, 1.0, curvedAnimation.value) ?? 1.0;
+          final sigma = fadeAnimation.value * 12.0;
 
           return FadeTransition(
-            opacity: curvedAnimation,
+            opacity: fadeAnimation,
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-              child: child,
+              child: Center(
+                child: Transform.scale(
+                  scale: scale,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(radius),
+                    child: child,
+                  ),
+                ),
+              ),
             ),
           );
         },
@@ -56,7 +71,7 @@ class QuestopiaDialog extends StatelessWidget {
     this.title,
     required this.content,
     this.actions,
-    this.maxWidth = 340,
+    this.maxWidth = 320,
   });
 
   final Widget? icon;
@@ -68,101 +83,77 @@ class QuestopiaDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final anim = ModalRoute.of(context)?.animation;
 
-    Widget buildCard(double radius) {
-      return ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: maxWidth,
-          minWidth: 280,
-        ),
-        child: Material(
-          color: colors.surfaceContainer,
-          elevation: 6,
-          shadowColor: Colors.black.withValues(alpha: 0.35),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radius),
-            side: BorderSide(
-              color: colors.outlineVariant.withValues(alpha: 0.35),
-              width: 0.5,
-            ),
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: maxWidth,
+        minWidth: 260,
+      ),
+      child: Material(
+        color: colors.surfaceContainer,
+        elevation: 8,
+        shadowColor: Colors.black.withValues(alpha: 0.4),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: colors.outlineVariant.withValues(alpha: 0.35),
+            width: 0.5,
           ),
-          clipBehavior: Clip.antiAlias,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (icon != null) ...[
-                  Align(
-                    alignment: Alignment.center,
-                    child: IconTheme(
-                      data: IconThemeData(
-                        size: 26,
-                        color: colors.primary,
-                      ),
-                      child: icon!,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (icon != null) ...[
+                Align(
+                  alignment: Alignment.center,
+                  child: IconTheme(
+                    data: IconThemeData(
+                      size: 26,
+                      color: colors.primary,
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                if (title != null) ...[
-                  DefaultTextStyle(
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: colors.onSurface,
-                    ),
-                    textAlign:
-                        icon != null ? TextAlign.center : TextAlign.start,
-                    child: title!,
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: content,
+                    child: icon!,
                   ),
                 ),
-                if (actions != null && actions!.isNotEmpty) ...[
-                  const SizedBox(height: 18),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      for (var i = 0; i < actions!.length; i++) ...[
-                        if (i > 0) const SizedBox(width: 8),
-                        actions![i],
-                      ],
-                    ],
-                  ),
-                ],
+                const SizedBox(height: 12),
               ],
-            ),
+              if (title != null) ...[
+                DefaultTextStyle(
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
+                  ),
+                  textAlign:
+                      icon != null ? TextAlign.center : TextAlign.start,
+                  child: title!,
+                ),
+                const SizedBox(height: 12),
+              ],
+              Flexible(
+                child: SingleChildScrollView(
+                  child: content,
+                ),
+              ),
+              if (actions != null && actions!.isNotEmpty) ...[
+                const SizedBox(height: 18),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    for (var i = 0; i < actions!.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      actions![i],
+                    ],
+                  ],
+                ),
+              ],
+            ],
           ),
         ),
-      );
-    }
-
-    return Center(
-      child: anim != null
-          ? AnimatedBuilder(
-              animation: anim,
-              builder: (context, _) {
-                final curved = CurvedAnimation(
-                  parent: anim,
-                  curve: Curves.easeOutCubic,
-                  reverseCurve: Curves.easeInCubic,
-                );
-                final radius = lerpDouble(56.0, 24.0, curved.value) ?? 24.0;
-                final scale = lerpDouble(0.84, 1.0, curved.value) ?? 1.0;
-                return Transform.scale(
-                  scale: scale,
-                  child: buildCard(radius),
-                );
-              },
-            )
-          : buildCard(24.0),
+      ),
     );
   }
 }
@@ -177,6 +168,8 @@ class QuestopiaConfirmationDialog extends StatelessWidget {
     this.cancelLabel = 'Cancel',
     this.isDestructive = false,
     this.icon,
+    this.onConfirm,
+    this.onCancel,
   });
 
   final String title;
@@ -185,6 +178,8 @@ class QuestopiaConfirmationDialog extends StatelessWidget {
   final String cancelLabel;
   final bool isDestructive;
   final IconData? icon;
+  final VoidCallback? onConfirm;
+  final VoidCallback? onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -207,7 +202,13 @@ class QuestopiaConfirmationDialog extends StatelessWidget {
       ),
       actions: [
         OutlinedButton(
-          onPressed: () => Navigator.of(context).pop(false),
+          onPressed: () {
+            if (onCancel != null) {
+              onCancel!();
+            } else {
+              Navigator.of(context).pop(false);
+            }
+          },
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             minimumSize: const Size(64, 36),
@@ -218,7 +219,13 @@ class QuestopiaConfirmationDialog extends StatelessWidget {
           child: Text(cancelLabel),
         ),
         FilledButton(
-          onPressed: () => Navigator.of(context).pop(true),
+          onPressed: () {
+            if (onConfirm != null) {
+              onConfirm!();
+            } else {
+              Navigator.of(context).pop(true);
+            }
+          },
           style: FilledButton.styleFrom(
             backgroundColor: isDestructive ? colors.error : colors.primary,
             foregroundColor: isDestructive ? colors.onError : colors.onPrimary,

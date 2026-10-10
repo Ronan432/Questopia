@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../../game/presentation/game_screen.dart';
 import '../../../game/providers/game_engine_provider.dart';
@@ -24,6 +25,10 @@ class CatalogGamesView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(libraryProvider);
+    final isDesktop = !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.macOS ||
+            defaultTargetPlatform == TargetPlatform.linux);
 
     return Column(
       children: [
@@ -31,7 +36,9 @@ class CatalogGamesView extends ConsumerWidget {
         Expanded(
           child: _buildRemoteGrid(context, ref, games, state),
         ),
-        if (state.totalPages > 1) const CatalogPaginationBar(),
+        // Desktop has no bottom navigation bar, so pagination lives here.
+        if (isDesktop && state.totalPages > 1)
+          const CatalogPaginationBar(),
       ],
     );
   }
@@ -42,6 +49,8 @@ class CatalogGamesView extends ConsumerWidget {
     List<RemoteGame> games,
     LibraryState state,
   ) {
+    final l10n = AppLocalizations.of(context)!;
+
     if (state.isLoadingRemote && games.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -79,7 +88,7 @@ class CatalogGamesView extends ConsumerWidget {
                   .read(libraryProvider.notifier)
                   .refreshRemoteCatalog(force: true),
               icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Retry'),
+              label: Text(AppLocalizations.of(context)!.retry),
             ),
           ),
         ],
@@ -89,9 +98,11 @@ class CatalogGamesView extends ConsumerWidget {
     if (games.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(height: 120),
-          Center(child: Text('No catalog items available.')),
+        children: [
+          const SizedBox(height: 120),
+          Center(
+            child: Text(AppLocalizations.of(context)!.noCatalogItems),
+          ),
         ],
       );
     }
@@ -103,7 +114,7 @@ class CatalogGamesView extends ConsumerWidget {
             defaultTargetPlatform == TargetPlatform.macOS ||
             defaultTargetPlatform == TargetPlatform.linux);
     final isNavBarBlur = !isDesktop && ref.watch(settingsProvider).isNavBarBlur;
-    final hasPagination = state.totalPages > 1;
+final hasPagination = state.totalPages > 1;
     final bottomGridPadding = hasPagination
         ? 8.0
         : (isNavBarBlur ? 90.0 : (isCompact ? 20.0 : 24.0));
@@ -149,7 +160,9 @@ class CatalogGamesView extends ConsumerWidget {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            'Game file not found at ${matchingLocal!.gameFilePath}. Folder may have been moved or storage permission revoked.',
+                            l10n.gameFileNotFound(
+                              matchingLocal!.gameFilePath,
+                            ),
                           ),
                         ),
                       );
@@ -177,13 +190,14 @@ class CatalogGamesView extends ConsumerWidget {
     WidgetRef ref,
     RemoteGame remoteGame,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     try {
       final downloaded =
           await ref.read(libraryProvider.notifier).downloadGame(remoteGame);
       if (downloaded != null) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Downloaded ${remoteGame.displayName}')),
+          SnackBar(content: Text(l10n.downloadedGame(remoteGame.displayName))),
         );
       }
     } catch (error) {

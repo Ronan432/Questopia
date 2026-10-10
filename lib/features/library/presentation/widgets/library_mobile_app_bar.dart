@@ -128,7 +128,7 @@ class LibraryMobileAppBar extends ConsumerWidget implements PreferredSizeWidget 
                     const Spacer(),
                     if (selectedTab == 0) ...[
                       IconButton(
-                        tooltip: 'Import game',
+                        tooltip: l10n.importGameTooltip,
                         icon: const Icon(Icons.add_rounded),
                         onPressed: onImportGame,
                       ),

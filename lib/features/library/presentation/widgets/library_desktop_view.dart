@@ -111,7 +111,7 @@ class LibraryDesktopView extends ConsumerWidget {
                         ),
                         hintText: selectedTab == 0
                             ? l10n.search
-                            : 'Search online catalog...',
+                            : l10n.searchOnlineCatalog,
                         hintStyle: WidgetStatePropertyAll(
                           TextStyle(
                             color:

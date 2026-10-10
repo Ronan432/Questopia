@@ -48,6 +48,12 @@ endif()
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
+if (ANDROID AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+	# Drop debug information from release builds to keep the packaged library minimal.
+	# Declared before add_subdirectory so bundled oniguruma inherits the same setting.
+	add_compile_options(-g0)
+endif()
+
 option(USE_INSTALLED_ONIGURUMA "Use system-wide oniguruma library instead of bundling it" OFF)
 
 if (USE_INSTALLED_ONIGURUMA)
@@ -91,9 +97,6 @@ set(QSP_SOURCES
 	qsp/bindings/default/default_callbacks.c
 	qsp/bindings/default/default_control.c
 	qsp/bindings/default/qsp_default.h
-	qsp/bindings/java/java_callbacks.c
-	qsp/bindings/java/java_control.c
-	qsp/bindings/java/qsp_java.h
 	qsp/bindings/qsp.h
 	qsp/actions.c qsp/actions.h
 	qsp/callbacks.c qsp/callbacks.h
@@ -130,15 +133,6 @@ if (ANDROID)
 	target_link_libraries(qsp PRIVATE oniguruma::onig ${LOG_LIB})
 else()
 	target_link_libraries(qsp PRIVATE oniguruma::onig)
-endif()
-
-if (BUILD_JAVA)
-	target_compile_definitions(qsp PRIVATE _JAVA)
-	if (NOT ANDROID)
-		find_package(JNI)
-		target_include_directories(qsp PRIVATE ${JNI_INCLUDE_DIRS})
-		target_link_libraries(qsp PRIVATE ${JNI_LIBRARIES})
-	endif()
 endif()
 
 target_include_directories(qsp

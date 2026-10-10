@@ -23,7 +23,6 @@ android {
 
         externalNativeBuild {
             cmake {
-                arguments("-DBUILD_JAVA=0")
                 cFlags("-DANDROID", "-fshort-wchar")
                 cppFlags("-DANDROID", "-fshort-wchar")
             }

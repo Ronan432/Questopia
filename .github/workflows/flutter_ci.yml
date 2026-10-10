@@ -56,6 +56,9 @@ jobs:
       - name: Build Minified Release APKs (Split per ABI)
         run: flutter build apk --release --split-per-abi --tree-shake-icons
 
+      - name: Build Minified Universal APK (all ABIs)
+        run: flutter build apk --release --tree-shake-icons
+
       - name: Upload Android APKs
         uses: actions/upload-artifact@v4
         with:

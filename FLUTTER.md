@@ -62,7 +62,7 @@ Questopia-RE is a high-performance cross-platform interpreter and library client
 
 ### 3.5. Game Player, Media Pipeline, and Modal Dialogs (`GameScreen`)
 - **Native Video Decoding & Hardware Acceleration:** Powered by `video_player` (ExoPlayer on Android, Media Foundation on Windows) hardware decoders via `QspMedia` and `QspVideo`, replacing fragile webviews with smooth looping playback while keeping the native decoder payload out of the app bundle.
-- **Ogg Theora Fallback (`QspOgvVideo`):** The platform decoder cannot read Theora, so `.ogv` and `.ogg` files are routed to the bundled OGV.js WebAssembly decoder rendered in a hidden WebView. Every other container stays on the hardware decoder.
+- **Ogg Theora Fallback (`QspOgvVideo`):** The hardware decoder cannot read Theora, so `.ogv` and `.ogg` files are routed to the bundled OGV.js WebAssembly decoder. `OgvAssetServer` serves the decoder assets and the media file from `127.0.0.1` because the stream loader requires working byte range requests, which neither a bundled asset nor a data URI can provide. `OgvPlayerPage` renders the hidden player markup.
 - **High-Performance HTML Rendering (`QspHtmlView`):** Native flutter HTML parser rendering rich typography, custom styled interactive links, and embedded asset image/video elements.
 - **Unified Engine Dialog System (`GameDialogsHost`):** Message (`GameMessageDialog`), prompt input (`GameInputDialog`), interactive choice menus (`GameMenuDialog`), runtime error diagnostics (`GameErrorDialog`), image/video preview (`GameImagePreviewDialog`), and QSP console execution (`GameExecutorDialog`) all presented through `showQuestopiaDialog`.
 

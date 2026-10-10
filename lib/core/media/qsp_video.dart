@@ -1,7 +1,8 @@
 import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
+import 'package:video_player/video_player.dart';
 
 class QspVideo extends StatefulWidget {
   const QspVideo({
@@ -28,97 +29,115 @@ class QspVideo extends StatefulWidget {
 }
 
 class _QspVideoState extends State<QspVideo> {
-  late final Player _player = Player();
-  late final VideoController _controller = VideoController(_player);
-  StreamSubscription? _paramsSub;
-  double _aspectRatio = 16 / 9;
+  late VideoPlayerController _controller;
+  late Future<void> _initFuture;
+  bool _isReady = false;
+
+  VideoPlayerController _createController(String path) {
+    final lower = path.toLowerCase();
+    final isRemote =
+        lower.startsWith('http://') || lower.startsWith('https://');
+    return isRemote
+        ? VideoPlayerController.networkUrl(Uri.parse(path))
+        : VideoPlayerController.file(File(path));
+  }
 
   @override
   void initState() {
     super.initState();
-    _paramsSub = _player.stream.videoParams.listen((params) {
-      final w = params.w;
-      final h = params.h;
-      if (w != null && h != null && w > 0 && h > 0) {
-        final ratio = w / h;
-        if (mounted && (ratio - _aspectRatio).abs() > 0.01) {
-          setState(() {
-            _aspectRatio = ratio;
-          });
-        }
-      }
-    });
-    _initAndPlay();
+    _controller = _createController(widget.path);
+    _initFuture = _applyOptions();
   }
 
-  void _initAndPlay() {
-    _player.setPlaylistMode(
-      widget.loop ? PlaylistMode.loop : PlaylistMode.none,
-    );
-    if (widget.muted) {
-      _player.setVolume(0);
+  Future<void> _applyOptions() async {
+    await _controller.initialize();
+    await _controller.setLooping(widget.loop);
+    await _controller.setVolume(widget.muted ? 0 : 1);
+    if (!mounted) return;
+    setState(() => _isReady = true);
+    if (widget.autoplay) {
+      await _controller.play();
     }
-    _player.open(Media(widget.path), play: widget.autoplay);
   }
 
   @override
   void didUpdateWidget(covariant QspVideo oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.path != widget.path) {
-      _player.open(Media(widget.path), play: widget.autoplay);
+      _swapSource(widget.path);
     }
+  }
+
+  Future<void> _swapSource(String path) async {
+    final previous = _controller;
+    final next = _createController(path);
+    await previous.dispose();
+    if (!mounted) {
+      await next.dispose();
+      return;
+    }
+    setState(() {
+      _isReady = false;
+    });
+    _controller = next;
+    _initFuture = _applyOptions();
   }
 
   @override
   void dispose() {
-    _paramsSub?.cancel();
-    _player.dispose();
+    _controller.dispose();
     super.dispose();
+  }
+
+  double get _aspectRatio {
+    final ratio = _controller.value.aspectRatio;
+    if (ratio.isNaN || ratio <= 0) return 16 / 9;
+    return ratio;
   }
 
   @override
   Widget build(BuildContext context) {
-    Widget videoWidget = Video(
-      controller: _controller,
-      fit: widget.fit,
-      controls: NoVideoControls,
-      fill: Colors.transparent,
-      alignment: Alignment.center,
-    );
-
-    if (widget.width != null && widget.height != null) {
-      videoWidget = SizedBox(
-        width: widget.width,
-        height: widget.height,
-        child: videoWidget,
-      );
-    } else if (widget.width != null) {
-      videoWidget = SizedBox(
-        width: widget.width,
-        child: AspectRatio(
-          aspectRatio: _aspectRatio,
-          child: videoWidget,
-        ),
-      );
-    } else if (widget.height != null) {
-      videoWidget = SizedBox(
-        height: widget.height,
-        child: AspectRatio(
-          aspectRatio: _aspectRatio,
-          child: videoWidget,
-        ),
-      );
-    } else {
-      videoWidget = AspectRatio(
-        aspectRatio: _aspectRatio,
-        child: videoWidget,
-      );
-    }
-
-    return ExcludeSemantics(
-      child: Center(
-        child: videoWidget,
-      ),
+    return FutureBuilder<void>(
+      future: _initFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const SizedBox.shrink();
+        }
+        if (!_isReady || !_controller.value.isInitialized) {
+          return const SizedBox.shrink();
+        }
+        Widget video = VideoPlayer(_controller);
+        if (widget.fit != BoxFit.contain) {
+          video = FittedBox(
+            fit: widget.fit,
+            child: SizedBox(
+              width: _controller.value.size.width,
+              height: _controller.value.size.height,
+              child: video,
+            ),
+          );
+        }
+        if (widget.width != null && widget.height != null) {
+          video = SizedBox(
+            width: widget.width,
+            height: widget.height,
+            child: video,
+          );
+        } else if (widget.width != null) {
+          video = SizedBox(
+            width: widget.width,
+            child: AspectRatio(aspectRatio: _aspectRatio, child: video),
+          );
+        } else if (widget.height != null) {
+          video = SizedBox(
+            height: widget.height,
+            child: AspectRatio(aspectRatio: _aspectRatio, child: video),
+          );
+        } else {
+          video = AspectRatio(aspectRatio: _aspectRatio, child: video);
+        }
+        return ExcludeSemantics(child: Center(child: video));
+      },
     );
   }
 }

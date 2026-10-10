@@ -5,7 +5,7 @@ import '../../../../core/media/qsp_media.dart';
 import '../../../../core/media/qsp_path_resolver.dart';
 import '../../providers/game_engine_provider.dart';
 
-/// Embedded media viewer for game dialogs supporting images and media_kit videos.
+/// Embedded media viewer for game dialogs supporting images and videos.
 class GameMediaViewer extends ConsumerWidget {
   const GameMediaViewer({
     super.key,

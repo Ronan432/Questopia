@@ -243,88 +243,168 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           isDark ? Brightness.light : Brightness.dark,
     );
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: systemOverlay,
-      child: QuestopiaScaffold(
-        isAppBarVisible: _isHeaderVisible,
-        title: engineState.activeGame?.title ?? widget.title,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-          onPressed: () => Navigator.maybePop(context),
+    Future<bool> confirmExit() async {
+      final l10n = AppLocalizations.of(context)!;
+      final currentContext = context;
+      final confirmed = await showQuestopiaDialog<bool>(
+        context: currentContext,
+        builder: (ctx) => QuestopiaConfirmationDialog(
+          title: l10n.exitGameTitle,
+          message: l10n.exitGameMessage,
+          confirmLabel: l10n.close,
+          cancelLabel: l10n.cancel,
+          isDestructive: true,
+          icon: Icons.exit_to_app_rounded,
         ),
-        titleWidget: Text(engineState.activeGame?.title ?? widget.title),
-        actions: [
-          IconButton(
-            onPressed: _showOptionsMenu,
-            icon: const Icon(Icons.more_vert_rounded),
-            tooltip: AppLocalizations.of(context)!.gameOptionsTooltip,
+      );
+      if (!mounted) return false;
+      return confirmed == true;
+    }
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final exit = await confirmExit();
+        if (exit && context.mounted) {
+          Navigator.of(context).pop(result);
+        }
+      },
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: systemOverlay,
+        child: QuestopiaScaffold(
+          isAppBarVisible: _isHeaderVisible,
+          title: engineState.activeGame?.title ?? widget.title,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            onPressed: () async {
+              final exit = await confirmExit();
+              if (exit && context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
           ),
-        ],
-        body: NotificationListener<ScrollNotification>(
-          onNotification: (notification) {
-            _onScrollNotification(notification);
-            return false;
-          },
-          child: ExcludeSemantics(
-            child: SafeArea(
-            child: engineState.isLoading
-                ? const Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text('Loading game world...'),
-                      ],
-                    ),
-                  )
-                : IndexedStack(
-                    index: _activeTab,
-                    children: [
-                      // Tab 0: Story (Main Desc + Actions + Input)
-                      _buildStoryTab(
-                        context,
-                        mainHtml,
-                        engineState,
-                        engineNotifier,
-                        settings,
+          titleWidget: Text(engineState.activeGame?.title ?? widget.title),
+          actions: [
+            IconButton(
+              onPressed: _showOptionsMenu,
+              icon: const Icon(Icons.more_vert_rounded),
+              tooltip: AppLocalizations.of(context)!.gameOptionsTooltip,
+            ),
+          ],
+          body: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              _onScrollNotification(notification);
+              return false;
+            },
+            child: ExcludeSemantics(
+              child: SafeArea(
+                child: engineState.isLoading
+                    ? const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text('Loading game world...'),
+                          ],
+                        ),
+                      )
+                    : IndexedStack(
+                        index: _activeTab,
+                        children: [
+                          // Tab 0: Story (Main Desc + Actions + Input)
+                          _buildStoryTab(
+                            context,
+                            mainHtml,
+                            engineState,
+                            engineNotifier,
+                            settings,
+                          ),
+                          // Tab 1: Status / Vars
+                          _buildVarsTab(
+                            context,
+                            varsHtml,
+                            engineState,
+                            settings,
+                          ),
+                          // Tab 2: Inventory / Objects
+                          _buildObjectsTab(
+                            context,
+                            engineState,
+                            engineNotifier,
+                          ),
+                        ],
                       ),
-                      // Tab 1: Status / Vars
-                      _buildVarsTab(
-                        context,
-                        varsHtml,
-                        engineState,
-                        settings,
-                      ),
-                      // Tab 2: Inventory / Objects
-                      _buildObjectsTab(
-                        context,
-                        engineState,
-                        engineNotifier,
-                      ),
-                    ],
-                  ),
+              ),
             ),
           ),
-        ),
-      extendBody: settings.isNavBarBlur,
-      bottomNavigationBar: settings.isNavBarBlur
-          ? ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX:
-                      (settings.navBarBlurPercent.clamp(10.0, 100.0) / 100.0) *
-                          24.0,
-                  sigmaY:
-                      (settings.navBarBlurPercent.clamp(10.0, 100.0) / 100.0) *
-                          24.0,
-                ),
-                child: NavigationBar(
-                  backgroundColor: Theme.of(context)
-                      .colorScheme
-                      .surface
-                      .withValues(alpha: 0.70),
+          extendBody: settings.isNavBarBlur,
+          bottomNavigationBar: settings.isNavBarBlur
+              ? ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(
+                      sigmaX:
+                          (settings.navBarBlurPercent.clamp(10.0, 100.0) / 100.0) *
+                              24.0,
+                      sigmaY:
+                          (settings.navBarBlurPercent.clamp(10.0, 100.0) / 100.0) *
+                              24.0,
+                    ),
+                    child: NavigationBar(
+                      backgroundColor: Theme.of(context)
+                          .colorScheme
+                          .surface
+                          .withValues(alpha: 0.70),
+                      selectedIndex: _activeTab,
+                      onDestinationSelected: (index) {
+                        HapticFeedback.lightImpact();
+                        debugPrint('[GameScreen] Switching tab to $index');
+                        setState(() {
+                          _activeTab = index;
+                          _isHeaderVisible = true;
+                        });
+                      },
+                      destinations: [
+                        NavigationDestination(
+                          icon: Badge(
+                            isLabelVisible:
+                                engineState.gameState.isMainDescChanged
+                                    ? (_activeTab != 0)
+                                    : false,
+                            child: const Icon(Icons.article_outlined),
+                          ),
+                          selectedIcon: const Icon(Icons.article_rounded),
+                          label: 'Story',
+                        ),
+                        NavigationDestination(
+                          icon: Badge(
+                            isLabelVisible:
+                                engineState.gameState.isVarsDescChanged
+                                    ? (_activeTab != 1)
+                                    : false,
+                            child: const Icon(Icons.tune_rounded),
+                          ),
+                          selectedIcon: const Icon(Icons.tune_rounded),
+                          label: 'Status',
+                        ),
+                        NavigationDestination(
+                          icon: Badge(
+                            isLabelVisible:
+                                engineState.gameState.isObjectsChanged
+                                    ? (_activeTab != 2)
+                                    : false,
+                            child: const Icon(Icons.backpack_outlined),
+                          ),
+                          selectedIcon: const Icon(Icons.backpack_rounded),
+                          label: 'Inventory',
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : NavigationBar(
                   selectedIndex: _activeTab,
                   onDestinationSelected: (index) {
                     HapticFeedback.lightImpact();
@@ -337,10 +417,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                   destinations: [
                     NavigationDestination(
                       icon: Badge(
-                        isLabelVisible:
-                            engineState.gameState.isMainDescChanged
-                                ? (_activeTab != 0)
-                                : false,
+                        isLabelVisible: engineState.gameState.isMainDescChanged
+                            ? (_activeTab != 0)
+                            : false,
                         child: const Icon(Icons.article_outlined),
                       ),
                       selectedIcon: const Icon(Icons.article_rounded),
@@ -348,10 +427,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     ),
                     NavigationDestination(
                       icon: Badge(
-                        isLabelVisible:
-                            engineState.gameState.isVarsDescChanged
-                                ? (_activeTab != 1)
-                                : false,
+                        isLabelVisible: engineState.gameState.isVarsDescChanged
+                            ? (_activeTab != 1)
+                            : false,
                         child: const Icon(Icons.tune_rounded),
                       ),
                       selectedIcon: const Icon(Icons.tune_rounded),
@@ -359,10 +437,9 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     ),
                     NavigationDestination(
                       icon: Badge(
-                        isLabelVisible:
-                            engineState.gameState.isObjectsChanged
-                                ? (_activeTab != 2)
-                                : false,
+                        isLabelVisible: engineState.gameState.isObjectsChanged
+                            ? (_activeTab != 2)
+                            : false,
                         child: const Icon(Icons.backpack_outlined),
                       ),
                       selectedIcon: const Icon(Icons.backpack_rounded),
@@ -370,51 +447,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                     ),
                   ],
                 ),
-              ),
-            )
-          : NavigationBar(
-              selectedIndex: _activeTab,
-              onDestinationSelected: (index) {
-                HapticFeedback.lightImpact();
-                debugPrint('[GameScreen] Switching tab to $index');
-                setState(() {
-                  _activeTab = index;
-                  _isHeaderVisible = true;
-                });
-              },
-              destinations: [
-                NavigationDestination(
-                  icon: Badge(
-                    isLabelVisible: engineState.gameState.isMainDescChanged
-                        ? (_activeTab != 0)
-                        : false,
-                    child: const Icon(Icons.article_outlined),
-                  ),
-                  selectedIcon: const Icon(Icons.article_rounded),
-                  label: 'Story',
-                ),
-                NavigationDestination(
-                  icon: Badge(
-                    isLabelVisible: engineState.gameState.isVarsDescChanged
-                        ? (_activeTab != 1)
-                        : false,
-                    child: const Icon(Icons.tune_rounded),
-                  ),
-                  selectedIcon: const Icon(Icons.tune_rounded),
-                  label: 'Status',
-                ),
-                NavigationDestination(
-                  icon: Badge(
-                    isLabelVisible: engineState.gameState.isObjectsChanged
-                        ? (_activeTab != 2)
-                        : false,
-                    child: const Icon(Icons.backpack_outlined),
-                  ),
-                  selectedIcon: const Icon(Icons.backpack_rounded),
-                  label: 'Inventory',
-                ),
-              ],
-            ),
+        ),
       ),
     );
   }

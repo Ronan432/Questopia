@@ -100,28 +100,44 @@ class SettingsTiles {
         padding: const EdgeInsets.only(top: 2),
         child: Icon(icon, size: 24),
       ),
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 16),
-          ),
-          const SizedBox(height: 6),
-          SliderTheme(
-            data: SliderThemeData(
-              trackShape: const RoundedRectSliderTrackShape(),
-              overlayShape: SliderComponentShape.noOverlay,
-            ),
-            child: Slider(
-              value: value.clamp(min, max).toDouble(),
-              min: min,
-              max: max,
-              divisions: divisions,
-              onChanged: onChanged,
-            ),
-          ),
-        ],
+      title: Builder(
+        builder: (context) {
+          final colors = Theme.of(context).colorScheme;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+              SliderTheme(
+                data: SliderThemeData(
+                  trackHeight: 10.0,
+                  trackShape: const RoundedRectSliderTrackShape(),
+                  thumbShape: const RoundSliderThumbShape(
+                    enabledThumbRadius: 10.0,
+                    elevation: 3.0,
+                    pressedElevation: 6.0,
+                  ),
+                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 20.0),
+                  activeTrackColor: colors.primary,
+                  inactiveTrackColor: colors.surfaceContainerHighest,
+                  thumbColor: colors.primary,
+                  activeTickMarkColor: colors.onPrimary,
+                  inactiveTickMarkColor: colors.outline,
+                ),
+                child: Slider(
+                  value: value.clamp(min, max).toDouble(),
+                  min: min,
+                  max: max,
+                  divisions: divisions,
+                  onChanged: onChanged,
+                ),
+              ),
+            ],
+          );
+        },
       ),
       minVerticalPadding: 16,
     );

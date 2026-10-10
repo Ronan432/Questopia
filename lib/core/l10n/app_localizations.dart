@@ -901,6 +901,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Serif monospace'**
   String get fontSerifMonospace;
+
+  /// No description provided for @exitGameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit Game'**
+  String get exitGameTitle;
+
+  /// No description provided for @exitGameMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to exit the game? Any unsaved progress will be lost.'**
+  String get exitGameMessage;
+
+  /// No description provided for @deleteAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete All'**
+  String get deleteAll;
+
+  /// No description provided for @deleteAllGamesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete All Installed Games'**
+  String get deleteAllGamesTitle;
+
+  /// No description provided for @deleteAllGamesMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete all installed games from your library? This action cannot be undone.'**
+  String get deleteAllGamesMessage;
 }
 
 class _AppLocalizationsDelegate

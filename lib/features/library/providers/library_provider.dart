@@ -277,6 +277,14 @@ class LibraryNotifier extends StateNotifier<LibraryState> {
           .toList(),
     );
   }
+
+  Future<void> removeAllGames() async {
+    if (!mounted) return;
+    for (final game in List.of(state.localGames)) {
+      await _repository.deleteGame(game);
+    }
+    state = state.copyWith(localGames: []);
+  }
 }
 
 final gameRepositoryProvider = Provider((ref) => GameRepository());

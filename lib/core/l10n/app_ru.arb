@@ -176,5 +176,11 @@
   "fontBlack": "Жирный (Black)",
   "fontThin": "Тонкий (Thin)",
   "fontCasual": "Рукописный (Casual)",
-  "fontSerifMonospace": "Моноширинный с засечками"
+  "fontSerifMonospace": "Моноширинный с засечками",
+
+  "exitGameTitle": "Выход из игры",
+  "exitGameMessage": "Вы уверены, что хотите выйти из игры? Весь несохраненный прогресс будет потерян.",
+  "deleteAll": "Удалить все",
+  "deleteAllGamesTitle": "Удалить все установленные игры",
+  "deleteAllGamesMessage": "Вы уверены, что хотите удалить все установленные игры из библиотеки? Это действие необратимо."
 }

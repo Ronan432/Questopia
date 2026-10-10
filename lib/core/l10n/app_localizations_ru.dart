@@ -423,4 +423,21 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get fontSerifMonospace => 'Моноширинный с засечками';
+
+  @override
+  String get exitGameTitle => 'Выход из игры';
+
+  @override
+  String get exitGameMessage =>
+      'Вы уверены, что хотите выйти из игры? Весь несохраненный прогресс будет потерян.';
+
+  @override
+  String get deleteAll => 'Удалить все';
+
+  @override
+  String get deleteAllGamesTitle => 'Удалить все установленные игры';
+
+  @override
+  String get deleteAllGamesMessage =>
+      'Вы уверены, что хотите удалить все установленные игры из библиотеки? Это действие необратимо.';
 }

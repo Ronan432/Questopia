@@ -423,4 +423,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fontSerifMonospace => 'Serif monospace';
+
+  @override
+  String get exitGameTitle => 'Exit Game';
+
+  @override
+  String get exitGameMessage =>
+      'Are you sure you want to exit the game? Any unsaved progress will be lost.';
+
+  @override
+  String get deleteAll => 'Delete All';
+
+  @override
+  String get deleteAllGamesTitle => 'Delete All Installed Games';
+
+  @override
+  String get deleteAllGamesMessage =>
+      'Are you sure you want to delete all installed games from your library? This action cannot be undone.';
 }

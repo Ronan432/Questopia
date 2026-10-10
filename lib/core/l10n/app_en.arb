@@ -177,5 +177,11 @@
   "fontBlack": "Black",
   "fontThin": "Thin",
   "fontCasual": "Casual",
-  "fontSerifMonospace": "Serif monospace"
+  "fontSerifMonospace": "Serif monospace",
+
+  "exitGameTitle": "Exit Game",
+  "exitGameMessage": "Are you sure you want to exit the game? Any unsaved progress will be lost.",
+  "deleteAll": "Delete All",
+  "deleteAllGamesTitle": "Delete All Installed Games",
+  "deleteAllGamesMessage": "Are you sure you want to delete all installed games from your library? This action cannot be undone."
 }

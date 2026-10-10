@@ -24,6 +24,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get play => 'Play';
 
   @override
+  String get installedGames => 'Installed games';
+
+  @override
+  String get favoriteGames => 'Favorites';
+
+  @override
   String get saves => 'Saves';
 
   @override
@@ -127,10 +133,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fileOrArchiveHint => '.qsp, .gam, .zip, .rar, .aqsp, .7z';
 
   @override
-  String get gameFolderHint => 'Folder containing game files and assets';
+  String get selectFolder => 'Select folder';
 
   @override
-  String get selectFolder => 'Select folder';
+  String pageOf(int page, int total) {
+    return 'Page $page of $total';
+  }
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get prev => 'Prev';
+
+  @override
+  String get next => 'Next';
+
+  @override
+  String get noCatalogItems => 'No catalog items available.';
+
+  @override
+  String downloadedGame(String title) {
+    return 'Downloaded $title';
+  }
+
+  @override
+  String get searchOnlineCatalog => 'Search online catalog...';
+
+  @override
+  String get allLanguages => 'All Languages';
+
+  @override
+  String get featured => 'Featured';
+
+  @override
+  String get sortCatalog => 'Sort Catalog';
 
   @override
   String get selectGameFolder => 'Select Game Folder';

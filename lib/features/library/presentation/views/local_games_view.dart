@@ -12,6 +12,7 @@ import '../../../game/presentation/game_screen.dart';
 import '../../../game/providers/game_engine_provider.dart';
 import '../../data/local_game.dart';
 import '../../providers/library_provider.dart';
+import '../widgets/library_stats_row.dart';
 import '../widgets/local_game_card.dart';
 
 /// Local installed games view with empty placeholder and adaptive grid layout.
@@ -20,10 +21,18 @@ class LocalGamesView extends ConsumerWidget {
     super.key,
     required this.games,
     required this.onImportFolder,
+    required this.allGames,
+    required this.showFavoritesOnly,
+    required this.onToggleFavoritesOnly,
   });
 
   final List<LocalGame> games;
   final VoidCallback onImportFolder;
+
+  /// Unfiltered library, used for the summary counters.
+  final List<LocalGame> allGames;
+  final bool showFavoritesOnly;
+  final VoidCallback onToggleFavoritesOnly;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -66,57 +75,80 @@ class LocalGamesView extends ConsumerWidget {
             defaultTargetPlatform == TargetPlatform.linux);
     final isNavBarBlur = !isDesktop && ref.watch(settingsProvider).isNavBarBlur;
 
-    return GridView.builder(
+    final horizontalPadding = isCompact ? 12.0 : 20.0;
+
+    return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.fromLTRB(
-        isCompact ? 12 : 20,
-        4,
-        isCompact ? 12 : 20,
-        isNavBarBlur ? 90 : (isCompact ? 20 : 24),
-      ),
-      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: isCompact ? 200 : 320,
-        mainAxisExtent: isCompact ? 208 : 245,
-        crossAxisSpacing: isCompact ? 10 : 14,
-        mainAxisSpacing: isCompact ? 10 : 14,
-      ),
-      itemCount: games.length,
-      itemBuilder: (context, index) {
-        final game = games[index];
-        return LocalGameCard(
-          game: game,
-          isCompact: isCompact,
-          onPlay: () async {
-            final f = File(game.gameFilePath);
-            if (!await f.exists()) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      l10n.gameFileNotFound(game.gameFilePath),
-                    ),
-                  ),
-                );
-              }
-              return;
-            }
-            ref.read(gameEngineProvider.notifier).loadGame(game);
-            if (context.mounted) {
-              Navigator.of(context, rootNavigator: true).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => GameScreen(title: game.title),
-                ),
+      slivers: [
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            10,
+            horizontalPadding,
+            12,
+          ),
+          sliver: SliverToBoxAdapter(
+            child: LibraryStatsRow(
+              games: allGames,
+              showFavoritesOnly: showFavoritesOnly,
+              onToggleFavoritesOnly: onToggleFavoritesOnly,
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            0,
+            horizontalPadding,
+            isNavBarBlur ? 90 : (isCompact ? 20 : 24),
+          ),
+          sliver: SliverGrid.builder(
+            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: isCompact ? 200 : 320,
+              mainAxisExtent: isCompact ? 208 : 245,
+              crossAxisSpacing: isCompact ? 10 : 14,
+              mainAxisSpacing: isCompact ? 10 : 14,
+            ),
+            itemCount: games.length,
+            itemBuilder: (context, index) {
+              final game = games[index];
+              return LocalGameCard(
+                game: game,
+                isCompact: isCompact,
+                onPlay: () async {
+                  final f = File(game.gameFilePath);
+                  if (!await f.exists()) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            l10n.gameFileNotFound(game.gameFilePath),
+                          ),
+                        ),
+                      );
+                    }
+                    return;
+                  }
+                  ref.read(gameEngineProvider.notifier).loadGame(game);
+                  if (context.mounted) {
+                    Navigator.of(context, rootNavigator: true).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => GameScreen(title: game.title),
+                      ),
+                    );
+                  }
+                },
+                onRemove: () {
+                  ref.read(libraryProvider.notifier).removeGameFromLibrary(game);
+                },
+                onToggleFavorite: () {
+                  ref.read(libraryProvider.notifier).toggleFavorite(game);
+                },
               );
-            }
-          },
-          onRemove: () {
-            ref.read(libraryProvider.notifier).removeGameFromLibrary(game);
-          },
-          onToggleFavorite: () {
-            ref.read(libraryProvider.notifier).toggleFavorite(game);
-          },
-        );
-      },
+            },
+          ),
+        ),
+      ],
     );
   }
 }

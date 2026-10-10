@@ -128,6 +128,18 @@ abstract class AppLocalizations {
   /// **'Play'**
   String get play;
 
+  /// No description provided for @installedGames.
+  ///
+  /// In en, this message translates to:
+  /// **'Installed games'**
+  String get installedGames;
+
+  /// No description provided for @favoriteGames.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorites'**
+  String get favoriteGames;
+
   /// No description provided for @saves.
   ///
   /// In en, this message translates to:
@@ -332,17 +344,71 @@ abstract class AppLocalizations {
   /// **'.qsp, .gam, .zip, .rar, .aqsp, .7z'**
   String get fileOrArchiveHint;
 
-  /// No description provided for @gameFolderHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Folder containing game files and assets'**
-  String get gameFolderHint;
-
   /// No description provided for @selectFolder.
   ///
   /// In en, this message translates to:
   /// **'Select folder'**
   String get selectFolder;
+
+  /// No description provided for @pageOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Page {page} of {total}'**
+  String pageOf(int page, int total);
+
+  /// No description provided for @retry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retry;
+
+  /// No description provided for @prev.
+  ///
+  /// In en, this message translates to:
+  /// **'Prev'**
+  String get prev;
+
+  /// No description provided for @next.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get next;
+
+  /// No description provided for @noCatalogItems.
+  ///
+  /// In en, this message translates to:
+  /// **'No catalog items available.'**
+  String get noCatalogItems;
+
+  /// No description provided for @downloadedGame.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded {title}'**
+  String downloadedGame(String title);
+
+  /// No description provided for @searchOnlineCatalog.
+  ///
+  /// In en, this message translates to:
+  /// **'Search online catalog...'**
+  String get searchOnlineCatalog;
+
+  /// No description provided for @allLanguages.
+  ///
+  /// In en, this message translates to:
+  /// **'All Languages'**
+  String get allLanguages;
+
+  /// No description provided for @featured.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured'**
+  String get featured;
+
+  /// No description provided for @sortCatalog.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort Catalog'**
+  String get sortCatalog;
 
   /// No description provided for @selectGameFolder.
   ///

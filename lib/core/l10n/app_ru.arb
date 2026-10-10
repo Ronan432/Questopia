@@ -4,6 +4,8 @@
   "catalog": "Каталог",
   "settings": "Настройки",
   "play": "Играть",
+  "installedGames": "Установленные игры",
+  "favoriteGames": "Избранное",
   "saves": "Сохранения",
   "cheatModes": "Режимы читов",
   "search": "Поиск игр...",
@@ -39,8 +41,34 @@
   "emptyLibraryHint": "В библиотеке пока нет игр.\nСкачайте из каталога или импортируйте папку.",
   "fileOrArchive": "Файл или архив",
   "fileOrArchiveHint": ".qsp, .gam, .zip, .rar, .aqsp, .7z",
-  "gameFolderHint": "Папка с файлами игры и ресурсами",
   "selectFolder": "Выберите папку",
+  "pageOf": "Страница {page} из {total}",
+  "@pageOf": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "retry": "Повторить",
+  "prev": "Назад",
+  "next": "Вперёд",
+  "noCatalogItems": "В каталоге пока ничего нет.",
+  "downloadedGame": "Загружено: {title}",
+  "@downloadedGame": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "searchOnlineCatalog": "Поиск в онлайн каталоге...",
+  "allLanguages": "Все языки",
+  "featured": "Рекомендуемые",
+  "sortCatalog": "Сортировка каталога",
   "selectGameFolder": "Выберите папку с игрой",
   "selectGameFileOrArchive": "Выберите файл или архив игры",
   "unsupportedGameFormat": "Выбранный файл не поддерживается (.{ext}). Выберите файл .qsp, .gam или архив.",

@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_3_expressive/material_3_expressive.dart';
 
 import '../../../core/helpers/path_picker_helper.dart';
+import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/theme/questopia_theme.dart';
+import '../../../core/widgets/questopia_frosted_overlay.dart';
 import '../../../core/widgets/questopia_scaffold.dart';
 import '../../../core/widgets/window_title_bar.dart';
 import '../../settings/presentation/settings_screen.dart';
@@ -14,6 +16,7 @@ import '../providers/library_provider.dart';
 import 'helpers/crash_dialog_helper.dart';
 import 'views/catalog_games_view.dart';
 import 'views/local_games_view.dart';
+import 'widgets/catalog_pagination_bar.dart';
 import 'widgets/library_desktop_view.dart';
 import 'widgets/library_mobile_app_bar.dart';
 import 'widgets/library_mobile_bottom_bar.dart';
@@ -151,6 +154,11 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           return LocalGamesView(
             games: filteredLocalGames,
             onImportFolder: _importGameFolder,
+            allGames: state.localGames,
+            showFavoritesOnly: _showFavoritesOnly,
+            onToggleFavoritesOnly: () => setState(
+              () => _showFavoritesOnly = !_showFavoritesOnly,
+            ),
           );
         case 1:
           return CatalogGamesView(games: filteredRemoteGames);
@@ -266,9 +274,19 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           extendBody: !isDesktop && ref.watch(settingsProvider).isNavBarBlur,
           bottomNavigationBar: isDesktop
               ? null
-              : LibraryMobileBottomBar(
-                  selectedTab: _selectedTab,
-                  onTabSelected: _onTabChanged,
+              : QuestopiaFrostedOverlay(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_selectedTab == 1 && state.totalPages > 1)
+                        const CatalogPaginationBar(isInsideOverlay: true),
+                      LibraryMobileBottomBar(
+                        selectedTab: _selectedTab,
+                        onTabSelected: _onTabChanged,
+                        isInsideOverlay: true,
+                      ),
+                    ],
+                  ),
                 ),
         ),
       ),

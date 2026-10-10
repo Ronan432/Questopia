@@ -4,6 +4,8 @@
   "catalog": "Catalog",
   "settings": "Settings",
   "play": "Play",
+  "installedGames": "Installed games",
+  "favoriteGames": "Favorites",
   "saves": "Saves",
   "cheatModes": "Cheat modes",
   "search": "Search games...",
@@ -39,8 +41,34 @@
   "emptyLibraryHint": "No games in your library yet.\nDownload from Catalog or import a folder.",
   "fileOrArchive": "File or Archive",
   "fileOrArchiveHint": ".qsp, .gam, .zip, .rar, .aqsp, .7z",
-  "gameFolderHint": "Folder containing game files and assets",
   "selectFolder": "Select folder",
+  "pageOf": "Page {page} of {total}",
+  "@pageOf": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "retry": "Retry",
+  "prev": "Prev",
+  "next": "Next",
+  "noCatalogItems": "No catalog items available.",
+  "downloadedGame": "Downloaded {title}",
+  "@downloadedGame": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "searchOnlineCatalog": "Search online catalog...",
+  "allLanguages": "All Languages",
+  "featured": "Featured",
+  "sortCatalog": "Sort Catalog",
   "selectGameFolder": "Select Game Folder",
   "selectGameFileOrArchive": "Select Game File or Archive",
   "unsupportedGameFormat": "Selected file is not a supported game format (.{ext}). Please select a .qsp, .gam, or archive file.",

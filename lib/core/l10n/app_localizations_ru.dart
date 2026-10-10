@@ -24,6 +24,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get play => 'Играть';
 
   @override
+  String get installedGames => 'Установленные игры';
+
+  @override
+  String get favoriteGames => 'Избранное';
+
+  @override
   String get saves => 'Сохранения';
 
   @override
@@ -127,10 +133,41 @@ class AppLocalizationsRu extends AppLocalizations {
   String get fileOrArchiveHint => '.qsp, .gam, .zip, .rar, .aqsp, .7z';
 
   @override
-  String get gameFolderHint => 'Папка с файлами игры и ресурсами';
+  String get selectFolder => 'Выберите папку';
 
   @override
-  String get selectFolder => 'Выберите папку';
+  String pageOf(int page, int total) {
+    return 'Страница $page из $total';
+  }
+
+  @override
+  String get retry => 'Повторить';
+
+  @override
+  String get prev => 'Назад';
+
+  @override
+  String get next => 'Вперёд';
+
+  @override
+  String get noCatalogItems => 'В каталоге пока ничего нет.';
+
+  @override
+  String downloadedGame(String title) {
+    return 'Загружено: $title';
+  }
+
+  @override
+  String get searchOnlineCatalog => 'Поиск в онлайн каталоге...';
+
+  @override
+  String get allLanguages => 'Все языки';
+
+  @override
+  String get featured => 'Рекомендуемые';
+
+  @override
+  String get sortCatalog => 'Сортировка каталога';
 
   @override
   String get selectGameFolder => 'Выберите папку с игрой';

@@ -5,6 +5,7 @@
 > **Branch:** `master`  
 > **`flutter analyze`:** CLEAN (0 issues)  
 > **Cleanup procedure:** [CLEANUP.md](CLEANUP.md) — runs **only on explicit user request**  
+> **AI agent behavior rules:** Section 7 — **mandatory, read before every task**
 
 ---
 
@@ -36,6 +37,7 @@ Questopia-RE is a high-performance cross-platform interpreter and library client
 10. **STANDARDIZED COMMIT FORMAT AND USER-FRIENDLY DESCRIPTIONS:** Commit subject lines must strictly adhere to standardized conventional prefix syntax (e.g. `Feat: <reason>`, `Fix: <reason>`, `Ci: <reason>`). Never put multi-line descriptions or markdown headers in commit titles. Commit descriptions/bodies must be written in plain, easily understandable user-facing English explaining what changed and why.
 11. **BAN ON `&` SYMBOL:** The ampersand character (`&`) is strictly forbidden across all user-facing UI strings, headers, button labels, documentation, and commit messages. Always use the full word "and" or "ve".
 12. **ON-DEMAND CLEANUP ONLY:** Code cleanup, dead code removal, and refactoring must be performed **only when the user explicitly requests it**. A cleanup is never started on initiative, never bundled into a feature change, and never committed without a separate request. Every removal must be proven by a zero reference count first, and no cleanup may alter runtime behaviour. The full procedure lives in [CLEANUP.md](CLEANUP.md).
+13. **AI AGENT BEHAVIOR PROTOCOL:** Every AI agent working in this repository must follow Section 7 in full. Section 7 overrides any default habit of the agent. A violation of Section 7 counts as a failed task even if the code compiles.
 
 > ⚠️ **Do not begin a cleanup pass unless the user asks for one.** If a cleanup is not requested, work only on the task at hand and report findings instead of acting on them.
 
@@ -141,3 +143,69 @@ Refactor: Unified context dialogs and morph-shaping animations
 - Modularized game dialog components to keep all files under 300 lines.
 - Updated FLUTTER.md architecture documentation.
 ```
+
+---
+
+## 7. AI Agent Behavior Protocol (MANDATORY)
+
+This section exists because agents repeatedly ignored explicit prohibitions, repeated earlier work, and produced duplicate designs. Every rule below is binding. When this section conflicts with an agent's default habits, this section wins.
+
+### 7.1. Instruction Obedience
+
+1. **Prohibitions are permanent for the whole session.** When the user says "do not do X", X stays forbidden for every later step, file, and screen until the user explicitly lifts it. A prohibition is never forgotten, never reinterpreted, and never worked around with a "similar" approach.
+2. **Do exactly what was asked, nothing more.** No extra features, no extra restyling, no unrequested renames, no bonus refactors, no "while I was here" edits. If something else looks wrong, report it in one sentence and wait.
+3. **The latest user message wins.** If a new instruction conflicts with an older one, follow the new one. If it also conflicts with a rule in this file, ask one short question before acting.
+4. **Read the whole request before acting.** Every sentence of the user message is a requirement. Before finishing, re-read the message and confirm each requirement is satisfied.
+5. **No interpretation upgrades.** Do not replace the requested solution with a "better" one. If the user describes a specific design, behavior, or approach, implement that exact thing.
+6. **If the user says "do not write code", do not write code.** Answer only what was asked and wait for the next instruction.
+
+### 7.2. No Duplicate Work and No Duplicate Designs
+
+1. **One request produces exactly one result.** Never output two variants, alternatives, "Option A / Option B", or two versions of the same screen, widget, dialog, or layout.
+2. **Search before creating.** Before adding any widget, screen, dialog, sheet, helper, provider, or ARB key, search the codebase for an existing implementation by name and by purpose. If one exists, reuse or extend it. Never create a second implementation of something that already exists.
+3. **Never redo finished work.** If a change was already applied in this session or exists in git history, do not apply it again, do not rewrite it, and do not present it again as new. Check `git diff` and `git log` when unsure.
+4. **Never repeat earlier output.** Do not re-print code, explanations, or summaries that were already given. Reference them in one short line instead.
+5. **Never restart a design from scratch** unless the user explicitly says to. Fix the existing design in place.
+6. **If the same fix fails twice, stop.** Do not try a third different design. Report what was tried, what failed, and the suspected cause, then wait for the user.
+
+### 7.3. Minimal Surgical Changes
+
+1. **Touch only what the task requires.** Never restructure, reformat, reorder, or rename working code when only a targeted fix is requested.
+2. **Do not modify files outside the task scope.** If a fix needs a change in another file, state which file and why before changing it.
+3. **Do not revert or overwrite manual user edits.** Treat the current working tree as the source of truth. Re-read a file immediately before editing it.
+4. **Preserve existing behavior.** A fix for one problem must not change unrelated runtime behavior, spacing, colors, animations, or settings.
+5. **Respect Section 2 on every change:** English-only comments, zero hardcoded strings (ARB keys in both `app_en.arb` and `app_ru.arb`), files under 300 lines, no `&` symbol, no `flutter test`, no unrequested cleanup.
+
+### 7.4. Working Procedure for Every Task
+
+1. **Read** the relevant files and this document first.
+2. **Search** for existing implementations (Section 7.2, rule 2).
+3. **State the plan** in at most five short lines: which files change and what changes. Wait for approval only when the task is ambiguous or touches many files.
+4. **Apply the change** surgically (Section 7.3).
+5. **Run `flutter analyze`** and fix every issue the change introduced. Never run `flutter test`.
+6. **Verify against the request** by re-reading the user message and checking every requirement.
+7. **Report briefly:** list changed files and one line per change. No long recaps, no repeated explanations, no marketing language.
+
+### 7.5. Communication Rules
+
+1. **Reply in the language the user writes in.** The user writes in Turkish. Code, comments, identifiers, ARB source strings, and commit messages stay in English as defined in Section 2 and Section 6.
+2. **Be short and direct.** No apologies, no filler, no restating the request.
+3. **Ask at most one question** when blocked, and only when the answer cannot be found in the code or this document.
+4. **Be honest about failures.** If something was not done, could not be verified, or is uncertain, say so plainly. Never claim a task is complete when part of it is missing.
+5. **Do not argue with a prohibition.** If the user forbids something, do not explain why it would have been better.
+
+### 7.6. User Prohibition Ledger
+
+Standing prohibitions recorded here apply to every future session. Agents must read this ledger before starting a task and must append a new row whenever the user says "never", "do not", or "stop doing" about something that is not already listed.
+
+| No | Prohibition | Applies to |
+| :--- | :--- | :--- |
+| P1 | Never run `flutter test`. | All tasks |
+| P2 | Never start a cleanup or refactor pass without an explicit request. | All tasks |
+| P3 | Never create two variants or duplicate designs for one request. | All UI tasks |
+| P4 | Never redo or re-apply work that is already finished. | All tasks |
+| P5 | Never add features, restyling, or edits that were not requested. | All tasks |
+| P6 | Never use the ampersand character in UI strings, docs, or commits. | All text |
+| P7 | Never revert to or repeat a rejected design variation when a fix fails. | All UI tasks |
+
+> New rows go below P6. Never delete or weaken an existing row unless the user explicitly asks.

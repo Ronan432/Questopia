@@ -4,6 +4,7 @@
 > **Target Framework:** Flutter 3.44.6 / Dart 3.12.2  
 > **Branch:** `master`  
 > **`flutter analyze`:** CLEAN (0 issues)  
+> **Cleanup procedure:** [CLEANUP.md](CLEANUP.md) — runs **only on explicit user request**  
 
 ---
 
@@ -34,6 +35,9 @@ Questopia-RE is a high-performance cross-platform interpreter and library client
 9. **EFFECTIVE SETTINGS LINKAGE:** Every setting field in `SettingsState` must have an active consumer and observable effect in the UI or runtime engine (blur, haptics, action height ratio, immersive mode, square posters, font family, etc.).
 10. **STANDARDIZED COMMIT FORMAT AND USER-FRIENDLY DESCRIPTIONS:** Commit subject lines must strictly adhere to standardized conventional prefix syntax (e.g. `Feat: <reason>`, `Fix: <reason>`, `Ci: <reason>`). Never put multi-line descriptions or markdown headers in commit titles. Commit descriptions/bodies must be written in plain, easily understandable user-facing English explaining what changed and why.
 11. **BAN ON `&` SYMBOL:** The ampersand character (`&`) is strictly forbidden across all user-facing UI strings, headers, button labels, documentation, and commit messages. Always use the full word "and" or "ve".
+12. **ON-DEMAND CLEANUP ONLY:** Code cleanup, dead code removal, and refactoring must be performed **only when the user explicitly requests it**. A cleanup is never started on initiative, never bundled into a feature change, and never committed without a separate request. Every removal must be proven by a zero reference count first, and no cleanup may alter runtime behaviour. The full procedure lives in [CLEANUP.md](CLEANUP.md).
+
+> ⚠️ **Do not begin a cleanup pass unless the user asks for one.** If a cleanup is not requested, work only on the task at hand and report findings instead of acting on them.
 
 ---
 

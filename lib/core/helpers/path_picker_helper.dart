@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../l10n/app_localizations.dart';
 import '../theme/questopia_theme.dart';
 import 'sheet_helper.dart';
 
@@ -54,13 +55,14 @@ class PathPickerHelper {
 
   /// Opens the native file picker to select a game file or archive (.qsp, .gam, .zip, .rar, .aqsp, .7z).
   static Future<String?> pickGameFile(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     debugPrint('[QUESTOPIA_IMPORT] [PICKER] pickGameFile called');
     await ensureStoragePermissions();
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.any,
         allowMultiple: false,
-        dialogTitle: 'Select Game File or Archive',
+        dialogTitle: l10n.selectGameFileOrArchive,
       );
 
       if (result == null || result.files.isEmpty) {
@@ -99,9 +101,7 @@ class PathPickerHelper {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(
-                  'Selected file is not a supported game format (.$ext). Please select a .qsp, .gam, or archive file.',
-                ),
+                content: Text(l10n.unsupportedGameFormat(ext)),
               ),
             );
           }
@@ -117,15 +117,16 @@ class PathPickerHelper {
   static Future<String?> pickDirectory(
     BuildContext context, {
     String currentPath = '',
-    String title = 'Select folder',
+    String? title,
   }) async {
+    final l10n = AppLocalizations.of(context)!;
     debugPrint(
-        '[QUESTOPIA_IMPORT] [PICKER] pickDirectory called (currentPath: "$currentPath", title: "$title")');
+        '[QUESTOPIA_IMPORT] [PICKER] pickDirectory called (currentPath: "$currentPath")');
     await ensureStoragePermissions();
 
     try {
       final selectedPath = await FilePicker.platform.getDirectoryPath(
-        dialogTitle: title,
+        dialogTitle: title ?? l10n.selectFolder,
         initialDirectory: currentPath.isNotEmpty ? currentPath : null,
       );
 
@@ -145,6 +146,7 @@ class PathPickerHelper {
   /// the user to select between importing a game file/archive or selecting an extracted game folder.
   static Future<String?> pickGame(BuildContext context) async {
     final colors = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     final option = await showQuestopiaSheet<int>(
       context: context,
@@ -162,7 +164,7 @@ class PathPickerHelper {
                 Padding(
                   padding: const EdgeInsets.only(left: 8, bottom: 12),
                   child: Text(
-                    'Import Game',
+                    l10n.importGame,
                     style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colors.primary,
@@ -173,18 +175,16 @@ class PathPickerHelper {
                   children: [
                     SegmentedListTile(
                       leading: const Icon(Icons.insert_drive_file_outlined),
-                      title: const Text('File or Archive'),
-                      subtitle:
-                          const Text('.qsp, .gam, .zip, .rar, .aqsp, .7z'),
+                      title: Text(l10n.fileOrArchive),
+                      subtitle: Text(l10n.fileOrArchiveHint),
                       trailing: const Icon(Icons.chevron_right),
                       minVerticalPadding: 12,
                       onTap: () => Navigator.pop(ctx, 1),
                     ),
                     SegmentedListTile(
                       leading: const Icon(Icons.folder_open_outlined),
-                      title: const Text('Game Folder'),
-                      subtitle:
-                          const Text('Folder containing game files and assets'),
+                      title: Text(l10n.gameFolder),
+                      subtitle: Text(l10n.gameFolderHint),
                       trailing: const Icon(Icons.chevron_right),
                       minVerticalPadding: 12,
                       onTap: () => Navigator.pop(ctx, 2),
@@ -198,7 +198,7 @@ class PathPickerHelper {
                   child: M3EButton.icon(
                     onPressed: () => Navigator.pop(ctx, 0),
                     icon: const Icon(Icons.close_rounded, size: 20),
-                    label: const Text('Cancel'),
+                    label: Text(l10n.cancel),
                     style: M3EButtonStyle.outlined,
                     size: M3EButtonSize.lg,
                     shape: M3EButtonShape.round,
@@ -216,7 +216,7 @@ class PathPickerHelper {
     if (option == 1) {
       return pickGameFile(context);
     } else if (option == 2) {
-      return pickDirectory(context, title: 'Select Game Folder');
+      return pickDirectory(context, title: l10n.selectGameFolder);
     }
 
     return null;

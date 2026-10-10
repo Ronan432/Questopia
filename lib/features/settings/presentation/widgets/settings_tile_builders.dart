@@ -3,28 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:material_segmented_list/material_segmented_list.dart';
 
-/// Section header item for settings lists.
-class SettingsSectionHeader extends StatelessWidget {
-  const SettingsSectionHeader({super.key, required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 20, 4, 8),
-      child: Text(
-        title,
-        style: Theme.of(context)
-            .textTheme
-            .titleSmall
-            ?.copyWith(color: scheme.primary, fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-}
-
 /// Helper functions returning [SegmentedListTile] for settings lists.
 class SettingsTiles {
   const SettingsTiles._();

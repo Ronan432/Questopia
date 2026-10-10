@@ -82,21 +82,22 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   }
 
   Future<void> _importGameFolder() async {
-    final path = await PathPickerHelper.pickGameFile(context);
+    final path = await PathPickerHelper.pickGame(context);
     if (!mounted || path == null || path.isEmpty) return;
 
+    final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     try {
       final game =
           await ref.read(libraryProvider.notifier).importGameFolder(path);
       if (game != null) {
         messenger.showSnackBar(
-          SnackBar(content: Text('Imported ${game.title}')),
+          SnackBar(content: Text(l10n.importedGame(game.title))),
         );
       }
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Import failed: $e')),
+        SnackBar(content: Text(l10n.importFailed(e.toString()))),
       );
     }
   }

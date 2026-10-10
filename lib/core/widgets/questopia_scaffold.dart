@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 
 import 'window_title_bar.dart';
 
-class QuestopiaScaffold extends StatelessWidget {
+/// Scaffold with a fully collapsible header bar that animates its own height
+/// away so no empty background strip is left behind.
+class QuestopiaScaffold extends StatefulWidget {
   const QuestopiaScaffold({
     super.key,
     required this.title,
@@ -40,60 +42,101 @@ class QuestopiaScaffold extends StatelessWidget {
   final bool isAppBarVisible;
 
   @override
+  State<QuestopiaScaffold> createState() => _QuestopiaScaffoldState();
+}
+
+class _QuestopiaScaffoldState extends State<QuestopiaScaffold>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _headerController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 240),
+    value: widget.isAppBarVisible ? 1 : 0,
+  );
+
+  @override
+  void didUpdateWidget(covariant QuestopiaScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isAppBarVisible == oldWidget.isAppBarVisible) return;
+    if (widget.isAppBarVisible) {
+      _headerController.forward();
+    } else {
+      _headerController.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _headerController.dispose();
+    super.dispose();
+  }
+
+  bool _isDesktopPlatform() {
+    if (kIsWeb) return false;
+    return defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.linux;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    var isDesktop = false;
-    if (!kIsWeb) {
-      if (defaultTargetPlatform == TargetPlatform.windows) isDesktop = true;
-      if (defaultTargetPlatform == TargetPlatform.macOS) isDesktop = true;
-      if (defaultTargetPlatform == TargetPlatform.linux) isDesktop = true;
-    }
-    final showCustomTitleBar = isDesktop;
+    final showCustomTitleBar = _isDesktopPlatform();
+    final maxHeight = showCustomTitleBar ? 40.0 : kToolbarHeight;
 
-    final targetHeight = showCustomTitleBar ? 40.0 : kToolbarHeight;
+    return AnimatedBuilder(
+      animation: _headerController,
+      builder: (context, _) {
+        final t = Curves.easeOutCubic.transform(_headerController.value);
+        final collapsedHeight = maxHeight * t;
 
-    PreferredSizeWidget? resolvedAppBar;
-    if (customAppBar != null) {
-      if (!showCustomTitleBar) {
-        resolvedAppBar = customAppBar;
-      }
-    }
+        final bar = showCustomTitleBar
+            ? WindowTitleBar(
+                title: widget.title,
+                leading: widget.leading,
+                titleWidget: widget.titleWidget,
+                actions: widget.actions,
+              )
+            : AppBar(
+                leading: widget.leading,
+                title: widget.titleWidget ?? Text(widget.title),
+                actions: widget.actions,
+                scrolledUnderElevation: 0,
+                surfaceTintColor: Colors.transparent,
+                backgroundColor: Theme.of(context).colorScheme.surface,
+              );
 
-    resolvedAppBar ??= PreferredSize(
-      preferredSize: Size.fromHeight(targetHeight),
-      child: AnimatedSlide(
-        offset: isAppBarVisible ? Offset.zero : const Offset(0, -1),
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        child: AnimatedOpacity(
-          opacity: isAppBarVisible ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 180),
-          child: IgnorePointer(
-            ignoring: !isAppBarVisible,
-            child: showCustomTitleBar
-                ? WindowTitleBar(
-                    title: title,
-                    leading: leading,
-                    titleWidget: titleWidget,
-                    actions: actions,
-                  )
-                : AppBar(
-                    leading: leading,
-                    title: titleWidget ?? Text(title),
-                    actions: actions,
-                    scrolledUnderElevation: 0,
-                    surfaceTintColor: Colors.transparent,
-                    backgroundColor: Theme.of(context).colorScheme.surface,
+        PreferredSizeWidget? appBar;
+        if (widget.customAppBar != null && !showCustomTitleBar) {
+          appBar = widget.customAppBar;
+        } else {
+          appBar = PreferredSize(
+            preferredSize: Size.fromHeight(collapsedHeight),
+            child: ClipRect(
+              child: OverflowBox(
+                alignment: Alignment.topCenter,
+                minHeight: maxHeight,
+                maxHeight: maxHeight,
+                child: Transform.translate(
+                  offset: Offset(0, collapsedHeight - maxHeight),
+                  child: Opacity(
+                    opacity: t,
+                    child: IgnorePointer(
+                      ignoring: _headerController.value < 0.99,
+                      child: bar,
+                    ),
                   ),
-          ),
-        ),
-      ),
-    );
+                ),
+              ),
+            ),
+          );
+        }
 
-    return Scaffold(
-      appBar: resolvedAppBar,
-      body: body,
-      extendBody: extendBody,
-      bottomNavigationBar: bottomNavigationBar,
+        return Scaffold(
+          appBar: appBar,
+          body: widget.body,
+          extendBody: widget.extendBody,
+          bottomNavigationBar: widget.bottomNavigationBar,
+        );
+      },
     );
   }
 }

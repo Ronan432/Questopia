@@ -39,7 +39,7 @@ class LibraryMobileBottomBar extends ConsumerWidget {
         NavigationDestination(
           icon: const Icon(Icons.home_outlined),
           selectedIcon: const Icon(Icons.home_rounded),
-          label: l10n.library,
+          label: l10n.home,
         ),
         NavigationDestination(
           icon: const Icon(Icons.storefront_outlined),

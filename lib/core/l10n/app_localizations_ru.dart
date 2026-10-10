@@ -12,7 +12,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get appTitle => 'Questopia';
 
   @override
-  String get library => 'Библиотека';
+  String get home => 'Главная';
 
   @override
   String get catalog => 'Каталог';
@@ -112,6 +112,57 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get downloading => 'Загрузка...';
+
+  @override
+  String get addGame => 'Добавить игру';
+
+  @override
+  String get emptyLibraryHint =>
+      'В библиотеке пока нет игр.\nСкачайте из каталога или импортируйте папку.';
+
+  @override
+  String get fileOrArchive => 'Файл или архив';
+
+  @override
+  String get fileOrArchiveHint => '.qsp, .gam, .zip, .rar, .aqsp, .7z';
+
+  @override
+  String get gameFolderHint => 'Папка с файлами игры и ресурсами';
+
+  @override
+  String get selectFolder => 'Выберите папку';
+
+  @override
+  String get selectGameFolder => 'Выберите папку с игрой';
+
+  @override
+  String get selectGameFileOrArchive => 'Выберите файл или архив игры';
+
+  @override
+  String unsupportedGameFormat(Object ext) {
+    return 'Выбранный файл не поддерживается (.$ext). Выберите файл .qsp, .gam или архив.';
+  }
+
+  @override
+  String importedGame(String title) {
+    return 'Импортировано: $title';
+  }
+
+  @override
+  String importFailed(String reason) {
+    return 'Ошибка импорта: $reason';
+  }
+
+  @override
+  String gameFileNotFound(String path) {
+    return 'Файл игры не найден: $path. Папка могла быть перемещена или отозван доступ к хранилищу.';
+  }
+
+  @override
+  String get importGameTooltip => 'Импорт игры';
+
+  @override
+  String get gameOptionsTooltip => 'Параметры игры';
 
   @override
   String get sectionAppearance => 'Внешний вид';

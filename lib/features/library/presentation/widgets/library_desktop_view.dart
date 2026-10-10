@@ -60,7 +60,7 @@ class LibraryDesktopView extends ConsumerWidget {
               NavigationRailDestination(
                 icon: const Icon(Icons.home_outlined),
                 selectedIcon: const Icon(Icons.home_rounded),
-                label: Text(l10n.library),
+                label: Text(l10n.home),
               ),
               NavigationRailDestination(
                 icon: const Icon(Icons.storefront_outlined),
@@ -72,13 +72,12 @@ class LibraryDesktopView extends ConsumerWidget {
                 selectedIcon: const Icon(Icons.settings),
                 label: Text(l10n.settings),
               ),
-              const NavigationRailDestination(
-                icon: Icon(Icons.add_rounded),
-                label: Text('Add Game'),
+              NavigationRailDestination(
+                icon: const Icon(Icons.add_rounded),
+                label: Text(l10n.addGame),
               ),
             ],
           ),
-          const VerticalDivider(thickness: 1, width: 1),
           Expanded(
             child: Column(
               children: [

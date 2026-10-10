@@ -12,7 +12,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Questopia';
 
   @override
-  String get library => 'Library';
+  String get home => 'Home';
 
   @override
   String get catalog => 'Catalog';
@@ -112,6 +112,57 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get downloading => 'Downloading...';
+
+  @override
+  String get addGame => 'Add Game';
+
+  @override
+  String get emptyLibraryHint =>
+      'No games in your library yet.\nDownload from Catalog or import a folder.';
+
+  @override
+  String get fileOrArchive => 'File or Archive';
+
+  @override
+  String get fileOrArchiveHint => '.qsp, .gam, .zip, .rar, .aqsp, .7z';
+
+  @override
+  String get gameFolderHint => 'Folder containing game files and assets';
+
+  @override
+  String get selectFolder => 'Select folder';
+
+  @override
+  String get selectGameFolder => 'Select Game Folder';
+
+  @override
+  String get selectGameFileOrArchive => 'Select Game File or Archive';
+
+  @override
+  String unsupportedGameFormat(Object ext) {
+    return 'Selected file is not a supported game format (.$ext). Please select a .qsp, .gam, or archive file.';
+  }
+
+  @override
+  String importedGame(String title) {
+    return 'Imported $title';
+  }
+
+  @override
+  String importFailed(String reason) {
+    return 'Import failed: $reason';
+  }
+
+  @override
+  String gameFileNotFound(String path) {
+    return 'Game file not found at $path. Folder may have been moved or storage permission revoked.';
+  }
+
+  @override
+  String get importGameTooltip => 'Import game';
+
+  @override
+  String get gameOptionsTooltip => 'Game Options';
 
   @override
   String get sectionAppearance => 'Appearance';

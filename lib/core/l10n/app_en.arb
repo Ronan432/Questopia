@@ -1,6 +1,6 @@
 {
   "appTitle": "Questopia",
-  "library": "Library",
+  "home": "Home",
   "catalog": "Catalog",
   "settings": "Settings",
   "play": "Play",
@@ -34,6 +34,42 @@
   "download": "Download",
   "delete": "Delete",
   "downloading": "Downloading...",
+
+  "addGame": "Add Game",
+  "emptyLibraryHint": "No games in your library yet.\nDownload from Catalog or import a folder.",
+  "fileOrArchive": "File or Archive",
+  "fileOrArchiveHint": ".qsp, .gam, .zip, .rar, .aqsp, .7z",
+  "gameFolderHint": "Folder containing game files and assets",
+  "selectFolder": "Select folder",
+  "selectGameFolder": "Select Game Folder",
+  "selectGameFileOrArchive": "Select Game File or Archive",
+  "unsupportedGameFormat": "Selected file is not a supported game format (.{ext}). Please select a .qsp, .gam, or archive file.",
+  "importedGame": "Imported {title}",
+  "@importedGame": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "importFailed": "Import failed: {reason}",
+  "@importFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "gameFileNotFound": "Game file not found at {path}. Folder may have been moved or storage permission revoked.",
+  "@gameFileNotFound": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "importGameTooltip": "Import game",
+  "gameOptionsTooltip": "Game Options",
 
   "sectionAppearance": "Appearance",
   "sectionGeneral": "General",

@@ -1,6 +1,6 @@
 {
   "appTitle": "Questopia",
-  "library": "Библиотека",
+  "home": "Главная",
   "catalog": "Каталог",
   "settings": "Настройки",
   "play": "Играть",
@@ -34,6 +34,42 @@
   "download": "Скачать",
   "delete": "Удалить",
   "downloading": "Загрузка...",
+
+  "addGame": "Добавить игру",
+  "emptyLibraryHint": "В библиотеке пока нет игр.\nСкачайте из каталога или импортируйте папку.",
+  "fileOrArchive": "Файл или архив",
+  "fileOrArchiveHint": ".qsp, .gam, .zip, .rar, .aqsp, .7z",
+  "gameFolderHint": "Папка с файлами игры и ресурсами",
+  "selectFolder": "Выберите папку",
+  "selectGameFolder": "Выберите папку с игрой",
+  "selectGameFileOrArchive": "Выберите файл или архив игры",
+  "unsupportedGameFormat": "Выбранный файл не поддерживается (.{ext}). Выберите файл .qsp, .gam или архив.",
+  "importedGame": "Импортировано: {title}",
+  "@importedGame": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "importFailed": "Ошибка импорта: {reason}",
+  "@importFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "gameFileNotFound": "Файл игры не найден: {path}. Папка могла быть перемещена или отозван доступ к хранилищу.",
+  "@gameFileNotFound": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "importGameTooltip": "Импорт игры",
+  "gameOptionsTooltip": "Параметры игры",
 
   "sectionAppearance": "Внешний вид",
   "sectionGeneral": "Общие",

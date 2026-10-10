@@ -23,9 +23,8 @@ class SoundSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: [
-        SettingsSectionHeader(title: l10n.sectionSound),
         SegmentedListSection(
           children: [
             SettingsTiles.switchTile(
@@ -63,9 +62,8 @@ class StorageSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: [
-        SettingsSectionHeader(title: l10n.sectionStorage),
         SegmentedListSection(
           children: [
             SegmentedListTile(
@@ -116,9 +114,8 @@ class AboutSection extends StatelessWidget {
     final info = packageInfo;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: [
-        SettingsSectionHeader(title: l10n.sectionAbout),
         SegmentedListSection(
           children: [
             SegmentedListTile(

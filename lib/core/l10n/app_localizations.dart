@@ -104,11 +104,11 @@ abstract class AppLocalizations {
   /// **'Questopia'**
   String get appTitle;
 
-  /// No description provided for @library.
+  /// No description provided for @home.
   ///
   /// In en, this message translates to:
-  /// **'Library'**
-  String get library;
+  /// **'Home'**
+  String get home;
 
   /// No description provided for @catalog.
   ///
@@ -307,6 +307,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Downloading...'**
   String get downloading;
+
+  /// No description provided for @addGame.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Game'**
+  String get addGame;
+
+  /// No description provided for @emptyLibraryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'No games in your library yet.\nDownload from Catalog or import a folder.'**
+  String get emptyLibraryHint;
+
+  /// No description provided for @fileOrArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'File or Archive'**
+  String get fileOrArchive;
+
+  /// No description provided for @fileOrArchiveHint.
+  ///
+  /// In en, this message translates to:
+  /// **'.qsp, .gam, .zip, .rar, .aqsp, .7z'**
+  String get fileOrArchiveHint;
+
+  /// No description provided for @gameFolderHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder containing game files and assets'**
+  String get gameFolderHint;
+
+  /// No description provided for @selectFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Select folder'**
+  String get selectFolder;
+
+  /// No description provided for @selectGameFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Game Folder'**
+  String get selectGameFolder;
+
+  /// No description provided for @selectGameFileOrArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Game File or Archive'**
+  String get selectGameFileOrArchive;
+
+  /// No description provided for @unsupportedGameFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected file is not a supported game format (.{ext}). Please select a .qsp, .gam, or archive file.'**
+  String unsupportedGameFormat(Object ext);
+
+  /// No description provided for @importedGame.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {title}'**
+  String importedGame(String title);
+
+  /// No description provided for @importFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Import failed: {reason}'**
+  String importFailed(String reason);
+
+  /// No description provided for @gameFileNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Game file not found at {path}. Folder may have been moved or storage permission revoked.'**
+  String gameFileNotFound(String path);
+
+  /// No description provided for @importGameTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Import game'**
+  String get importGameTooltip;
+
+  /// No description provided for @gameOptionsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Game Options'**
+  String get gameOptionsTooltip;
 
   /// No description provided for @sectionAppearance.
   ///

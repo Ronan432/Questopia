@@ -26,9 +26,8 @@ class AppearanceSection extends StatelessWidget {
     final accentColors = SettingsPickerSheets.accentColors;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: [
-        SettingsSectionHeader(title: l10n.sectionAppearance),
         SegmentedListSection(
           children: [
             SettingsTiles.navTile(
@@ -93,9 +92,8 @@ class GeneralSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: [
-        SettingsSectionHeader(title: l10n.sectionGeneral),
         SegmentedListSection(
           children: [
             SettingsTiles.switchTile(

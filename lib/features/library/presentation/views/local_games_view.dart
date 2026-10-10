@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/l10n/app_localizations.dart';
 import '../../../../core/providers/settings_provider.dart';
+import '../../../../core/widgets/questopia_morph_button.dart';
 import '../../../game/presentation/game_screen.dart';
 import '../../../game/providers/game_engine_provider.dart';
 import '../../data/local_game.dart';
@@ -25,6 +27,8 @@ class LocalGamesView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+
     if (games.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -36,18 +40,18 @@ class LocalGamesView extends ConsumerWidget {
             color: Theme.of(context).colorScheme.outline,
           ),
           const SizedBox(height: 12),
-          const Center(
+          Center(
             child: Text(
-              'No games in your library yet.\nDownload from Catalog or import a folder.',
+              l10n.emptyLibraryHint,
               textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(height: 16),
           Center(
-            child: FilledButton.icon(
+            child: QuestopiaMorphButton.filled(
               onPressed: onImportFolder,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Add Game'),
+              icon: const Icon(Icons.add_rounded, size: 20),
+              child: Text(l10n.addGame),
             ),
           ),
         ],
@@ -89,7 +93,7 @@ class LocalGamesView extends ConsumerWidget {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
-                      'Game file not found at ${game.gameFilePath}. Folder may have been moved or storage permission revoked.',
+                      l10n.gameFileNotFound(game.gameFilePath),
                     ),
                   ),
                 );

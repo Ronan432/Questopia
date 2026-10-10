@@ -62,6 +62,7 @@ Questopia-RE is a high-performance cross-platform interpreter and library client
 
 ### 3.5. Game Player, Media Pipeline, and Modal Dialogs (`GameScreen`)
 - **Native Video Decoding & Hardware Acceleration:** Powered by `video_player` (ExoPlayer on Android, Media Foundation on Windows) hardware decoders via `QspMedia` and `QspVideo`, replacing fragile webviews with smooth looping playback while keeping the native decoder payload out of the app bundle.
+- **Ogg Theora Fallback (`QspOgvVideo`):** The platform decoder cannot read Theora, so `.ogv` and `.ogg` files are routed to the bundled OGV.js WebAssembly decoder rendered in a hidden WebView. Every other container stays on the hardware decoder.
 - **High-Performance HTML Rendering (`QspHtmlView`):** Native flutter HTML parser rendering rich typography, custom styled interactive links, and embedded asset image/video elements.
 - **Unified Engine Dialog System (`GameDialogsHost`):** Message (`GameMessageDialog`), prompt input (`GameInputDialog`), interactive choice menus (`GameMenuDialog`), runtime error diagnostics (`GameErrorDialog`), image/video preview (`GameImagePreviewDialog`), and QSP console execution (`GameExecutorDialog`) all presented through `showQuestopiaDialog`.
 
@@ -84,6 +85,8 @@ Questopia-RE is a high-performance cross-platform interpreter and library client
 | `lib/core/helpers/html_processor.dart` | Sanitizer, video tag converter, and entity decoder for QSP HTML output. |
 | `lib/core/helpers/path_picker_helper.dart` | Platform-aware native file/folder picker and Android Scoped Storage directory resolver. |
 | `lib/core/media/qsp_media.dart` | Unified media rendering widget combining native `video_player` hardware video and image loaders. |
+| `lib/core/media/qsp_ogv_video.dart` | WebAssembly Ogg Theora decoder hosted in a WebView for formats the platform decoder rejects. |
+| `lib/core/theme/game_colors.dart` | Fixed high contrast reading surface colors for the game text panes. |
 | `lib/core/media/qsp_html_view.dart` | Native HTML widget renderer with custom widget builder for video and image tags. |
 | `lib/features/library/data/game_repository.dart` | 3-Tier import pipeline (zero-copy, isolate copy, archive unpacker) and isolate BFS scanner. |
 | `lib/features/library/presentation/library_screen.dart` | Modular hub with swipeable PageView navigation connecting library, catalog, and inline settings. |

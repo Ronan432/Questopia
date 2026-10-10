@@ -12,6 +12,7 @@ import '../../../core/media/qsp_html_view.dart';
 import '../../../core/media/qsp_path_resolver.dart';
 import '../../../core/native/qsp_models.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/theme/game_colors.dart';
 import '../../../core/helpers/dialog_helper.dart';
 import '../../../core/helpers/html_processor.dart';
 import '../../../core/helpers/sheet_helper.dart';
@@ -452,11 +453,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final isCustomBg = settings.useGameBackgroundColor;
     final bgColor = isCustomBg
         ? Color(settings.gameBackColor)
-        : theme.colorScheme.surface;
+        : GameColors.background(theme.brightness);
     final isCustomFontColor = settings.useGameTextColor;
     final fontColor = isCustomFontColor
         ? Color(settings.gameTextColor)
-        : theme.colorScheme.onSurface;
+        : GameColors.foreground(theme.brightness);
 
     return Container(
       color: bgColor,
@@ -469,6 +470,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
               child: QspHtmlView(
                 html: mainHtml,
                 resolver: resolver,
+                backgroundColor: bgColor,
                 textStyle: TextStyle(
                   fontSize: settings.fontSize.clamp(12.0, 28.0),
                   color: fontColor,
@@ -637,11 +639,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     final isCustomBg = settings.useGameBackgroundColor;
     final bgColor = isCustomBg
         ? Color(settings.gameBackColor)
-        : theme.colorScheme.surface;
+        : GameColors.background(theme.brightness);
     final isCustomFontColor = settings.useGameTextColor;
     final fontColor = isCustomFontColor
         ? Color(settings.gameTextColor)
-        : theme.colorScheme.onSurface;
+        : GameColors.foreground(theme.brightness);
 
     return Container(
       color: bgColor,
@@ -650,6 +652,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         child: QspHtmlView(
           html: varsHtml,
           resolver: resolver,
+          backgroundColor: bgColor,
           textStyle: TextStyle(
             fontSize: settings.fontSize.clamp(12.0, 28.0),
             color: fontColor,

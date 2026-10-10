@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'qsp_media_kind.dart';
+import 'qsp_ogv_video.dart';
 import 'qsp_path_resolver.dart';
 import 'qsp_video.dart';
 
@@ -26,6 +27,17 @@ class QspMedia extends StatelessWidget {
   final bool loop;
   final bool muted;
 
+  /// The platform decoder has no Theora support, so Ogg video must fall back
+  /// to the bundled WebAssembly decoder instead.
+  static bool _needsWebAssemblyDecoder(String source) {
+    final lower = source.toLowerCase();
+    if (lower.startsWith('http://') || lower.startsWith('https://')) {
+      final withoutQuery = lower.split('?')[0].split('#')[0];
+      return withoutQuery.endsWith('.ogv') || withoutQuery.endsWith('.ogg');
+    }
+    return lower.endsWith('.ogv') || lower.endsWith('.ogg');
+  }
+
   @override
   Widget build(BuildContext context) {
     if (src.isEmpty) return _broken(context);
@@ -38,16 +50,28 @@ class QspMedia extends StatelessWidget {
       final kind = detectMediaKind(src);
       Widget child;
       if (kind == QspMediaKind.video) {
-        child = QspVideo(
-          key: ValueKey(src),
-          path: src,
-          autoplay: autoplay,
-          loop: loop,
-          muted: muted,
-          fit: fit,
-          width: width,
-          height: height,
-        );
+        if (_needsWebAssemblyDecoder(src)) {
+          child = QspOgvVideo(
+            key: ValueKey('ogv:$src'),
+            path: src,
+            autoplay: autoplay,
+            loop: loop,
+            muted: muted,
+            width: width,
+            height: height,
+          );
+        } else {
+          child = QspVideo(
+            key: ValueKey(src),
+            path: src,
+            autoplay: autoplay,
+            loop: loop,
+            muted: muted,
+            fit: fit,
+            width: width,
+            height: height,
+          );
+        }
       } else {
         child = Image.network(
           src,
@@ -80,16 +104,28 @@ class QspMedia extends StatelessWidget {
         );
         break;
       case QspMediaKind.video:
-        child = QspVideo(
-          key: ValueKey(path),
-          path: path,
-          autoplay: autoplay,
-          loop: loop,
-          muted: muted,
-          fit: fit,
-          width: width,
-          height: height,
-        );
+        if (_needsWebAssemblyDecoder(path)) {
+          child = QspOgvVideo(
+            key: ValueKey('ogv:$path'),
+            path: path,
+            autoplay: autoplay,
+            loop: loop,
+            muted: muted,
+            width: width,
+            height: height,
+          );
+        } else {
+          child = QspVideo(
+            key: ValueKey(path),
+            path: path,
+            autoplay: autoplay,
+            loop: loop,
+            muted: muted,
+            fit: fit,
+            width: width,
+            height: height,
+          );
+        }
         break;
       case QspMediaKind.unknown:
         child = Image.file(

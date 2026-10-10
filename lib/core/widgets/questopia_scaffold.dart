@@ -80,13 +80,21 @@ class _QuestopiaScaffoldState extends State<QuestopiaScaffold>
   @override
   Widget build(BuildContext context) {
     final showCustomTitleBar = _isDesktopPlatform();
-    final maxHeight = showCustomTitleBar ? 40.0 : kToolbarHeight;
+    final topInset = showCustomTitleBar
+        ? 0.0
+        : MediaQuery.paddingOf(context).top;
+    final naturalHeight =
+        (showCustomTitleBar ? 40.0 : kToolbarHeight) + topInset;
 
     return AnimatedBuilder(
       animation: _headerController,
       builder: (context, _) {
         final t = Curves.easeOutCubic.transform(_headerController.value);
-        final collapsedHeight = maxHeight * t;
+        final visibleHeight = naturalHeight * t;
+        // Scaffold adds the top inset on top of the reported size, so the
+        // compensation keeps the total height in sync with the animation.
+        final reportedHeight =
+            (visibleHeight - topInset).clamp(0.0, double.infinity);
 
         final bar = showCustomTitleBar
             ? WindowTitleBar(
@@ -109,20 +117,17 @@ class _QuestopiaScaffoldState extends State<QuestopiaScaffold>
           appBar = widget.customAppBar;
         } else {
           appBar = PreferredSize(
-            preferredSize: Size.fromHeight(collapsedHeight),
+            preferredSize: Size.fromHeight(reportedHeight),
             child: ClipRect(
               child: OverflowBox(
                 alignment: Alignment.topCenter,
-                minHeight: maxHeight,
-                maxHeight: maxHeight,
-                child: Transform.translate(
-                  offset: Offset(0, collapsedHeight - maxHeight),
-                  child: Opacity(
-                    opacity: t,
-                    child: IgnorePointer(
-                      ignoring: _headerController.value < 0.99,
-                      child: bar,
-                    ),
+                minHeight: naturalHeight,
+                maxHeight: naturalHeight,
+                child: Opacity(
+                  opacity: t,
+                  child: IgnorePointer(
+                    ignoring: _headerController.value < 0.99,
+                    child: bar,
                   ),
                 ),
               ),

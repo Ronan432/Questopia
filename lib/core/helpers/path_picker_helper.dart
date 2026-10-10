@@ -161,16 +161,7 @@ class PathPickerHelper {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 8, bottom: 12),
-                  child: Text(
-                    l10n.importGame,
-                    style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colors.primary,
-                        ),
-                  ),
-                ),
+                QuestopiaSheetHeaderPill(title: l10n.importGame),
                 SegmentedListSection(
                   children: [
                     SegmentedListTile(
@@ -184,7 +175,6 @@ class PathPickerHelper {
                     SegmentedListTile(
                       leading: const Icon(Icons.folder_open_outlined),
                       title: Text(l10n.gameFolder),
-                      subtitle: Text(l10n.gameFolderHint),
                       trailing: const Icon(Icons.chevron_right),
                       minVerticalPadding: 12,
                       onTap: () => Navigator.pop(ctx, 2),

@@ -50,7 +50,7 @@ class OgvPlayerPage {
 <script>
 (function () {
   try {
-    OGVLoader.base = '/ogv/';
+    OGVLoader.base = '/ogv';
     OGVLoader.simdLockMutex = false;
     window.OGV_DECODER_PROGRESS = function () {};
 
@@ -66,23 +66,33 @@ class OgvPlayerPage {
       webglOk = false;
     }
     console.log('[OGV] webgl=' + webglOk + ' wasm=' + OGVLoader.wasmSupported());
-    if (!webglOk) {
-      window.OGV_USE_SOFTWARE_SINK = true;
-    }
 
+    // Only these options are read from the constructor. Everything else is an
+    // attribute backed property and has to be assigned afterwards.
     var player = new OGVPlayer({
-      target: document.body,
-      autoplay: $autoplay,
-      loop: $loop,
-      muted: $muted,
-      preload: 'auto',
       worker: false,
       // WebGL is much faster but leaves a blank canvas on some devices, so the
       // software renderer is selected whenever WebGL is unavailable.
       webGL: webglOk
     });
+
+    player.style.maxWidth = '100%';
+    player.style.width = '100%';
+    player.style.height = '100%';
+    player.style.display = 'block';
+    player.style.objectFit = 'contain';
+
+    // The player is created detached from the document. It renders offscreen
+    // and stays invisible until it is attached, so this line is what actually
+    // makes the video appear.
+    document.body.appendChild(player);
     window.__ogvPlayer = player;
+
     player.src = '$mediaUrl';
+    player.muted = $muted;
+    player.loop = $loop;
+    player.autoplay = $autoplay;
+    player.preload = 'auto';
 
     player.addEventListener('loadeddata', function () {
       var canvas = document.querySelector('canvas');
@@ -97,8 +107,12 @@ class OgvPlayerPage {
       }
     });
 
-    player.addEventListener('error', function () {
-      console.log('[OGV] hata: ' + (player && player.media ? '' : ''));
+    player.addEventListener('error', function (event) {
+      console.log('[OGV] hata: ' + (event && event.message ? event.message : 'bilinmiyor'));
+    });
+
+    player.addEventListener('stalled', function () {
+      console.log('[OGV] veri akisi durdu');
     });
 
     // The page is loaded without a user gesture, so playback always starts
@@ -117,6 +131,7 @@ class OgvPlayerPage {
     };
   } catch (err) {
     window.__ogvError = String(err);
+    console.log('[OGV] kurulum hatasi: ' + err);
   }
 })();
 </script>

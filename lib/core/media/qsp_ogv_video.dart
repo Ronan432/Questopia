@@ -45,10 +45,7 @@ class _QspOgvVideoState extends State<QspOgvVideo> {
   String _playerUrl(String baseUrl) {
     final query = <String, String>{
       'src': widget.path,
-      // Browsers refuse to start unmuted playback without a user gesture, and
-      // game media is loaded automatically. Playback therefore begins muted and
-      // the sound is enabled once the player reports ready.
-      'muted': '1',
+      'muted': widget.muted ? '1' : '0',
       'loop': widget.loop ? '1' : '0',
       'autoplay': widget.autoplay ? '1' : '0',
     };
@@ -74,6 +71,11 @@ class _QspOgvVideoState extends State<QspOgvVideo> {
       final controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
         ..setBackgroundColor(Colors.transparent)
+        ..setOnConsoleMessage((message) {
+          // The decoder reports renderer choice and canvas size through the
+          // browser console, which is the only way to see its state.
+          debugPrint('[OGV-JS] ${message.message}');
+        })
         ..setNavigationDelegate(
           NavigationDelegate(
             onNavigationRequest: (request) {

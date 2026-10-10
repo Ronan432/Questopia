@@ -50,13 +50,32 @@ class OgvPlayerPage {
       preload: 'auto',
       worker: false
     });
+    window.__ogvPlayer = player;
     player.src = '$mediaUrl';
 
     player.addEventListener('loadeddata', function () {
       if ($autoplay) {
-        player.play();
+        var attempt = player.play();
+        if (attempt && attempt.catch) {
+          attempt.catch(function () {});
+        }
       }
     });
+
+    // The page is loaded without a user gesture, so playback always starts
+    // muted. Sound is enabled by the host once the player is touched.
+    window.__ogvUnmute = function () {
+      try {
+        player.muted = !$muted;
+        var resume = player.play();
+        if (resume && resume.catch) {
+          resume.catch(function () {});
+        }
+        return true;
+      } catch (err) {
+        return false;
+      }
+    };
   } catch (err) {
     window.__ogvError = String(err);
   }

@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 import 'ogv_asset_server.dart';
 
@@ -43,7 +45,10 @@ class _QspOgvVideoState extends State<QspOgvVideo> {
   String _playerUrl(String baseUrl) {
     final query = <String, String>{
       'src': widget.path,
-      'muted': widget.muted ? '1' : '0',
+      // Browsers refuse to start unmuted playback without a user gesture, and
+      // game media is loaded automatically. Playback therefore begins muted and
+      // the sound is enabled once the player reports ready.
+      'muted': '1',
       'loop': widget.loop ? '1' : '0',
       'autoplay': widget.autoplay ? '1' : '0',
     };
@@ -61,40 +66,55 @@ class _QspOgvVideoState extends State<QspOgvVideo> {
   }
 
   Future<void> _initialize() async {
-    final server = await OgvAssetServer.ensureStarted();
+    try {
+      final server = await OgvAssetServer.ensureStarted();
+      final url = _playerUrl(server.baseUrl);
+      debugPrint('[OgvVideo] baslatiliyor: $url');
 
-    final controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Colors.transparent)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onNavigationRequest: (request) {
-            // Only the local player page may load. Media is pulled over XHR
-            // so no further navigation should ever be requested.
-            return request.url.startsWith(server.baseUrl)
-                ? NavigationDecision.navigate
-                : NavigationDecision.prevent;
-          },
-          onPageFinished: (_) {
-            if (mounted) setState(() => _ready = true);
-          },
-          onWebResourceError: (_) {
-            if (mounted) setState(() => _failed = true);
-          },
-        ),
-      );
+      final controller = WebViewController()
+        ..setJavaScriptMode(JavaScriptMode.unrestricted)
+        ..setBackgroundColor(Colors.transparent)
+        ..setNavigationDelegate(
+          NavigationDelegate(
+            onNavigationRequest: (request) {
+              debugPrint('[OgvVideo] gezinti: ${request.url}');
+              // Only the local player page may load. Media is pulled over XHR
+              // so no further navigation should ever be requested.
+              return request.url.startsWith(server.baseUrl)
+                  ? NavigationDecision.navigate
+                  : NavigationDecision.prevent;
+            },
+            onPageFinished: (_) {
+              debugPrint('[OgvVideo] sayfa yuklendi');
+              if (mounted) setState(() => _ready = true);
+            },
+            onWebResourceError: (error) {
+              debugPrint('[OgvVideo] kaynak hatasi: ${error.description}');
+              // A failed subresource must not blank the whole widget, so the
+              // error only takes effect when the page itself never loaded.
+              if (!_ready && mounted) setState(() => _failed = true);
+            },
+          ),
+        );
 
-    await controller.loadRequest(Uri.parse(_playerUrl(server.baseUrl)));
+      await _allowAutomaticPlayback(controller);
+      await controller.loadRequest(Uri.parse(url));
 
-    if (!mounted) return;
-    setState(() => _controller = controller);
+      if (!mounted) return;
+      setState(() => _controller = controller);
+    } catch (error) {
+      debugPrint('[OgvVideo] baslatma hatasi: $error');
+      if (mounted) setState(() => _failed = true);
+    }
   }
 
   Future<void> _resume() async {
     final controller = _controller;
     if (controller == null) return;
     try {
-      await controller.runJavaScript('play();');
+      await controller.runJavaScript(
+        'window.__ogvUnmute ? window.__ogvUnmute() : play();',
+      );
     } catch (_) {
       // Autoplay may be refused until the first user interaction, which is
       // acceptable because the surrounding game screen is that gesture.
@@ -107,6 +127,22 @@ class _QspOgvVideoState extends State<QspOgvVideo> {
     super.dispose();
   }
 
+  /// Lets the page start playback on its own.
+  ///
+  /// The WebView blocks any playback that is not tied to a user gesture, which
+  /// would leave game media frozen on its first frame. The decoder only ever
+  /// plays local game files, so the restriction buys nothing here.
+  Future<void> _allowAutomaticPlayback(WebViewController controller) async {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      final AndroidWebViewController android =
+          controller.platform as AndroidWebViewController;
+      await android.setMediaPlaybackRequiresUserGesture(false);
+    } catch (_) {
+      // Older platform implementations simply keep the default behaviour.
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
@@ -114,33 +150,39 @@ class _QspOgvVideoState extends State<QspOgvVideo> {
       return const SizedBox.shrink();
     }
 
-    Widget view = Stack(
+    // The tap overlay only needs to sit above the player, and the stack must
+    // fill a box of known size, so the media area is bounded before the stack
+    // is built. QSP markup often omits width and height on the image tag, which
+    // would otherwise leave the stack with an unbounded height.
+    const ratio = 16 / 9;
+    final surface = Stack(
+      fit: StackFit.expand,
       children: [
-        Positioned.fill(child: WebViewWidget(controller: controller)),
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onTap: _resume,
-          ),
+        WebViewWidget(controller: controller),
+        GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: _resume,
         ),
       ],
     );
 
-    const ratio = 16 / 9;
+    final Widget view;
     if (widget.width != null && widget.height != null) {
-      view = SizedBox(width: widget.width, height: widget.height, child: view);
+      view = SizedBox(width: widget.width, height: widget.height, child: surface);
     } else if (widget.width != null) {
       view = SizedBox(
         width: widget.width,
-        child: AspectRatio(aspectRatio: ratio, child: view),
+        child: AspectRatio(aspectRatio: ratio, child: surface),
       );
     } else if (widget.height != null) {
       view = SizedBox(
         height: widget.height,
-        child: AspectRatio(aspectRatio: ratio, child: view),
+        child: AspectRatio(aspectRatio: ratio, child: surface),
       );
+    } else {
+      view = AspectRatio(aspectRatio: ratio, child: surface);
     }
 
-    return ExcludeSemantics(child: Center(child: view));
+    return ExcludeSemantics(child: view);
   }
 }

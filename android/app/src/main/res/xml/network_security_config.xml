@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The Ogg fallback player talks to a decoder server bound to 127.0.0.1, which
+  is plain HTTP. Cleartext stays disabled for every other destination so the
+  app keeps the modern default of refusing unencrypted traffic.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

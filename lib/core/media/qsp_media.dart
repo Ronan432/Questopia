@@ -31,11 +31,12 @@ class QspMedia extends StatelessWidget {
   /// to the bundled WebAssembly decoder instead.
   static bool _needsWebAssemblyDecoder(String source) {
     final lower = source.toLowerCase();
-    if (lower.startsWith('http://') || lower.startsWith('https://')) {
-      final withoutQuery = lower.split('?')[0].split('#')[0];
-      return withoutQuery.endsWith('.ogv') || withoutQuery.endsWith('.ogg');
+    final withoutQuery = lower.split('?')[0].split('#')[0];
+    final isOgg = withoutQuery.endsWith('.ogv') || withoutQuery.endsWith('.ogg');
+    if (isOgg) {
+      debugPrint('[QspMedia] OGV yonlendirmesi: $source');
     }
-    return lower.endsWith('.ogv') || lower.endsWith('.ogg');
+    return isOgg;
   }
 
   @override

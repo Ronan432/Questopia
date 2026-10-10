@@ -65,6 +65,7 @@ class OgvAssetServer {
   Future<void> _handle(HttpRequest request) async {
     try {
       final path = request.uri.path;
+      debugPrint('[OgvServer] ${request.method} $path');
       if (path.startsWith('/ogv/')) {
         await _serveAsset(request, path.substring('/ogv/'.length));
       } else if (path == '/media') {
@@ -74,7 +75,8 @@ class OgvAssetServer {
       } else {
         await _close(request, HttpStatus.notFound);
       }
-    } catch (_) {
+    } catch (error) {
+      debugPrint('[OgvServer] HATA $error');
       await _close(request, HttpStatus.internalServerError);
     }
   }
@@ -95,6 +97,7 @@ class OgvAssetServer {
     try {
       final data = await rootBundle.load('assets/ogv/$safe');
       final bytes = data.buffer.asUint8List();
+      debugPrint('[OgvServer] asset $safe -> ${bytes.length} bayt');
       request.response
         ..statusCode = HttpStatus.ok
         ..headers.contentType = ContentType.parse(_mimeFor(safe))
@@ -103,6 +106,7 @@ class OgvAssetServer {
         ..add(bytes);
       await request.response.close();
     } catch (_) {
+      debugPrint('[OgvServer] asset bulunamadi: $safe');
       await _close(request, HttpStatus.notFound);
     }
   }
@@ -141,12 +145,14 @@ class OgvAssetServer {
 
     final file = File(raw);
     if (!file.existsSync()) {
+      debugPrint('[OgvServer] medya bulunamadi: $raw');
       await _close(request, HttpStatus.notFound);
       return;
     }
 
     final length = await file.length();
     final rangeHeader = request.headers.value(HttpHeaders.rangeHeader);
+    debugPrint('[OgvServer] medya $raw (${length >> 10} KB) range=$rangeHeader');
 
     if (rangeHeader == null) {
       final response = request.response

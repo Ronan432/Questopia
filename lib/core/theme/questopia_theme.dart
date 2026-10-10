@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:material_3_expressive/material_3_expressive.dart';
 
 abstract final class QuestopiaTheme {
+  /// Typeface shared by the app theme and the in-game text renderer.
+  static const String fontFamily = 'Netflix Sans';
+
+  /// Lower and upper bounds applied to the in-game font size setting.
+  static const double minGameFontSize = 12.0;
+  static const double maxGameFontSize = 28.0;
+
   /// Accent seeds for the legacy "Color Accent" preference.
   static const Map<String, Color> _accentSeeds = {
     'blue': Color(0xFF0061A4),
@@ -196,7 +203,7 @@ abstract final class QuestopiaTheme {
   static ThemeData _themeWithScheme(Brightness brightness, ColorScheme scheme) {
     return ThemeData(
       useMaterial3: true,
-      fontFamily: 'Netflix Sans',
+      fontFamily: fontFamily,
       colorScheme: scheme,
       scaffoldBackgroundColor: scheme.surface,
       appBarTheme: AppBarTheme(

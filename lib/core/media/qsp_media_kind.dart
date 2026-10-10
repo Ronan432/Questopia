@@ -38,9 +38,6 @@ QspMediaKind _sniff(String path) {
     if (h[0] == 0xFF && h[1] == 0xD8) return QspMediaKind.image;
 
     // PNG: 89 50 4E 47
-    if (h[0] == 0x89 && h[1] == 0x50 && h[2] == 0x4E && h[3] == 0x43) {
-      return QspMediaKind.image;
-    }
     if (h[0] == 0x89 && h[1] == 0x50 && h[2] == 0x4E && h[3] == 0x47) {
       return QspMediaKind.image;
     }

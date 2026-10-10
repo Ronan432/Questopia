@@ -14,15 +14,6 @@ class QspPathResolver {
   bool _indexing = false;
   bool _indexed = false;
 
-  void updatePreloadedIndex(Map<String, String> preloaded) {
-    _relMap.addAll(preloaded);
-    for (final entry in preloaded.entries) {
-      final base = p.basename(entry.key).toLowerCase();
-      _basenameMap.putIfAbsent(base, () => entry.value);
-    }
-    _indexed = true;
-  }
-
   Future<void> _startAsyncIndex() async {
     if (_indexing || _indexed) return;
     _indexing = true;

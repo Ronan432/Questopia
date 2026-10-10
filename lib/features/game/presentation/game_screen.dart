@@ -13,9 +13,11 @@ import '../../../core/media/qsp_path_resolver.dart';
 import '../../../core/native/qsp_models.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/theme/game_colors.dart';
+import '../../../core/theme/questopia_theme.dart';
 import '../../../core/helpers/dialog_helper.dart';
 import '../../../core/helpers/html_processor.dart';
 import '../../../core/helpers/sheet_helper.dart';
+import '../../../core/l10n/app_localizations.dart';
 import '../../../core/widgets/questopia_scaffold.dart';
 import '../providers/game_engine_provider.dart';
 import 'dialogs/game_dialogs_host.dart';
@@ -256,7 +258,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           IconButton(
             onPressed: _showOptionsMenu,
             icon: const Icon(Icons.more_vert_rounded),
-            tooltip: 'Game Options',
+            tooltip: AppLocalizations.of(context)!.gameOptionsTooltip,
           ),
         ],
         body: NotificationListener<ScrollNotification>(
@@ -472,9 +474,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                 resolver: resolver,
                 backgroundColor: bgColor,
                 textStyle: TextStyle(
-                  fontSize: settings.fontSize.clamp(12.0, 28.0),
+                  fontSize: settings.fontSize.clamp(
+                  QuestopiaTheme.minGameFontSize,
+                  QuestopiaTheme.maxGameFontSize,
+                ),
                   color: fontColor,
-                  fontFamily: 'Netflix Sans',
+                  fontFamily: QuestopiaTheme.fontFamily,
                   height: 1.5,
                 ),
                 onTapLink: (url) {
@@ -654,9 +659,12 @@ class _GameScreenState extends ConsumerState<GameScreen> {
           resolver: resolver,
           backgroundColor: bgColor,
           textStyle: TextStyle(
-            fontSize: settings.fontSize.clamp(12.0, 28.0),
+            fontSize: settings.fontSize.clamp(
+              QuestopiaTheme.minGameFontSize,
+              QuestopiaTheme.maxGameFontSize,
+            ),
             color: fontColor,
-            fontFamily: 'Netflix Sans',
+            fontFamily: QuestopiaTheme.fontFamily,
             height: 1.5,
           ),
           onTapLink: (url) {

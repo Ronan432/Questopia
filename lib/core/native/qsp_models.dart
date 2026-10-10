@@ -38,21 +38,6 @@ class QspMenuItem {
   });
 }
 
-class QspVar {
-  final String name;
-  final int numValue;
-  final String strValue;
-
-  const QspVar({
-    required this.name,
-    this.numValue = 0,
-    this.strValue = '',
-  });
-
-  @override
-  String toString() => 'QspVar($name = num: $numValue, str: "$strValue")';
-}
-
 class QspErrorInfo {
   final int errorNum;
   final String errorDesc;

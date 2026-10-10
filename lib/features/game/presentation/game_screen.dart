@@ -2,12 +2,10 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../core/media/qsp_html_view.dart';
@@ -52,88 +50,6 @@ class _GameScreenState extends ConsumerState<GameScreen> {
 
   bool _isHeaderVisible = true;
   Timer? _reappearTimer;
-
-  String _translatedMainHtml = '';
-  String _translatedVarsHtml = '';
-  String _lastTranslatedMainRaw = '';
-  String _lastTranslatedVarsRaw = '';
-  Map<int, String> _tActs = {}, _tObjs = {};
-  bool _isTranslating = false;
-
-  TranslateLanguage _lang(String c) => switch (c.toLowerCase()) {
-        'tr' => TranslateLanguage.turkish,
-        'ru' => TranslateLanguage.russian,
-        'es' => TranslateLanguage.spanish,
-        'de' => TranslateLanguage.german,
-        'fr' => TranslateLanguage.french,
-        'it' => TranslateLanguage.italian,
-        'pt' => TranslateLanguage.portuguese,
-        'zh' => TranslateLanguage.chinese,
-        'ja' => TranslateLanguage.japanese,
-        _ => TranslateLanguage.english,
-      };
-
-  void _translateContentIfNeeded(String main, String vars, SettingsState s) {
-    if (!s.isTranslationEnabled) return;
-    if (_lastTranslatedMainRaw == main) {
-      if (_lastTranslatedVarsRaw == vars) {
-        return;
-      }
-    }
-    _translateAll(main, vars, ref.read(gameEngineProvider).gameState.actions, ref.read(gameEngineProvider).gameState.objects, s);
-  }
-
-  void _translateActionsAndObjectsIfNeeded(List<QspAction> acts, List<QspObject> objs, SettingsState s) {
-    // Actions and objects are translated in _translateAll
-  }
-
-  Future<void> _translateAll(String main, String vars, List<QspAction> acts, List<QspObject> objs, SettingsState s) async {
-    if (!s.isTranslationEnabled) return;
-    if (!kIsWeb) {
-      if (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.macOS || defaultTargetPlatform == TargetPlatform.linux) {
-        return;
-      }
-    }
-    if (_isTranslating) return;
-    _isTranslating = true;
-    _lastTranslatedMainRaw = main;
-    _lastTranslatedVarsRaw = vars;
-    try {
-      final t = OnDeviceTranslator(sourceLanguage: _lang(s.translationSourceLang), targetLanguage: _lang(s.translationTargetLang));
-      final m = OnDeviceTranslatorModelManager();
-      await m.downloadModel(_lang(s.translationSourceLang).bcpCode);
-      await m.downloadModel(_lang(s.translationTargetLang).bcpCode);
-
-      final tm = HtmlProcessor.stripHtmlTags(main);
-      final tv = HtmlProcessor.stripHtmlTags(vars);
-      final rMain = tm.isNotEmpty ? await t.translateText(tm) : main;
-      final rVars = tv.isNotEmpty ? await t.translateText(tv) : vars;
-
-      final aMap = <int, String>{};
-      for (final a in acts) {
-        final c = HtmlProcessor.stripHtmlTags(a.name);
-        aMap[a.index] = c.isNotEmpty ? a.name.replaceAll(c, await t.translateText(c)) : a.name;
-      }
-      final oMap = <int, String>{};
-      for (final o in objs) {
-        final c = HtmlProcessor.stripHtmlTags(o.name);
-        oMap[o.index] = c.isNotEmpty ? o.name.replaceAll(c, await t.translateText(c)) : o.name;
-      }
-      await t.close();
-      if (mounted) {
-        setState(() {
-          _translatedMainHtml = rMain;
-          _translatedVarsHtml = rVars;
-          _tActs = aMap;
-          _tObjs = oMap;
-          _isTranslating = false;
-        });
-      }
-    } catch (_) {
-      _isTranslating = false;
-    }
-  }
-
 
   void _onScrollNotification(ScrollNotification notification) {
     if (notification is UserScrollNotification) {
@@ -296,26 +212,10 @@ class _GameScreenState extends ConsumerState<GameScreen> {
         ? engineState.gameState.varsDesc
         : '<p>No status information available.</p>';
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _translateContentIfNeeded(mainHtml, varsHtml, settings);
-      _translateActionsAndObjectsIfNeeded(
-        engineState.gameState.actions,
-        engineState.gameState.objects,
-        settings,
-      );
-    });
-
-    final activeMainHtml = settings.isTranslationEnabled
-        ? (_translatedMainHtml.isNotEmpty ? _translatedMainHtml : mainHtml)
-        : mainHtml;
-    final activeVarsHtml = settings.isTranslationEnabled
-        ? (_translatedVarsHtml.isNotEmpty ? _translatedVarsHtml : varsHtml)
-        : varsHtml;
-
     debugPrint('[GameScreen] build() fired: activeTab=$_activeTab, '
         'isLoading=${engineState.isLoading}, '
-        'mainDescLen=${activeMainHtml.length}, '
-        'varsDescLen=${activeVarsHtml.length}, '
+        'mainDescLen=${mainHtml.length}, '
+        'varsDescLen=${varsHtml.length}, '
         'actions=${engineState.gameState.actions.length}, '
         'objects=${engineState.gameState.objects.length}, '
         'activeDialog=${engineState.activeDialog}');
@@ -382,7 +282,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       // Tab 0: Story (Main Desc + Actions + Input)
                       _buildStoryTab(
                         context,
-                        activeMainHtml,
+                        mainHtml,
                         engineState,
                         engineNotifier,
                         settings,
@@ -390,7 +290,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
                       // Tab 1: Status / Vars
                       _buildVarsTab(
                         context,
-                        activeVarsHtml,
+                        varsHtml,
                         engineState,
                         settings,
                       ),
@@ -630,8 +530,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     GameEngineNotifier engineNotifier,
   ) {
     final colors = Theme.of(context).colorScheme;
-    final activeName = _tActs[act.index] ?? act.name;
-    final visual = _parseVisualItem(activeName, act.image);
+    final visual = _parseVisualItem(act.name, act.image);
     final file =
         visual.imagePath != null ? _findGameAssetFile(visual.imagePath!) : null;
 
@@ -805,8 +704,7 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     }
 
     final parsedObjects = objects.map((obj) {
-      final activeName = _tObjs[obj.index] ?? obj.name;
-      final visual = _parseVisualItem(activeName, obj.image);
+      final visual = _parseVisualItem(obj.name, obj.image);
       final file = visual.imagePath != null
           ? _findGameAssetFile(visual.imagePath!)
           : null;

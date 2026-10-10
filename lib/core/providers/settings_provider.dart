@@ -54,9 +54,6 @@ class SettingsState {
   final double navBarBlurPercent;
   final bool isExecStringEnabled;
   final int binaryPrefixes;
-  final bool isTranslationEnabled;
-  final String translationSourceLang;
-  final String translationTargetLang;
 
   const SettingsState({
     this.themeMode = ThemeModeOption.system,
@@ -94,9 +91,6 @@ class SettingsState {
     this.navBarBlurPercent = 70.0,
     this.isExecStringEnabled = false,
     this.binaryPrefixes = 1000,
-    this.isTranslationEnabled = false,
-    this.translationSourceLang = 'en',
-    this.translationTargetLang = 'ru',
   });
 
   SettingsState copyWith({
@@ -135,9 +129,6 @@ class SettingsState {
     double? navBarBlurPercent,
     bool? isExecStringEnabled,
     int? binaryPrefixes,
-    bool? isTranslationEnabled,
-    String? translationSourceLang,
-    String? translationTargetLang,
   }) {
     return SettingsState(
       themeMode: themeMode ?? this.themeMode,
@@ -177,11 +168,6 @@ class SettingsState {
       navBarBlurPercent: navBarBlurPercent ?? this.navBarBlurPercent,
       isExecStringEnabled: isExecStringEnabled ?? this.isExecStringEnabled,
       binaryPrefixes: binaryPrefixes ?? this.binaryPrefixes,
-      isTranslationEnabled: isTranslationEnabled ?? this.isTranslationEnabled,
-      translationSourceLang:
-          translationSourceLang ?? this.translationSourceLang,
-      translationTargetLang:
-          translationTargetLang ?? this.translationTargetLang,
     );
   }
 }
@@ -226,9 +212,6 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   static const _kNavBarBlurPercent = 'pref_nav_bar_blur_percent';
   static const _kExecString = 'pref_exec_string';
   static const _kBinaryPrefixes = 'pref_binary_prefixes';
-  static const _kIsTranslationEnabled = 'pref_is_translation_enabled';
-  static const _kTranslationSourceLang = 'pref_translation_source_lang';
-  static const _kTranslationTargetLang = 'pref_translation_target_lang';
   static const _kLegacyMigrated = 'pref_legacy_settings_migrated';
 
   static const _themeModes = [
@@ -348,9 +331,6 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       binaryPrefixes: prefs.getInt(_kBinaryPrefixes) ??
           int.tryParse(_legacyString(prefs, 'binPref') ?? '') ??
           1000,
-      isTranslationEnabled: prefs.getBool(_kIsTranslationEnabled) ?? false,
-      translationSourceLang: prefs.getString(_kTranslationSourceLang) ?? 'en',
-      translationTargetLang: prefs.getString(_kTranslationTargetLang) ?? 'ru',
     );
   }
 
@@ -643,20 +623,6 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   Future<void> setBinaryPrefixes(int value) async {
     state = state.copyWith(binaryPrefixes: value);
     await _set(_kBinaryPrefixes, value);
-  }
-
-  Future<void> setTranslationEnabled(bool value) async {
-    state = state.copyWith(isTranslationEnabled: value);
-    await _set(_kIsTranslationEnabled, value);
-  }
-
-  Future<void> setTranslationLanguages(String source, String target) async {
-    state = state.copyWith(
-      translationSourceLang: source,
-      translationTargetLang: target,
-    );
-    await _set(_kTranslationSourceLang, source);
-    await _set(_kTranslationTargetLang, target);
   }
 }
 

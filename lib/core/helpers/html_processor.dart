@@ -253,14 +253,6 @@ class HtmlProcessor {
     return html.replaceAll(_imgRegExp, '');
   }
 
-  /// Strips all HTML tags to return plain text (useful for action buttons).
-  static String stripHtmlTags(String html) {
-    if (html.isEmpty) return html;
-    return html
-        .replaceAll(RegExp(r'<[^>]*>', caseSensitive: false, dotAll: true), '')
-        .trim();
-  }
-
   /// MIME type lookup for the local media proxy (`questopia.local`).
   static String mimeTypeForPath(String path) {
     final lower = path.toLowerCase();
